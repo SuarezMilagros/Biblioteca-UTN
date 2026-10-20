@@ -1,5 +1,7 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models.functions import Upper
 from django.utils import timezone
 
 
@@ -39,11 +41,12 @@ class Editorial(models.Model):
 
     def __str__(self):
         return self.nombre
-    
+
+
 class Libro(models.Model):
     id_libro = models.BigAutoField(primary_key=True)
     titulo = models.CharField(max_length=255)
-    isbn = models.CharField(max_length=20)
+    isbn = models.CharField(max_length=20, blank=True)
     imagen = models.ImageField(upload_to='portadas/', blank=True)
     categoria = models.ForeignKey(
         Categoria,
@@ -70,10 +73,22 @@ class Libro(models.Model):
 
     def __str__(self):
         return self.titulo
-    
+
+
 class Ejemplar(models.Model):
     id_ejemplar = models.BigAutoField(primary_key=True)
-    codigo_inventario = models.CharField(max_length=30, unique=True)
+    id_inventario = models.PositiveIntegerField(
+        unique=True,
+        null=True,
+        blank=True,
+        verbose_name='ID de inventario',
+        help_text='Identificador numérico original del inventario. Opcional; único cuando tiene valor.',
+    )
+    codigo_inventario = models.CharField(
+        max_length=30,
+        verbose_name='código de inventario',
+        help_text='Numeración física del ejemplar. Admite letras y números; se guarda en mayúsculas.',
+    )
     observaciones = models.TextField(blank=True)
     libro = models.ForeignKey(
         Libro,
@@ -85,14 +100,34 @@ class Ejemplar(models.Model):
     class Meta:
         verbose_name = 'ejemplar'
         verbose_name_plural = 'ejemplares'
+        constraints = [
+            models.UniqueConstraint(
+                Upper('codigo_inventario'),
+                name='codigo_inventario_unico',
+                violation_error_message='Ya existe un ejemplar con ese código de inventario.',
+            ),
+        ]
 
     def __str__(self):
         return self.codigo_inventario
-    
+
+    @staticmethod
+    def normalizar_codigo(valor):
+        return (valor or '').strip().upper()
+
+    def clean(self):
+        super().clean()
+        self.codigo_inventario = self.normalizar_codigo(self.codigo_inventario)
+        if not self.codigo_inventario:
+            raise ValidationError({'codigo_inventario': 'Este campo es obligatorio.'})
+
+    def save(self, *args, **kwargs):
+        self.codigo_inventario = self.normalizar_codigo(self.codigo_inventario)
+        super().save(*args, **kwargs)
+
     @property
     def disponible(self):
         return not self.prestamos.filter(fecha_devolucion__isnull=True).exists()
-    
 
 
 class Persona(models.Model):
@@ -113,6 +148,7 @@ class Persona(models.Model):
 
     def __str__(self):
         return f'{self.apellido}, {self.nombre}'
+
 
 class Prestamo(models.Model):
     id_prestamo = models.BigAutoField(primary_key=True)

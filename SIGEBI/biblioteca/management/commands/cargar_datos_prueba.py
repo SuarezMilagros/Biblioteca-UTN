@@ -1,8 +1,9 @@
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
-from datetime import timedelta
 
 from biblioteca.models import (
     Autor, Categoria, Editorial, Ejemplar, Libro, Persona, Prestamo,
@@ -55,6 +56,19 @@ PRESTAMOS = [
 ]
 
 
+def obtener_o_crear(modelo, defaults=None, **busqueda):
+    """Devuelve el primer registro que coincide con `busqueda`, o lo crea.
+
+    No usa get_or_create: los nombres de categorías, autores y editoriales,
+    y los ISBN de libros, no son únicos. Si ya hay dos registros con el mismo
+    valor, get_or_create falla con MultipleObjectsReturned.
+    """
+    existente = modelo.objects.filter(**busqueda).order_by('pk').first()
+    if existente is not None:
+        return existente, False
+    return modelo.objects.create(**busqueda, **(defaults or {})), True
+
+
 class Command(BaseCommand):
     help = 'Carga datos de prueba ficticios. Se puede ejecutar más de una vez sin duplicar.'
 
@@ -64,51 +78,52 @@ class Command(BaseCommand):
         with transaction.atomic():
             categorias = {}
             for nombre, descripcion in CATEGORIAS:
-                categorias[nombre], _ = Categoria.objects.get_or_create(
-                    nombre=nombre, defaults={'descripcion': descripcion},
+                categorias[nombre], _ = obtener_o_crear(
+                    Categoria, defaults={'descripcion': descripcion}, nombre=nombre,
                 )
 
             autores = {}
             for nombre, apellido in AUTORES:
-                autores[apellido], _ = Autor.objects.get_or_create(
-                    nombre=nombre, apellido=apellido,
-                )
+                autores[apellido], _ = obtener_o_crear(Autor, nombre=nombre, apellido=apellido)
 
             editoriales = {}
             for nombre in EDITORIALES:
-                editoriales[nombre], _ = Editorial.objects.get_or_create(nombre=nombre)
+                editoriales[nombre], _ = obtener_o_crear(Editorial, nombre=nombre)
 
             ejemplares = {}
             for titulo, isbn, cat, apellido, edi, prefijo, cantidad in LIBROS:
-                libro, _ = Libro.objects.get_or_create(
-                    isbn=isbn,
+                libro, _ = obtener_o_crear(
+                    Libro,
                     defaults={
-                        'titulo': titulo,
                         'categoria': categorias[cat],
                         'autor': autores[apellido],
                         'editorial': editoriales[edi],
                     },
+                    titulo=titulo,
+                    isbn=isbn,
                 )
                 for n in range(1, cantidad + 1):
                     codigo = f'{prefijo}-{n:03d}'
-                    ejemplares[codigo], _ = Ejemplar.objects.get_or_create(
-                        codigo_inventario=codigo,
+                    ejemplares[codigo], _ = obtener_o_crear(
+                        Ejemplar,
                         defaults={
                             'libro': libro,
                             'observaciones': OBSERVACIONES.get(codigo, ''),
                         },
+                        codigo_inventario=codigo,
                     )
 
             personas = {}
             for nombre, apellido, documento, tipo, legajo in PERSONAS:
-                personas[documento], _ = Persona.objects.get_or_create(
-                    documento=documento,
+                personas[documento], _ = obtener_o_crear(
+                    Persona,
                     defaults={
                         'nombre': nombre,
                         'apellido': apellido,
                         'tipo': tipo,
                         'legajo': legajo,
                     },
+                    documento=documento,
                 )
 
             usuario, creado = get_user_model().objects.get_or_create(
