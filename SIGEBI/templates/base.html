@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block titulo %}SIGEBI{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/estilos.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <header class="cabecera">
+        <a class="marca" href="{% url 'inicio' %}">SIGEBI</a>
+        <span class="subtitulo">Sistema de Gestión de Biblioteca · UTN FRT, Extensión Áulica Concepción</span>
+    </header>
+
+    <main class="contenido">
+        {% block contenido %}{% endblock %}
+    </main>
+
+    <footer class="pie">SIGEBI · Release 1 — Biblioteca física</footer>
+
+    <script src="{% static 'js/main.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
