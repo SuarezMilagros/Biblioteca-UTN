@@ -92,16 +92,22 @@ class Command(BaseCommand):
 
             ejemplares = {}
             for titulo, isbn, cat, apellido, edi, prefijo, cantidad in LIBROS:
-                libro, _ = obtener_o_crear(
-                    Libro,
-                    defaults={
-                        'categoria': categorias[cat],
-                        'autor': autores[apellido],
-                        'editorial': editoriales[edi],
-                    },
-                    titulo=titulo,
-                    isbn=isbn,
-                )
+                # Primero se busca el libro por su primer ejemplar (por ejemplo ADM-001).
+                # Así, si alguien edita el título o el ISBN desde el sistema, no se duplica.
+                primer_ejemplar = Ejemplar.objects.filter(codigo_inventario=f'{prefijo}-001').first()
+                if primer_ejemplar is not None:
+                    libro = primer_ejemplar.libro
+                else:
+                    libro, _ = obtener_o_crear(
+                        Libro,
+                        defaults={
+                            'categoria': categorias[cat],
+                            'autor': autores[apellido],
+                            'editorial': editoriales[edi],
+                        },
+                        titulo=titulo,
+                        isbn=isbn,
+                    )
                 for n in range(1, cantidad + 1):
                     codigo = f'{prefijo}-{n:03d}'
                     ejemplares[codigo], _ = obtener_o_crear(
@@ -137,7 +143,15 @@ class Command(BaseCommand):
             for codigo, documento, d_prestamo, d_venc, d_dev in PRESTAMOS:
                 ejemplar = ejemplares[codigo]
                 persona = personas[documento]
+                # Ya cargado en una ejecución anterior (aunque ya esté devuelto): no se repite.
                 if Prestamo.objects.filter(ejemplar=ejemplar, persona=persona).exists():
+                    continue
+                # Un ejemplar no puede tener dos préstamos activos: si ya está prestado, se omite.
+                if not ejemplar.disponible:
+                    self.stdout.write(self.style.WARNING(
+                        f'Préstamo de {codigo} a {persona} omitido: '
+                        'el ejemplar ya tiene un préstamo activo.'
+                    ))
                     continue
                 Prestamo.objects.create(
                     ejemplar=ejemplar,
