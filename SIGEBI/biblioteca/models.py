@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.functions import Upper
 from django.utils import timezone
@@ -115,11 +114,10 @@ class Ejemplar(models.Model):
     def normalizar_codigo(valor):
         return (valor or '').strip().upper()
 
-    def clean(self):
-        super().clean()
+    def clean_fields(self, exclude=None):
+        # Se normaliza antes de validar: "   " queda vacío y el campo da un solo error.
         self.codigo_inventario = self.normalizar_codigo(self.codigo_inventario)
-        if not self.codigo_inventario:
-            raise ValidationError({'codigo_inventario': 'Este campo es obligatorio.'})
+        super().clean_fields(exclude=exclude)
 
     def save(self, *args, **kwargs):
         self.codigo_inventario = self.normalizar_codigo(self.codigo_inventario)
