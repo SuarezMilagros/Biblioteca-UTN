@@ -61,11 +61,3 @@ class EjemplarForm(forms.ModelForm):
         if otros.exists():
             raise forms.ValidationError(MENSAJE_CODIGO_REPETIDO)
         return codigo
-
-    def _post_clean(self):
-        # Si el formulario ya marcó el código (vacío o repetido), se conserva ese mensaje.
-        # Ejemplar.clean() vuelve a exigir el código y, sin esto, el mensaje aparecería dos veces.
-        mensajes_del_formulario = list(self._errors.get('codigo_inventario', []))
-        super()._post_clean()
-        if mensajes_del_formulario:
-            self._errors['codigo_inventario'] = self.error_class(mensajes_del_formulario)

@@ -123,7 +123,8 @@ class LibroListView(LoginRequiredMixin, ListView):
         queryset = super().get_queryset().select_related('autor', 'editorial', 'categoria')
         q = self.request.GET.get('q', '').strip()
         if q:
-            queryset = queryset.filter(titulo__icontains=q)
+            # unaccent (PostgreSQL): "calculo" también encuentra "Cálculo I".
+            queryset = queryset.filter(titulo__unaccent__icontains=q)
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -208,3 +209,4 @@ class EjemplarUpdateView(LoginRequiredMixin, GuardarRegistroMixin, UpdateView):
 
     def get_success_url(self):
         return reverse('biblioteca:ejemplar_detail', args=[self.object.pk])
+        
