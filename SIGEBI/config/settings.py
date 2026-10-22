@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.postgres',
     'biblioteca',
 ]
 
@@ -136,6 +137,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Autenticación (Django Auth)
+# Las pantallas de gestión exigen usuario autenticado.
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'biblioteca:inicio'
