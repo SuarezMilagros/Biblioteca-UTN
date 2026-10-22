@@ -3,7 +3,33 @@
 {% block titulo %}Inicio · SIGEBI{% endblock %}
 
 {% block contenido %}
-    <h1>SIGEBI</h1>
-    <p>La estructura base está lista. Las pantallas de la biblioteca se desarrollarán en las próximas etapas.</p>
-    <p><a href="{% url 'admin:index' %}">Panel de administración</a></p>
+    <h1>Gestión del catálogo</h1>
+    <p class="texto-suave">Elegí una sección para consultar o registrar información de la biblioteca.</p>
+
+    <div class="tarjetas">
+        <a href="{% url 'biblioteca:libro_list' %}">
+            <h2>Libros</h2>
+            <p>Buscar por título y ver el detalle de cada libro.</p>
+        </a>
+        <a href="{% url 'biblioteca:ejemplar_list' %}">
+            <h2>Ejemplares</h2>
+            <p>Copias físicas, con su ID y código de inventario.</p>
+        </a>
+        <a href="{% url 'biblioteca:autor_list' %}">
+            <h2>Autores</h2>
+            <p>Alta y edición de autores.</p>
+        </a>
+        <a href="{% url 'biblioteca:editorial_list' %}">
+            <h2>Editoriales</h2>
+            <p>Alta y edición de editoriales.</p>
+        </a>
+        <a href="{% url 'biblioteca:categoria_list' %}">
+            <h2>Categorías</h2>
+            <p>Alta y edición de categorías.</p>
+        </a>
+    </div>
+
+    <p class="texto-suave" style="margin-top: 2rem;">
+        <a href="{% url 'admin:index' %}">Panel de administración</a>
+    </p>
 {% endblock %}

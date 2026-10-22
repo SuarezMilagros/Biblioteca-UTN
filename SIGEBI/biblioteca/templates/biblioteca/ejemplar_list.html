@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Ejemplares · SIGEBI{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-seccion">
+    <h1>Ejemplares</h1>
+    <a class="boton" href="{% url 'biblioteca:ejemplar_create' %}">Nuevo ejemplar</a>
+</div>
+
+{% if object_list %}
+<div class="tabla-contenedor">
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Código de inventario</th>
+                <th scope="col">ID de inventario</th>
+                <th scope="col">Libro</th>
+                <th scope="col">Disponibilidad</th>
+                <th scope="col"><span class="sr-only">Acciones</span></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for ejemplar in object_list %}
+            <tr>
+                <td data-etiqueta="Código">{{ ejemplar.codigo_inventario }}</td>
+                <td data-etiqueta="ID">{{ ejemplar.id_inventario|default:"—" }}</td>
+                <td data-etiqueta="Libro"><a href="{% url 'biblioteca:libro_detail' ejemplar.libro_id %}">{{ ejemplar.libro.titulo }}</a></td>
+                <td data-etiqueta="Disponibilidad">
+                    {% if ejemplar.disponible %}
+                        <span class="badge badge-disponible">Disponible</span>
+                    {% else %}
+                        <span class="badge badge-prestado">Prestado</span>
+                    {% endif %}
+                </td>
+                <td class="acciones">
+                    <a href="{% url 'biblioteca:ejemplar_detail' ejemplar.pk %}">Ver</a>
+                    <a href="{% url 'biblioteca:ejemplar_update' ejemplar.pk %}">Editar</a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include 'biblioteca/_paginacion.html' %}
+{% else %}
+<p class="vacio">Todavía no hay ejemplares registrados.</p>
+{% endif %}
+{% endblock %}

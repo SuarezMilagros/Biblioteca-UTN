@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Categorías · SIGEBI{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-seccion">
+    <h1>Categorías</h1>
+    <a class="boton" href="{% url 'biblioteca:categoria_create' %}">Nueva categoría</a>
+</div>
+
+{% if object_list %}
+<div class="tabla-contenedor">
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Nombre</th>
+                <th scope="col">Descripción</th>
+                <th scope="col"><span class="sr-only">Acciones</span></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for categoria in object_list %}
+            <tr>
+                <td data-etiqueta="Nombre">{{ categoria.nombre }}</td>
+                <td data-etiqueta="Descripción">{{ categoria.descripcion|default:"—"|truncatechars:80 }}</td>
+                <td class="acciones">
+                    <a href="{% url 'biblioteca:categoria_update' categoria.pk %}">Editar</a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include 'biblioteca/_paginacion.html' %}
+{% else %}
+<p class="vacio">Todavía no hay categorías registradas.</p>
+{% endif %}
+{% endblock %}

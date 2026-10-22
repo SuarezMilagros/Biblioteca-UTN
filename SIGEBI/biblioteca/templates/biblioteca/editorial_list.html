@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Editoriales · SIGEBI{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-seccion">
+    <h1>Editoriales</h1>
+    <a class="boton" href="{% url 'biblioteca:editorial_create' %}">Nueva editorial</a>
+</div>
+
+{% if object_list %}
+<div class="tabla-contenedor">
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Nombre</th>
+                <th scope="col"><span class="sr-only">Acciones</span></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for editorial in object_list %}
+            <tr>
+                <td data-etiqueta="Nombre">{{ editorial.nombre }}</td>
+                <td class="acciones">
+                    <a href="{% url 'biblioteca:editorial_update' editorial.pk %}">Editar</a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include 'biblioteca/_paginacion.html' %}
+{% else %}
+<p class="vacio">Todavía no hay editoriales registradas.</p>
+{% endif %}
+{% endblock %}

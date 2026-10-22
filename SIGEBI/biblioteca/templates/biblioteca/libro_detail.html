@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block titulo %}{{ object.titulo }} · SIGEBI{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-seccion">
+    <h1>{{ object.titulo }}</h1>
+    <a class="boton-secundario" href="{% url 'biblioteca:libro_update' object.pk %}">Editar libro</a>
+</div>
+
+<section class="tarjeta" style="margin-bottom: 1.5rem;">
+    <div class="detalle-con-portada">
+        {% if object.imagen %}
+            <img class="portada" src="{{ object.imagen.url }}" alt="Portada de {{ object.titulo }}">
+        {% else %}
+            <div class="portada-vacia">Sin imagen de portada</div>
+        {% endif %}
+
+        <dl class="detalle">
+            <dt>Autor</dt>
+            <dd>{{ object.autor }}</dd>
+
+            <dt>Editorial</dt>
+            <dd>{{ object.editorial }}</dd>
+
+            <dt>Categoría</dt>
+            <dd>{{ object.categoria }}</dd>
+
+            <dt>ISBN</dt>
+            <dd>{{ object.isbn|default:"Sin ISBN" }}</dd>
+        </dl>
+    </div>
+</section>
+
+<div class="encabezado-seccion">
+    <h2>Ejemplares</h2>
+    <a class="boton" href="{% url 'biblioteca:ejemplar_create' %}?libro={{ object.pk }}">Agregar ejemplar</a>
+</div>
+
+{% if ejemplares %}
+<div class="tabla-contenedor">
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Código de inventario</th>
+                <th scope="col">ID de inventario</th>
+                <th scope="col">Disponibilidad</th>
+                <th scope="col"><span class="sr-only">Acciones</span></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for ejemplar in ejemplares %}
+            <tr>
+                <td data-etiqueta="Código">{{ ejemplar.codigo_inventario }}</td>
+                <td data-etiqueta="ID">{{ ejemplar.id_inventario|default:"—" }}</td>
+                <td data-etiqueta="Disponibilidad">
+                    {% if ejemplar.disponible %}
+                        <span class="badge badge-disponible">Disponible</span>
+                    {% else %}
+                        <span class="badge badge-prestado">Prestado</span>
+                    {% endif %}
+                </td>
+                <td class="acciones">
+                    <a href="{% url 'biblioteca:ejemplar_detail' ejemplar.pk %}">Ver</a>
+                    <a href="{% url 'biblioteca:ejemplar_update' ejemplar.pk %}">Editar</a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="vacio">Este libro todavía no tiene ejemplares registrados.</p>
+{% endif %}
+
+<p style="margin-top: 1.5rem;"><a href="{% url 'biblioteca:libro_list' %}">← Volver a libros</a></p>
+{% endblock %}

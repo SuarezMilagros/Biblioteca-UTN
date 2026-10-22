@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Autores · SIGEBI{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-seccion">
+    <h1>Autores</h1>
+    <a class="boton" href="{% url 'biblioteca:autor_create' %}">Nuevo autor</a>
+</div>
+
+{% if object_list %}
+<div class="tabla-contenedor">
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Apellido</th>
+                <th scope="col">Nombre</th>
+                <th scope="col"><span class="sr-only">Acciones</span></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for autor in object_list %}
+            <tr>
+                <td data-etiqueta="Apellido">{{ autor.apellido }}</td>
+                <td data-etiqueta="Nombre">{{ autor.nombre }}</td>
+                <td class="acciones">
+                    <a href="{% url 'biblioteca:autor_update' autor.pk %}">Editar</a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include 'biblioteca/_paginacion.html' %}
+{% else %}
+<p class="vacio">Todavía no hay autores registrados.</p>
+{% endif %}
+{% endblock %}

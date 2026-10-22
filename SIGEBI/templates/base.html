@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+{% load static %}<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -7,13 +7,42 @@
     <link rel="stylesheet" href="{% static 'css/estilos.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body>python manage.py test biblioteca.tests.test_interfaz -v 2
+    <a class="saltar-contenido" href="#contenido">Saltar al contenido</a>
+
     <header class="cabecera">
-        <a class="marca" href="{% url 'inicio' %}">SIGEBI</a>
-        <span class="subtitulo">Sistema de Gestión de Biblioteca · UTN FRT, Extensión Áulica Concepción</span>
+        <div class="cabecera-superior">
+            <a class="marca" href="{% url 'biblioteca:inicio' %}">SIGEBI</a>
+            <span class="subtitulo">Sistema de Gestión de Biblioteca · UTN FRT, Extensión Áulica Concepción</span>
+        </div>
+        {% if user.is_authenticated %}
+        {% with seccion=request.resolver_match.url_name %}
+        <nav class="navegacion" aria-label="Principal">
+            <a href="{% url 'biblioteca:libro_list' %}"{% if seccion|slice:":6" == "libro_" %} aria-current="page"{% endif %}>Libros</a>
+            <a href="{% url 'biblioteca:ejemplar_list' %}"{% if seccion|slice:":9" == "ejemplar_" %} aria-current="page"{% endif %}>Ejemplares</a>
+            <a href="{% url 'biblioteca:autor_list' %}"{% if seccion|slice:":6" == "autor_" %} aria-current="page"{% endif %}>Autores</a>
+            <a href="{% url 'biblioteca:editorial_list' %}"{% if seccion|slice:":10" == "editorial_" %} aria-current="page"{% endif %}>Editoriales</a>
+            <a href="{% url 'biblioteca:categoria_list' %}"{% if seccion|slice:":10" == "categoria_" %} aria-current="page"{% endif %}>Categorías</a>
+            <form method="post" action="{% url 'logout' %}" class="formulario-salir">
+                {% csrf_token %}
+                <button type="submit" class="boton-enlace">Salir ({{ user.get_username }})</button>
+            </form>
+        </nav>
+        {% endwith %}
+        {% endif %}
     </header>
 
-    <main class="contenido">
+    <main class="contenido" id="contenido" tabindex="-1">
+        <div role="status">
+            {% if messages %}
+            <ul class="mensajes">
+                {% for message in messages %}
+                <li class="mensaje mensaje-{{ message.tags }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+
         {% block contenido %}{% endblock %}
     </main>
 

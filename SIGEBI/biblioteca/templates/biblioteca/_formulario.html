@@ -1,0 +1,25 @@
+{% comment %}
+    Campos de un ModelForm. Requiere la variable `form`.
+    Se incluye desde las plantillas de alta y edición.
+{% endcomment %}
+
+{% if form.non_field_errors %}
+<div class="alerta-error">
+    {% for error in form.non_field_errors %}
+    <p>{{ error }}</p>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% for campo in form %}
+<div class="campo{% if campo.errors %} campo-error{% endif %}">
+    <label for="{{ campo.id_for_label }}">
+        {{ campo.label }}{% if campo.field.required %} <span class="obligatorio" aria-hidden="true">*</span>{% endif %}
+    </label>
+    {{ campo }}
+    {% if campo.help_text %}<small class="ayuda">{{ campo.help_text }}</small>{% endif %}
+    {% for error in campo.errors %}
+    <small class="error">{{ error }}</small>
+    {% endfor %}
+</div>
+{% endfor %}

@@ -1,0 +1,15 @@
+{% comment %}
+    Paginación de un ListView. Conserva el texto de búsqueda `q` si existe.
+{% endcomment %}
+
+{% if is_paginated %}
+<nav class="paginacion" aria-label="Paginación">
+    {% if page_obj.has_previous %}
+        <a href="?{% if q %}q={{ q|urlencode }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
+    {% endif %}
+    <span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+        <a href="?{% if q %}q={{ q|urlencode }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Siguiente</a>
+    {% endif %}
+</nav>
+{% endif %}

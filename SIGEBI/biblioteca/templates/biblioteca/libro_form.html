@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block titulo %}{% if object %}Editar libro{% else %}Nuevo libro{% endif %} · SIGEBI{% endblock %}
+
+{% block contenido %}
+<h1>{% if object %}Editar libro{% else %}Nuevo libro{% endif %}</h1>
+
+<form method="post" enctype="multipart/form-data" class="formulario tarjeta">
+    {% csrf_token %}
+    {% include 'biblioteca/_formulario.html' %}
+    <div class="acciones-formulario">
+        <button type="submit" class="boton">Guardar</button>
+        {% if object %}
+            <a class="boton-secundario" href="{% url 'biblioteca:libro_detail' object.pk %}">Cancelar</a>
+        {% else %}
+            <a class="boton-secundario" href="{% url 'biblioteca:libro_list' %}">Cancelar</a>
+        {% endif %}
+    </div>
+</form>
+{% endblock %}

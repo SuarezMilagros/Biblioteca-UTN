@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Ejemplar {{ object.codigo_inventario }} · SIGEBI{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-seccion">
+    <h1>Ejemplar {{ object.codigo_inventario }}</h1>
+    <a class="boton-secundario" href="{% url 'biblioteca:ejemplar_update' object.pk %}">Editar ejemplar</a>
+</div>
+
+<section class="tarjeta">
+    <dl class="detalle">
+        <dt>Código de inventario</dt>
+        <dd>{{ object.codigo_inventario }}</dd>
+
+        <dt>ID de inventario</dt>
+        <dd>{{ object.id_inventario|default:"No registrado" }}</dd>
+
+        <dt>Libro</dt>
+        <dd><a href="{% url 'biblioteca:libro_detail' object.libro_id %}">{{ object.libro.titulo }}</a></dd>
+
+        <dt>Disponibilidad</dt>
+        <dd>
+            {% if object.disponible %}
+                <span class="badge badge-disponible">Disponible</span>
+            {% else %}
+                <span class="badge badge-prestado">Prestado</span>
+            {% endif %}
+        </dd>
+
+        <dt>Observaciones</dt>
+        <dd>{{ object.observaciones|default:"Sin observaciones" }}</dd>
+    </dl>
+</section>
+
+<p style="margin-top: 1.5rem;"><a href="{% url 'biblioteca:libro_detail' object.libro_id %}">← Volver al libro</a></p>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block titulo %}{% if object %}Editar autor{% else %}Nuevo autor{% endif %} · SIGEBI{% endblock %}
+
+{% block contenido %}
+<h1>{% if object %}Editar autor{% else %}Nuevo autor{% endif %}</h1>
+
+<form method="post" class="formulario tarjeta">
+    {% csrf_token %}
+    {% include 'biblioteca/_formulario.html' %}
+    <div class="acciones-formulario">
+        <button type="submit" class="boton">Guardar</button>
+        <a class="boton-secundario" href="{% url 'biblioteca:autor_list' %}">Cancelar</a>
+    </div>
+</form>
+{% endblock %}
