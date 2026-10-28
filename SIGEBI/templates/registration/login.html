@@ -6,21 +6,23 @@
 <section class="tarjeta tarjeta-centrada">
     <h1>Ingresar</h1>
 
-    {% if form.errors %}
+    {% if form.non_field_errors %}
     <div class="alerta-error">
-        <p>El usuario o la contraseña no son correctos.</p>
+        {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
     </div>
     {% endif %}
 
     <form method="post" action="{% url 'login' %}" class="formulario">
         {% csrf_token %}
         <div class="campo">
-            <label for="{{ form.username.id_for_label }}">Usuario</label>
+            <label for="{{ form.username.id_for_label }}">Correo electrónico</label>
             {{ form.username }}
+            {% for error in form.username.errors %}<p class="campo-error">{{ error }}</p>{% endfor %}
         </div>
         <div class="campo">
             <label for="{{ form.password.id_for_label }}">Contraseña</label>
             {{ form.password }}
+            {% for error in form.password.errors %}<p class="campo-error">{{ error }}</p>{% endfor %}
         </div>
         <input type="hidden" name="next" value="{{ next }}">
         <div class="acciones-formulario">

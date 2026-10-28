@@ -1,6 +1,7 @@
 from unittest import mock
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.db import IntegrityError
 from django.test import TestCase
 from django.urls import reverse
@@ -15,7 +16,10 @@ MENSAJE_CODIGO_REPETIDO = 'Ya existe un ejemplar con ese código de inventario.'
 class CatalogoBaseTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.usuario = get_user_model().objects.create_user(username='bibliotecario', password=CLAVE)
+        cls.usuario = get_user_model().objects.create_user(
+            username='bibliotecario', email='bibliotecario@example.com', password=CLAVE
+        )
+        cls.usuario.groups.add(Group.objects.get(name='Bibliotecario'))
         cls.categoria = Categoria.objects.create(nombre='Matemática')
         cls.autor = Autor.objects.create(nombre='Hugo', apellido='Ledesma')
         cls.editorial = Editorial.objects.create(nombre='Ediciones del Valle')
@@ -93,7 +97,7 @@ class AccesoTests(CatalogoBaseTestCase):
 
     def test_login_y_logout_por_post(self):
         self.client.logout()
-        respuesta = self.client.post(reverse('login'), {'username': 'bibliotecario', 'password': CLAVE})
+        respuesta = self.client.post(reverse('login'), {'username': 'bibliotecario@example.com', 'password': CLAVE})
         self.assertRedirects(respuesta, reverse('biblioteca:inicio'), fetch_redirect_response=False)
         respuesta = self.client.post(reverse('logout'))
         self.assertRedirects(respuesta, reverse('login'), fetch_redirect_response=False)
