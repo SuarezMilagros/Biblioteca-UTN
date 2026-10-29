@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.db import IntegrityError, transaction
 from django.shortcuts import render
 from django.urls import reverse, reverse_lazy
@@ -42,14 +42,16 @@ class GuardarRegistroMixin:
 
 # ---------- Categorías, autores y editoriales ----------
 
-class CategoriaListView(LoginRequiredMixin, ListView):
+class CategoriaListView(PermissionRequiredMixin, ListView):
+    permission_required = 'biblioteca.view_categoria'
     model = Categoria
     template_name = 'biblioteca/categoria_list.html'
     ordering = ['nombre']
     paginate_by = ELEMENTOS_POR_PAGINA
 
 
-class CategoriaCreateView(LoginRequiredMixin, GuardarRegistroMixin, CreateView):
+class CategoriaCreateView(PermissionRequiredMixin, GuardarRegistroMixin, CreateView):
+    permission_required = 'biblioteca.add_categoria'
     model = Categoria
     form_class = CategoriaForm
     template_name = 'biblioteca/categoria_form.html'
@@ -57,7 +59,8 @@ class CategoriaCreateView(LoginRequiredMixin, GuardarRegistroMixin, CreateView):
     mensaje_exito = 'Categoría "{obj}" registrada.'
 
 
-class CategoriaUpdateView(LoginRequiredMixin, GuardarRegistroMixin, UpdateView):
+class CategoriaUpdateView(PermissionRequiredMixin, GuardarRegistroMixin, UpdateView):
+    permission_required = 'biblioteca.change_categoria'
     model = Categoria
     form_class = CategoriaForm
     template_name = 'biblioteca/categoria_form.html'
@@ -65,14 +68,16 @@ class CategoriaUpdateView(LoginRequiredMixin, GuardarRegistroMixin, UpdateView):
     mensaje_exito = 'Categoría "{obj}" actualizada.'
 
 
-class AutorListView(LoginRequiredMixin, ListView):
+class AutorListView(PermissionRequiredMixin, ListView):
+    permission_required = 'biblioteca.view_autor'
     model = Autor
     template_name = 'biblioteca/autor_list.html'
     ordering = ['apellido', 'nombre']
     paginate_by = ELEMENTOS_POR_PAGINA
 
 
-class AutorCreateView(LoginRequiredMixin, GuardarRegistroMixin, CreateView):
+class AutorCreateView(PermissionRequiredMixin, GuardarRegistroMixin, CreateView):
+    permission_required = 'biblioteca.add_autor'
     model = Autor
     form_class = AutorForm
     template_name = 'biblioteca/autor_form.html'
@@ -80,7 +85,8 @@ class AutorCreateView(LoginRequiredMixin, GuardarRegistroMixin, CreateView):
     mensaje_exito = 'Autor "{obj}" registrado.'
 
 
-class AutorUpdateView(LoginRequiredMixin, GuardarRegistroMixin, UpdateView):
+class AutorUpdateView(PermissionRequiredMixin, GuardarRegistroMixin, UpdateView):
+    permission_required = 'biblioteca.change_autor'
     model = Autor
     form_class = AutorForm
     template_name = 'biblioteca/autor_form.html'
@@ -88,14 +94,16 @@ class AutorUpdateView(LoginRequiredMixin, GuardarRegistroMixin, UpdateView):
     mensaje_exito = 'Autor "{obj}" actualizado.'
 
 
-class EditorialListView(LoginRequiredMixin, ListView):
+class EditorialListView(PermissionRequiredMixin, ListView):
+    permission_required = 'biblioteca.view_editorial'
     model = Editorial
     template_name = 'biblioteca/editorial_list.html'
     ordering = ['nombre']
     paginate_by = ELEMENTOS_POR_PAGINA
 
 
-class EditorialCreateView(LoginRequiredMixin, GuardarRegistroMixin, CreateView):
+class EditorialCreateView(PermissionRequiredMixin, GuardarRegistroMixin, CreateView):
+    permission_required = 'biblioteca.add_editorial'
     model = Editorial
     form_class = EditorialForm
     template_name = 'biblioteca/editorial_form.html'
@@ -103,7 +111,8 @@ class EditorialCreateView(LoginRequiredMixin, GuardarRegistroMixin, CreateView):
     mensaje_exito = 'Editorial "{obj}" registrada.'
 
 
-class EditorialUpdateView(LoginRequiredMixin, GuardarRegistroMixin, UpdateView):
+class EditorialUpdateView(PermissionRequiredMixin, GuardarRegistroMixin, UpdateView):
+    permission_required = 'biblioteca.change_editorial'
     model = Editorial
     form_class = EditorialForm
     template_name = 'biblioteca/editorial_form.html'
@@ -113,7 +122,8 @@ class EditorialUpdateView(LoginRequiredMixin, GuardarRegistroMixin, UpdateView):
 
 # ---------- Libros ----------
 
-class LibroListView(LoginRequiredMixin, ListView):
+class LibroListView(PermissionRequiredMixin, ListView):
+    permission_required = 'biblioteca.view_libro'
     model = Libro
     template_name = 'biblioteca/libro_list.html'
     ordering = ['titulo']
@@ -133,7 +143,8 @@ class LibroListView(LoginRequiredMixin, ListView):
         return contexto
 
 
-class LibroDetailView(LoginRequiredMixin, DetailView):
+class LibroDetailView(PermissionRequiredMixin, DetailView):
+    permission_required = 'biblioteca.view_libro'
     model = Libro
     template_name = 'biblioteca/libro_detail.html'
 
@@ -143,7 +154,8 @@ class LibroDetailView(LoginRequiredMixin, DetailView):
         return contexto
 
 
-class LibroCreateView(LoginRequiredMixin, GuardarRegistroMixin, CreateView):
+class LibroCreateView(PermissionRequiredMixin, GuardarRegistroMixin, CreateView):
+    permission_required = 'biblioteca.add_libro'
     model = Libro
     form_class = LibroForm
     template_name = 'biblioteca/libro_form.html'
@@ -153,7 +165,8 @@ class LibroCreateView(LoginRequiredMixin, GuardarRegistroMixin, CreateView):
         return reverse('biblioteca:libro_detail', args=[self.object.pk])
 
 
-class LibroUpdateView(LoginRequiredMixin, GuardarRegistroMixin, UpdateView):
+class LibroUpdateView(PermissionRequiredMixin, GuardarRegistroMixin, UpdateView):
+    permission_required = 'biblioteca.change_libro'
     model = Libro
     form_class = LibroForm
     template_name = 'biblioteca/libro_form.html'
@@ -165,7 +178,8 @@ class LibroUpdateView(LoginRequiredMixin, GuardarRegistroMixin, UpdateView):
 
 # ---------- Ejemplares ----------
 
-class EjemplarListView(LoginRequiredMixin, ListView):
+class EjemplarListView(PermissionRequiredMixin, ListView):
+    permission_required = 'biblioteca.view_ejemplar'
     model = Ejemplar
     template_name = 'biblioteca/ejemplar_list.html'
     ordering = ['codigo_inventario']
@@ -175,7 +189,8 @@ class EjemplarListView(LoginRequiredMixin, ListView):
         return super().get_queryset().select_related('libro')
 
 
-class EjemplarDetailView(LoginRequiredMixin, DetailView):
+class EjemplarDetailView(PermissionRequiredMixin, DetailView):
+    permission_required = 'biblioteca.view_ejemplar'
     model = Ejemplar
     template_name = 'biblioteca/ejemplar_detail.html'
 
@@ -183,7 +198,8 @@ class EjemplarDetailView(LoginRequiredMixin, DetailView):
         return super().get_queryset().select_related('libro')
 
 
-class EjemplarCreateView(LoginRequiredMixin, GuardarRegistroMixin, CreateView):
+class EjemplarCreateView(PermissionRequiredMixin, GuardarRegistroMixin, CreateView):
+    permission_required = 'biblioteca.add_ejemplar'
     model = Ejemplar
     form_class = EjemplarForm
     template_name = 'biblioteca/ejemplar_form.html'
@@ -201,7 +217,8 @@ class EjemplarCreateView(LoginRequiredMixin, GuardarRegistroMixin, CreateView):
         return reverse('biblioteca:libro_detail', args=[self.object.libro_id])
 
 
-class EjemplarUpdateView(LoginRequiredMixin, GuardarRegistroMixin, UpdateView):
+class EjemplarUpdateView(PermissionRequiredMixin, GuardarRegistroMixin, UpdateView):
+    permission_required = 'biblioteca.change_ejemplar'
     model = Ejemplar
     form_class = EjemplarForm
     template_name = 'biblioteca/ejemplar_form.html'

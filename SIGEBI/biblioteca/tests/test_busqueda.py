@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.test import TestCase
 from django.urls import reverse
 
@@ -16,6 +17,7 @@ class BusquedaSinAcentosTests(TestCase):
 
     def setUp(self):
         usuario = get_user_model().objects.create_user(username='buscador', password='clave-de-prueba-123')
+        usuario.groups.add(Group.objects.get(name='Bibliotecario'))
         self.client.force_login(usuario)
 
     def buscar(self, texto):

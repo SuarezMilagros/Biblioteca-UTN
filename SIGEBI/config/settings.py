@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.postgres',
     'biblioteca',
+    'cuentas',
 ]
 
 MIDDLEWARE = [
@@ -149,3 +150,6 @@ MEDIA_ROOT = BASE_DIR / 'media'
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'biblioteca:inicio'
 LOGOUT_REDIRECT_URL = 'login'
+
+# Inicio de sesión por correo electrónico (ver cuentas/backends.py).
+AUTHENTICATION_BACKENDS = ['cuentas.backends.CorreoBackend']
