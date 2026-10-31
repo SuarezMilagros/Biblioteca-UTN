@@ -153,3 +153,11 @@ LOGOUT_REDIRECT_URL = 'login'
 
 # Inicio de sesión por correo electrónico (ver cuentas/backends.py).
 AUTHENTICATION_BACKENDS = ['cuentas.backends.CorreoBackend']
+
+# Recuperación de contraseña (ver cuentas/tests/test_recuperacion.py).
+# El enlace vence a la hora.
+PASSWORD_RESET_TIMEOUT = 3600
+
+# En desarrollo, el correo se imprime en la consola donde corre runserver.
+# El envío real se configura en la etapa 7, con variables de entorno.
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
