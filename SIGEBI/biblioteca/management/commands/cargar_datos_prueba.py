@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
@@ -8,6 +9,7 @@ from django.utils import timezone
 from biblioteca.models import (
     Autor, Categoria, Editorial, Ejemplar, Libro, Persona, Prestamo,
 )
+from cuentas.roles import BIBLIOTECARIO
 
 CATEGORIAS = [
     ('Administración', 'Gestión y organización de empresas.'),
@@ -134,11 +136,21 @@ class Command(BaseCommand):
 
             usuario, creado = get_user_model().objects.get_or_create(
                 username='bibliotecario_prueba',
-                defaults={'first_name': 'Bibliotecario', 'last_name': 'de Prueba'},
+                defaults={
+                    'first_name': 'Bibliotecario',
+                    'last_name': 'de Prueba',
+                    'email': 'bibliotecario.prueba@example.com',
+                },
             )
             if creado:
                 usuario.set_unusable_password()
                 usuario.save()
+            # Cuentas creadas antes de la etapa 5 no tienen correo ni rol: se completan.
+            # La contraseña no se toca, así que repetir el seed no la cambia.
+            if not usuario.email:
+                usuario.email = 'bibliotecario.prueba@example.com'
+                usuario.save(update_fields=['email'])
+            usuario.groups.add(Group.objects.get_or_create(name=BIBLIOTECARIO)[0])
 
             for codigo, documento, d_prestamo, d_venc, d_dev in PRESTAMOS:
                 ejemplar = ejemplares[codigo]

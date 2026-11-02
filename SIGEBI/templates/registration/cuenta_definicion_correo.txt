@@ -1,0 +1,12 @@
+{% autoescape off %}Se creó una cuenta de SIGEBI para este correo.
+
+Para entrar, primero definí tu contraseña en este enlace:
+{{ enlace }}
+
+El enlace vence en una hora y deja de funcionar después de definir la contraseña.
+Si venció, pedile a un administrador que te reenvíe este correo.
+
+Si no esperabas este correo, no hace falta hacer nada.
+
+SIGEBI · Biblioteca UTN FRT Concepción
+{% endautoescape %}

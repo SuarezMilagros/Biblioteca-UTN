@@ -3,6 +3,8 @@
 Un correo inexistente, una contraseña incorrecta, una cuenta inactiva o un correo
 repetido muestran el mismo mensaje: así nadie puede averiguar qué cuentas existen.
 """
+from unittest import mock
+
 from django.contrib.auth import SESSION_KEY, authenticate, get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -59,10 +61,11 @@ class LoginPorCorreoTests(TestCase):
         self.assertNotIn(SESSION_KEY, self.client.session)
 
     def test_correo_repetido_no_inicia_sesion(self):
-        get_user_model().objects.create_user(
-            username='40555666', email='ANA.PEREZ@example.com', password=CLAVE
-        )
-        respuesta = self.iniciar_sesion('ana.perez@example.com')
+        # Desde la etapa 5 la base no admite dos cuentas con el mismo correo (índice único).
+        # Para probar que el backend igual se niega, se simula una búsqueda que devuelve dos cuentas.
+        otra = get_user_model()(username='40555666', email='ANA.PEREZ@example.com')
+        with mock.patch.object(get_user_model().objects, 'filter', return_value=[self.usuario, otra]):
+            respuesta = self.iniciar_sesion('ana.perez@example.com')
         self.assertContains(respuesta, MENSAJE_GENERICO)
         self.assertNotIn(SESSION_KEY, self.client.session)
 
