@@ -23,6 +23,10 @@
             <a href="{% url 'biblioteca:autor_list' %}"{% if seccion|slice:":6" == "autor_" %} aria-current="page"{% endif %}>Autores</a>
             <a href="{% url 'biblioteca:editorial_list' %}"{% if seccion|slice:":10" == "editorial_" %} aria-current="page"{% endif %}>Editoriales</a>
             <a href="{% url 'biblioteca:categoria_list' %}"{% if seccion|slice:":10" == "categoria_" %} aria-current="page"{% endif %}>Categorías</a>
+            {% if perms.auth.view_user %}
+            <a href="{% url 'cuentas:usuario_list' %}"{% if seccion|slice:":8" == "usuario_" %} aria-current="page"{% endif %}>Cuentas</a>
+            {% endif %}
+            <a href="{% url 'password_change' %}"{% if seccion|slice:":15" == "password_change" %} aria-current="page"{% endif %}>Cambiar contraseña</a>
             <form method="post" action="{% url 'logout' %}" class="formulario-salir">
                 {% csrf_token %}
                 <button type="submit" class="boton-enlace">Salir ({{ user.get_username }})</button>
