@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block titulo %}{{ object }} · SIGEBI{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-seccion">
+    <h1>{{ object.apellido }}, {{ object.nombre }}</h1>
+    {% if perms.biblioteca.change_persona %}
+    <a class="boton-secundario" href="{% url 'biblioteca:persona_update' object.pk %}">Editar persona</a>
+    {% endif %}
+</div>
+
+<section class="tarjeta">
+    <dl class="detalle">
+        <dt>Documento</dt>
+        <dd>{{ object.documento }}</dd>
+
+        <dt>Tipo</dt>
+        <dd>{{ object.get_tipo_display }}</dd>
+
+        <dt>Legajo</dt>
+        <dd>{{ object.legajo|default:"No registrado" }}</dd>
+
+        <dt>Estado</dt>
+        <dd>
+            {% if object.activo %}
+                <span class="badge badge-disponible">Activa</span>
+            {% else %}
+                <span class="badge badge-baja">Dada de baja</span>
+            {% endif %}
+        </dd>
+    </dl>
+
+    {% if perms.biblioteca.change_persona %}
+    <div class="acciones-formulario">
+        {% if object.activo %}
+        <form method="post" action="{% url 'biblioteca:persona_baja' object.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="boton-secundario">Dar de baja</button>
+        </form>
+        <small class="ayuda">Una persona dada de baja no puede recibir préstamos nuevos. No se puede dar de baja si tiene préstamos sin devolver.</small>
+        {% else %}
+        <form method="post" action="{% url 'biblioteca:persona_reactivar' object.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="boton-secundario">Reactivar</button>
+        </form>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+
+<h2>Préstamos</h2>
+{% if prestamos %}
+<div class="tabla-contenedor">
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Ejemplar</th>
+                <th scope="col">Libro</th>
+                <th scope="col">Préstamo</th>
+                <th scope="col">Vencimiento</th>
+                <th scope="col">Devolución</th>
+                <th scope="col">Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for prestamo in prestamos %}
+            <tr>
+                <td data-etiqueta="Ejemplar"><a href="{% url 'biblioteca:ejemplar_detail' prestamo.ejemplar_id %}">{{ prestamo.ejemplar.codigo_inventario }}</a></td>
+                <td data-etiqueta="Libro">{{ prestamo.ejemplar.libro.titulo }}</td>
+                <td data-etiqueta="Préstamo">{{ prestamo.fecha_prestamo|date:"d/m/Y" }}</td>
+                <td data-etiqueta="Vencimiento">{{ prestamo.fecha_vencimiento|date:"d/m/Y" }}</td>
+                <td data-etiqueta="Devolución">{{ prestamo.fecha_devolucion|date:"d/m/Y"|default:"—" }}</td>
+                <td data-etiqueta="Estado">
+                    {% if prestamo.vencido %}
+                        <span class="badge badge-vencido">Vencido</span>
+                    {% elif prestamo.activo %}
+                        <span class="badge badge-prestado">Sin devolver</span>
+                    {% else %}
+                        <span class="badge badge-disponible">Devuelto</span>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="vacio">Esta persona no tiene préstamos registrados.</p>
+{% endif %}
+
+<p style="margin-top: 1.5rem;"><a href="{% url 'biblioteca:persona_list' %}">← Volver a personas</a></p>
+{% endblock %}

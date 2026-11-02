@@ -15,6 +15,10 @@
             <h2>Ejemplares</h2>
             <p>Copias físicas, con su ID y código de inventario.</p>
         </a>
+        <a href="{% url 'biblioteca:persona_list' %}">
+            <h2>Personas</h2>
+            <p>Alumnos y profesores que pueden pedir préstamos.</p>
+        </a>
         <a href="{% url 'biblioteca:autor_list' %}">
             <h2>Autores</h2>
             <p>Alta y edición de autores.</p>
@@ -29,7 +33,9 @@
         </a>
     </div>
 
+    {% if user.is_superuser %}
     <p class="texto-suave" style="margin-top: 2rem;">
         <a href="{% url 'admin:index' %}">Panel de administración</a>
     </p>
+    {% endif %}
 {% endblock %}

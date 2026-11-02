@@ -1,8 +1,9 @@
 from django import forms
 
-from .models import Autor, Categoria, Editorial, Ejemplar, Libro
+from .models import Autor, Categoria, Editorial, Ejemplar, Libro, Persona
 
 MENSAJE_CODIGO_REPETIDO = 'Ya existe un ejemplar con ese código de inventario.'
+MENSAJE_DOCUMENTO_REPETIDO = 'Ya existe una persona con ese documento.'
 
 
 class CategoriaForm(forms.ModelForm):
@@ -61,3 +62,36 @@ class EjemplarForm(forms.ModelForm):
         if otros.exists():
             raise forms.ValidationError(MENSAJE_CODIGO_REPETIDO)
         return codigo
+
+
+class PersonaForm(forms.ModelForm):
+    """Alta y edición de personas. La baja y la reactivación se hacen con botones aparte."""
+
+    class Meta:
+        model = Persona
+        fields = ['nombre', 'apellido', 'documento', 'tipo', 'legajo']
+        labels = {
+            'documento': 'Documento',
+            'tipo': 'Tipo',
+            'legajo': 'Legajo (opcional)',
+        }
+        help_texts = {
+            'documento': 'Sin puntos ni espacios; si los escribís, se quitan al guardar.',
+        }
+        error_messages = {
+            'documento': {'unique': MENSAJE_DOCUMENTO_REPETIDO},
+        }
+
+    def clean_documento(self):
+        documento = Persona.normalizar_documento(self.cleaned_data['documento'])
+        if not documento:
+            raise forms.ValidationError('Este campo es obligatorio.')
+        otras = Persona.objects.filter(documento__iexact=documento)
+        if self.instance.pk is not None:
+            otras = otras.exclude(pk=self.instance.pk)
+        if otras.exists():
+            raise forms.ValidationError(MENSAJE_DOCUMENTO_REPETIDO)
+        return documento
+
+    def clean_legajo(self):
+        return self.cleaned_data['legajo'].strip()

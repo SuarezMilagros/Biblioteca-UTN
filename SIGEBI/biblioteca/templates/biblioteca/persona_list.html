@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Personas · SIGEBI{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-seccion">
+    <h1>Personas</h1>
+    {% if perms.biblioteca.add_persona %}
+    <a class="boton" href="{% url 'biblioteca:persona_create' %}">Nueva persona</a>
+    {% endif %}
+</div>
+
+<form method="get" class="busqueda" role="search" action="{% url 'biblioteca:persona_list' %}">
+    <label for="q" class="sr-only">Buscar por apellido, nombre, documento o legajo</label>
+    <input type="search" id="q" name="q" value="{{ q }}" placeholder="Apellido, nombre, documento o legajo">
+    <label for="estado" class="sr-only">Estado</label>
+    <select id="estado" name="estado">
+        <option value="activas"{% if estado == 'activas' %} selected{% endif %}>Activas</option>
+        <option value="baja"{% if estado == 'baja' %} selected{% endif %}>Dadas de baja</option>
+        <option value="todas"{% if estado == 'todas' %} selected{% endif %}>Todas</option>
+    </select>
+    <button type="submit" class="boton">Buscar</button>
+    {% if q or estado != 'activas' %}
+        <a href="{% url 'biblioteca:persona_list' %}">Quitar filtros</a>
+    {% endif %}
+</form>
+
+{% if object_list %}
+<div class="tabla-contenedor">
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Apellido y nombre</th>
+                <th scope="col">Documento</th>
+                <th scope="col">Tipo</th>
+                <th scope="col">Legajo</th>
+                <th scope="col">Estado</th>
+                <th scope="col"><span class="sr-only">Acciones</span></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for persona in object_list %}
+            <tr>
+                <td data-etiqueta="Apellido y nombre"><a href="{% url 'biblioteca:persona_detail' persona.pk %}">{{ persona }}</a></td>
+                <td data-etiqueta="Documento">{{ persona.documento }}</td>
+                <td data-etiqueta="Tipo">{{ persona.get_tipo_display }}</td>
+                <td data-etiqueta="Legajo">{{ persona.legajo|default:"—" }}</td>
+                <td data-etiqueta="Estado">
+                    {% if persona.activo %}
+                        <span class="badge badge-disponible">Activa</span>
+                    {% else %}
+                        <span class="badge badge-baja">Dada de baja</span>
+                    {% endif %}
+                </td>
+                <td class="acciones">
+                    {% if perms.biblioteca.change_persona %}
+                    <a href="{% url 'biblioteca:persona_update' persona.pk %}">Editar</a>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include 'biblioteca/_paginacion.html' %}
+{% else %}
+    {% if q %}
+    <p class="vacio">No se encontraron personas con «{{ q }}».</p>
+    {% elif estado == 'baja' %}
+    <p class="vacio">No hay personas dadas de baja.</p>
+    {% else %}
+    <p class="vacio">Todavía no hay personas registradas.</p>
+    {% endif %}
+{% endif %}
+{% endblock %}

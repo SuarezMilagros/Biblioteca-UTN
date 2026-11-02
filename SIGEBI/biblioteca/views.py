@@ -2,12 +2,14 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.db import IntegrityError, transaction
-from django.shortcuts import render
+from django.db.models import Q
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
+from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
-from .forms import AutorForm, CategoriaForm, EditorialForm, EjemplarForm, LibroForm
-from .models import Autor, Categoria, Editorial, Ejemplar, Libro
+from .forms import AutorForm, CategoriaForm, EditorialForm, EjemplarForm, LibroForm, PersonaForm
+from .models import Autor, Categoria, Editorial, Ejemplar, Libro, Persona
 
 ELEMENTOS_POR_PAGINA = 20
 MENSAJE_DATO_REPETIDO = 'Ya existe un registro con esos datos. Revisá los valores e intentá de nuevo.'
@@ -226,4 +228,117 @@ class EjemplarUpdateView(PermissionRequiredMixin, GuardarRegistroMixin, UpdateVi
 
     def get_success_url(self):
         return reverse('biblioteca:ejemplar_detail', args=[self.object.pk])
-        
+
+
+# ---------- Personas ----------
+
+# Filtro del listado de personas: valor del parámetro `estado` -> filtro sobre `activo`.
+ESTADOS_DE_PERSONA = {
+    'activas': {'activo': True},
+    'baja': {'activo': False},
+    'todas': {},
+}
+
+
+class PersonaListView(PermissionRequiredMixin, ListView):
+    permission_required = 'biblioteca.view_persona'
+    model = Persona
+    template_name = 'biblioteca/persona_list.html'
+    ordering = ['apellido', 'nombre']
+    paginate_by = ELEMENTOS_POR_PAGINA
+
+    def estado(self):
+        estado = self.request.GET.get('estado', 'activas')
+        return estado if estado in ESTADOS_DE_PERSONA else 'activas'
+
+    def get_queryset(self):
+        queryset = super().get_queryset().filter(**ESTADOS_DE_PERSONA[self.estado()])
+        q = self.request.GET.get('q', '').strip()
+        if q:
+            # unaccent (PostgreSQL): "perez" también encuentra "Pérez".
+            documento = Persona.normalizar_documento(q)
+            queryset = queryset.filter(
+                Q(apellido__unaccent__icontains=q)
+                | Q(nombre__unaccent__icontains=q)
+                | Q(documento__icontains=documento)
+                | Q(legajo__icontains=q)
+            )
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        contexto['q'] = self.request.GET.get('q', '').strip()
+        contexto['estado'] = self.estado()
+        return contexto
+
+
+class PersonaDetailView(PermissionRequiredMixin, DetailView):
+    permission_required = 'biblioteca.view_persona'
+    model = Persona
+    template_name = 'biblioteca/persona_detail.html'
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        contexto['prestamos'] = (
+            self.object.prestamos.select_related('ejemplar__libro').order_by('-fecha_prestamo', '-pk')
+        )
+        return contexto
+
+
+class PersonaCreateView(PermissionRequiredMixin, GuardarRegistroMixin, CreateView):
+    permission_required = 'biblioteca.add_persona'
+    model = Persona
+    form_class = PersonaForm
+    template_name = 'biblioteca/persona_form.html'
+    mensaje_exito = 'Persona "{obj}" registrada.'
+
+    def get_success_url(self):
+        return reverse('biblioteca:persona_detail', args=[self.object.pk])
+
+
+class PersonaUpdateView(PermissionRequiredMixin, GuardarRegistroMixin, UpdateView):
+    permission_required = 'biblioteca.change_persona'
+    model = Persona
+    form_class = PersonaForm
+    template_name = 'biblioteca/persona_form.html'
+    mensaje_exito = 'Persona "{obj}" actualizada.'
+
+    def get_success_url(self):
+        return reverse('biblioteca:persona_detail', args=[self.object.pk])
+
+
+class PersonaBajaView(PermissionRequiredMixin, View):
+    """Baja lógica: la persona queda inactiva y conserva su historial de préstamos."""
+
+    permission_required = 'biblioteca.change_persona'
+    http_method_names = ['post']
+
+    def post(self, request, pk):
+        persona = get_object_or_404(Persona, pk=pk)
+        if not persona.activo:
+            messages.info(request, f'"{persona}" ya estaba dada de baja.')
+        elif persona.tiene_prestamos_activos:
+            messages.error(
+                request,
+                f'No se puede dar de baja a "{persona}": tiene préstamos sin devolver.',
+            )
+        else:
+            persona.activo = False
+            persona.save(update_fields=['activo'])
+            messages.success(request, f'"{persona}" quedó dada de baja.')
+        return redirect('biblioteca:persona_detail', pk=persona.pk)
+
+
+class PersonaReactivarView(PermissionRequiredMixin, View):
+    permission_required = 'biblioteca.change_persona'
+    http_method_names = ['post']
+
+    def post(self, request, pk):
+        persona = get_object_or_404(Persona, pk=pk)
+        if persona.activo:
+            messages.info(request, f'"{persona}" ya estaba activa.')
+        else:
+            persona.activo = True
+            persona.save(update_fields=['activo'])
+            messages.success(request, f'"{persona}" volvió a estar activa.')
+        return redirect('biblioteca:persona_detail', pk=persona.pk)

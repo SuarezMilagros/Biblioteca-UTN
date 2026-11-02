@@ -139,6 +139,12 @@ class Persona(models.Model):
     documento = models.CharField(max_length=20, unique=True)
     tipo = models.CharField(max_length=20, choices=Tipo.choices)
     legajo = models.CharField(max_length=20, blank=True)
+    # Baja lógica: la persona no se borra porque tiene historial de préstamos.
+    activo = models.BooleanField(
+        default=True,
+        verbose_name='activa',
+        help_text='Una persona dada de baja no puede recibir préstamos nuevos.',
+    )
 
     class Meta:
         verbose_name = 'persona'
@@ -146,6 +152,19 @@ class Persona(models.Model):
 
     def __str__(self):
         return f'{self.apellido}, {self.nombre}'
+
+    @staticmethod
+    def normalizar_documento(valor):
+        """Quita espacios y puntos, y pasa a mayúsculas: "40.111.222" queda "40111222"."""
+        return (valor or '').replace('.', '').replace(' ', '').strip().upper()
+
+    def save(self, *args, **kwargs):
+        self.documento = self.normalizar_documento(self.documento)
+        super().save(*args, **kwargs)
+
+    @property
+    def tiene_prestamos_activos(self):
+        return self.prestamos.filter(fecha_devolucion__isnull=True).exists()
 
 
 class Prestamo(models.Model):
