@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Cuenta · SIGEBI{% endblock %}
+
+{% block contenido %}
+<section class="tarjeta tarjeta-centrada">
+    <h1>{% if object %}Editar cuenta{% else %}Nueva cuenta{% endif %}</h1>
+
+    <form method="post" class="formulario">
+        {% csrf_token %}
+        {% for campo in form %}
+        <div class="campo">
+            <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+            {{ campo }}
+            {% for error in campo.errors %}<p class="campo-error">{{ error }}</p>{% endfor %}
+        </div>
+        {% endfor %}
+        {% for error in form.non_field_errors %}<p class="campo-error">{{ error }}</p>{% endfor %}
+        <div class="acciones-formulario">
+            <button type="submit" class="boton">Guardar</button>
+        </div>
+    </form>
+
+    {% if object and not object.has_usable_password and object.is_active %}
+    <form method="post" action="{% url 'cuentas:usuario_reenviar_definicion' object.pk %}" class="formulario">
+        {% csrf_token %}
+        <button type="submit" class="boton">Reenviar correo de definición</button>
+    </form>
+    {% endif %}
+</section>
+{% endblock %}

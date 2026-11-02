@@ -35,13 +35,20 @@ if not SECRET_KEY:
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = []
+# Hosts que atiende Django, separados por coma (ver SIGEBI/.env.example).
+# Vacío: con DJANGO_DEBUG=True Django atiende localhost y 127.0.0.1; con False no atiende ninguno.
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv('DJANGO_ALLOWED_HOSTS', '').split(',')
+    if host.strip()
+]
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
+    # Admin de Django: solo para superusuarios (ver config/apps.py y config/admin.py).
+    'config.apps.SigebiAdminConfig',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -133,6 +140,8 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+# Carpeta a la que copia collectstatic los archivos para el servidor. No se versiona.
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
