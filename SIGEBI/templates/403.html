@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Acceso no permitido · SIGEBI{% endblock %}
+
+{% block contenido %}
+<section class="tarjeta tarjeta-centrada">
+    <h1>Acceso no permitido</h1>
+    <p>Tu cuenta no tiene permiso para ver esta página.</p>
+    <p>Si necesitás este acceso, pedíselo a un administrativo de la biblioteca.</p>
+    <p><a class="boton" href="{% url 'biblioteca:inicio' %}">Volver al inicio</a></p>
+</section>
+{% endblock %}
