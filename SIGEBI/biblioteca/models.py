@@ -1,7 +1,12 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.db import models
 from django.db.models.functions import Upper
 from django.utils import timezone
+
+# Plazo del préstamo en días corridos (decisión D2). Es el único lugar donde se define.
+PLAZO_PRESTAMO_DIAS = 14
 
 
 class Categoria(models.Model):
@@ -206,6 +211,15 @@ class Prestamo(models.Model):
                 name='vencimiento_no_anterior_a_prestamo',
                 violation_error_message='La fecha de vencimiento no puede ser anterior a la fecha de préstamo.',
             ),
+            # Decisión D8: una devolución nunca es anterior al préstamo.
+            models.CheckConstraint(
+                condition=(
+                    models.Q(fecha_devolucion__isnull=True)
+                    | models.Q(fecha_devolucion__gte=models.F('fecha_prestamo'))
+                ),
+                name='devolucion_no_anterior_a_prestamo',
+                violation_error_message='La fecha de devolución no puede ser anterior a la fecha de préstamo.',
+            ),
         ]
 
     def __str__(self):
@@ -218,3 +232,7 @@ class Prestamo(models.Model):
     @property
     def vencido(self):
         return self.activo and self.fecha_vencimiento < timezone.localdate()
+
+    @staticmethod
+    def calcular_vencimiento(fecha_prestamo):
+        return fecha_prestamo + timedelta(days=PLAZO_PRESTAMO_DIAS)

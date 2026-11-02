@@ -5,11 +5,15 @@ from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.views import View
-from django.views.generic import CreateView, DetailView, ListView, UpdateView
+from django.views.generic import CreateView, DetailView, FormView, ListView, UpdateView
 
-from .forms import AutorForm, CategoriaForm, EditorialForm, EjemplarForm, LibroForm, PersonaForm
-from .models import Autor, Categoria, Editorial, Ejemplar, Libro, Persona
+from .forms import (
+    AutorForm, CategoriaForm, DevolucionForm, EditorialForm, EjemplarForm, LibroForm, PersonaForm,
+    PrestamoForm,
+)
+from .models import Autor, Categoria, Editorial, Ejemplar, Libro, Persona, Prestamo
 
 ELEMENTOS_POR_PAGINA = 20
 MENSAJE_DATO_REPETIDO = 'Ya existe un registro con esos datos. Revisá los valores e intentá de nuevo.'
@@ -199,6 +203,13 @@ class EjemplarDetailView(PermissionRequiredMixin, DetailView):
     def get_queryset(self):
         return super().get_queryset().select_related('libro')
 
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        prestamos = self.object.prestamos.select_related('persona').order_by('-fecha_prestamo', '-pk')
+        contexto['prestamos'] = prestamos
+        contexto['prestamo_activo'] = next((p for p in prestamos if p.activo), None)
+        return contexto
+
 
 class EjemplarCreateView(PermissionRequiredMixin, GuardarRegistroMixin, CreateView):
     permission_required = 'biblioteca.add_ejemplar'
@@ -342,3 +353,146 @@ class PersonaReactivarView(PermissionRequiredMixin, View):
             persona.save(update_fields=['activo'])
             messages.success(request, f'"{persona}" volvió a estar activa.')
         return redirect('biblioteca:persona_detail', pk=persona.pk)
+
+
+# ---------- Préstamos y devoluciones ----------
+
+MENSAJE_EJEMPLAR_YA_PRESTADO = 'Este ejemplar ya está prestado. Primero hay que registrar su devolución.'
+
+# Filtro del listado de préstamos: valor del parámetro `estado` -> (título, filtro, orden).
+ESTADOS_DE_PRESTAMO = {
+    'vigentes': ('Sin devolver', lambda qs, hoy: qs.filter(fecha_devolucion__isnull=True),
+                 ['fecha_vencimiento', 'pk']),
+    'vencidos': ('Vencidos', lambda qs, hoy: qs.filter(fecha_devolucion__isnull=True, fecha_vencimiento__lt=hoy),
+                 ['fecha_vencimiento', 'pk']),
+    'devueltos': ('Devueltos', lambda qs, hoy: qs.filter(fecha_devolucion__isnull=False),
+                  ['-fecha_devolucion', '-pk']),
+    'todos': ('Todos', lambda qs, hoy: qs, ['-fecha_prestamo', '-pk']),
+}
+
+
+class PrestamoListView(PermissionRequiredMixin, ListView):
+    permission_required = 'biblioteca.view_prestamo'
+    model = Prestamo
+    template_name = 'biblioteca/prestamo_list.html'
+    paginate_by = ELEMENTOS_POR_PAGINA
+
+    def estado(self):
+        estado = self.request.GET.get('estado', 'vigentes')
+        return estado if estado in ESTADOS_DE_PRESTAMO else 'vigentes'
+
+    def get_queryset(self):
+        _, filtrar, orden = ESTADOS_DE_PRESTAMO[self.estado()]
+        queryset = filtrar(
+            Prestamo.objects.select_related('persona', 'ejemplar__libro'), timezone.localdate()
+        ).order_by(*orden)
+        q = self.request.GET.get('q', '').strip()
+        if q:
+            queryset = queryset.filter(
+                Q(persona__apellido__unaccent__icontains=q)
+                | Q(persona__nombre__unaccent__icontains=q)
+                | Q(persona__documento__icontains=Persona.normalizar_documento(q))
+                | Q(ejemplar__codigo_inventario__icontains=q)
+                | Q(ejemplar__libro__titulo__unaccent__icontains=q)
+            )
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        contexto['q'] = self.request.GET.get('q', '').strip()
+        contexto['estado'] = self.estado()
+        contexto['estados'] = [(clave, titulo) for clave, (titulo, _, _) in ESTADOS_DE_PRESTAMO.items()]
+        return contexto
+
+
+class PrestamoCreateView(PermissionRequiredMixin, FormView):
+    """Préstamo de un ejemplar. Quien lo registra queda guardado como usuario del sistema."""
+
+    permission_required = 'biblioteca.add_prestamo'
+    form_class = PrestamoForm
+    template_name = 'biblioteca/prestamo_form.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.ejemplar = get_object_or_404(Ejemplar.objects.select_related('libro'), pk=kwargs['pk'])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        if not self.ejemplar.disponible:
+            messages.error(request, MENSAJE_EJEMPLAR_YA_PRESTADO)
+            return redirect('biblioteca:ejemplar_detail', pk=self.ejemplar.pk)
+        return super().get(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['ejemplar'] = self.ejemplar
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        contexto['ejemplar'] = self.ejemplar
+        return contexto
+
+    def form_valid(self, form):
+        try:
+            # Si otra persona prestó el mismo ejemplar al mismo tiempo, la base lo rechaza
+            # (un préstamo activo por ejemplar) y se vuelve al formulario sin error 500.
+            with transaction.atomic():
+                prestamo = Prestamo.objects.create(
+                    ejemplar=self.ejemplar,
+                    persona=form.persona,
+                    usuario_sistema=self.request.user,
+                    fecha_prestamo=form.cleaned_data['fecha_prestamo'],
+                    fecha_vencimiento=form.cleaned_data['fecha_vencimiento'],
+                )
+        except IntegrityError:
+            form.add_error(None, MENSAJE_EJEMPLAR_YA_PRESTADO)
+            return self.form_invalid(form)
+        messages.success(
+            self.request,
+            f'Préstamo registrado: {self.ejemplar} a "{prestamo.persona}". '
+            f'Vence el {prestamo.fecha_vencimiento:%d/%m/%Y}.',
+        )
+        return redirect('biblioteca:ejemplar_detail', pk=self.ejemplar.pk)
+
+
+class DevolucionView(PermissionRequiredMixin, FormView):
+    permission_required = 'biblioteca.change_prestamo'
+    form_class = DevolucionForm
+    template_name = 'biblioteca/devolucion_form.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.prestamo = get_object_or_404(
+            Prestamo.objects.select_related('persona', 'ejemplar__libro'), pk=kwargs['pk']
+        )
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        if not self.prestamo.activo:
+            messages.info(request, 'Este préstamo ya tiene registrada su devolución.')
+            return redirect('biblioteca:ejemplar_detail', pk=self.prestamo.ejemplar_id)
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        if not self.prestamo.activo:
+            messages.info(request, 'Este préstamo ya tiene registrada su devolución.')
+            return redirect('biblioteca:ejemplar_detail', pk=self.prestamo.ejemplar_id)
+        return super().post(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['prestamo'] = self.prestamo
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        contexto['prestamo'] = self.prestamo
+        return contexto
+
+    def form_valid(self, form):
+        self.prestamo.fecha_devolucion = form.cleaned_data['fecha_devolucion']
+        self.prestamo.save(update_fields=['fecha_devolucion'])
+        messages.success(
+            self.request,
+            f'Devolución registrada: {self.prestamo.ejemplar} vuelve a estar disponible.',
+        )
+        return redirect('biblioteca:ejemplar_detail', pk=self.prestamo.ejemplar_id)

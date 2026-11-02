@@ -15,6 +15,10 @@
             <h2>Ejemplares</h2>
             <p>Copias físicas, con su ID y código de inventario.</p>
         </a>
+        <a href="{% url 'biblioteca:prestamo_list' %}">
+            <h2>Préstamos</h2>
+            <p>Préstamos sin devolver, vencidos y devoluciones.</p>
+        </a>
         <a href="{% url 'biblioteca:persona_list' %}">
             <h2>Personas</h2>
             <p>Alumnos y profesores que pueden pedir préstamos.</p>

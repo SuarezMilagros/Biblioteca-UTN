@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Préstamos · SIGEBI{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-seccion">
+    <h1>Préstamos</h1>
+    <a class="boton-secundario" href="{% url 'biblioteca:ejemplar_list' %}">Prestar un ejemplar</a>
+</div>
+
+<form method="get" class="busqueda" role="search" action="{% url 'biblioteca:prestamo_list' %}">
+    <label for="q" class="sr-only">Buscar por persona, documento, código o título</label>
+    <input type="search" id="q" name="q" value="{{ q }}" placeholder="Persona, documento, código o título">
+    <label for="estado" class="sr-only">Estado</label>
+    <select id="estado" name="estado">
+        {% for clave, titulo in estados %}
+        <option value="{{ clave }}"{% if estado == clave %} selected{% endif %}>{{ titulo }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit" class="boton">Buscar</button>
+    {% if q or estado != 'vigentes' %}
+        <a href="{% url 'biblioteca:prestamo_list' %}">Quitar filtros</a>
+    {% endif %}
+</form>
+
+{% if object_list %}
+<div class="tabla-contenedor">
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Ejemplar</th>
+                <th scope="col">Libro</th>
+                <th scope="col">Persona</th>
+                <th scope="col">Préstamo</th>
+                <th scope="col">Vencimiento</th>
+                <th scope="col">Devolución</th>
+                <th scope="col">Estado</th>
+                <th scope="col"><span class="sr-only">Acciones</span></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for prestamo in object_list %}
+            <tr>
+                <td data-etiqueta="Ejemplar"><a href="{% url 'biblioteca:ejemplar_detail' prestamo.ejemplar_id %}">{{ prestamo.ejemplar.codigo_inventario }}</a></td>
+                <td data-etiqueta="Libro">{{ prestamo.ejemplar.libro.titulo }}</td>
+                <td data-etiqueta="Persona"><a href="{% url 'biblioteca:persona_detail' prestamo.persona_id %}">{{ prestamo.persona }}</a></td>
+                <td data-etiqueta="Préstamo">{{ prestamo.fecha_prestamo|date:"d/m/Y" }}</td>
+                <td data-etiqueta="Vencimiento">{{ prestamo.fecha_vencimiento|date:"d/m/Y" }}</td>
+                <td data-etiqueta="Devolución">{{ prestamo.fecha_devolucion|date:"d/m/Y"|default:"—" }}</td>
+                <td data-etiqueta="Estado">{% include 'biblioteca/_estado_prestamo.html' %}</td>
+                <td class="acciones">
+                    {% if prestamo.activo and perms.biblioteca.change_prestamo %}
+                    <a href="{% url 'biblioteca:prestamo_devolver' prestamo.pk %}" aria-label="Registrar devolución de {{ prestamo.ejemplar.codigo_inventario }}">Devolver</a>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include 'biblioteca/_paginacion.html' %}
+{% else %}
+    {% if q %}
+    <p class="vacio">No se encontraron préstamos con «{{ q }}».</p>
+    {% elif estado == 'vencidos' %}
+    <p class="vacio">No hay préstamos vencidos.</p>
+    {% elif estado == 'vigentes' %}
+    <p class="vacio">No hay préstamos sin devolver.</p>
+    {% else %}
+    <p class="vacio">No hay préstamos para mostrar.</p>
+    {% endif %}
+{% endif %}
+{% endblock %}

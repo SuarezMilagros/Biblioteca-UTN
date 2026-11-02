@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Prestar {{ ejemplar.codigo_inventario }} · SIGEBI{% endblock %}
+
+{% block contenido %}
+<h1>Prestar ejemplar {{ ejemplar.codigo_inventario }}</h1>
+<p class="texto-suave">{{ ejemplar.libro.titulo }}</p>
+
+<form method="post" class="formulario tarjeta">
+    {% csrf_token %}
+    {% include 'biblioteca/_formulario.html' %}
+    <div class="acciones-formulario">
+        <button type="submit" class="boton">Registrar préstamo</button>
+        <a class="boton-secundario" href="{% url 'biblioteca:ejemplar_detail' ejemplar.pk %}">Cancelar</a>
+    </div>
+</form>
+{% endblock %}
