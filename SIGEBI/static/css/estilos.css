@@ -228,6 +228,8 @@ h2 { font-size: 1.2rem; margin: 1.5rem 0 0.75rem; }
 
 .badge-disponible { background: var(--verde-claro); color: var(--verde); }
 .badge-prestado { background: var(--ambar-claro); color: var(--ambar); }
+.badge-vencido { background: var(--rojo-claro); color: var(--rojo); }
+.badge-baja { background: var(--borde); color: var(--texto-suave); }
 
 /* ---------- Búsqueda y paginación ---------- */
 
@@ -245,6 +247,14 @@ h2 { font-size: 1.2rem; margin: 1.5rem 0 0.75rem; }
     border: 1px solid var(--borde);
     border-radius: 6px;
     font: inherit;
+}
+
+.busqueda select {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--borde);
+    border-radius: 6px;
+    font: inherit;
+    background: var(--blanco);
 }
 
 .paginacion {

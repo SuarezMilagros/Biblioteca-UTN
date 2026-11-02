@@ -40,8 +40,8 @@ class EjemplarAdmin(admin.ModelAdmin):
 
 @admin.register(Persona)
 class PersonaAdmin(admin.ModelAdmin):
-    list_display = ('apellido', 'nombre', 'documento', 'tipo', 'legajo')
-    list_filter = ('tipo',)
+    list_display = ('apellido', 'nombre', 'documento', 'tipo', 'legajo', 'activo')
+    list_filter = ('tipo', 'activo')
     search_fields = ('apellido', 'nombre', 'documento', 'legajo')
 
 

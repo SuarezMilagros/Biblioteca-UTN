@@ -20,6 +20,7 @@
         <nav class="navegacion" aria-label="Principal">
             <a href="{% url 'biblioteca:libro_list' %}"{% if seccion|slice:":6" == "libro_" %} aria-current="page"{% endif %}>Libros</a>
             <a href="{% url 'biblioteca:ejemplar_list' %}"{% if seccion|slice:":9" == "ejemplar_" %} aria-current="page"{% endif %}>Ejemplares</a>
+            <a href="{% url 'biblioteca:persona_list' %}"{% if seccion|slice:":8" == "persona_" %} aria-current="page"{% endif %}>Personas</a>
             <a href="{% url 'biblioteca:autor_list' %}"{% if seccion|slice:":6" == "autor_" %} aria-current="page"{% endif %}>Autores</a>
             <a href="{% url 'biblioteca:editorial_list' %}"{% if seccion|slice:":10" == "editorial_" %} aria-current="page"{% endif %}>Editoriales</a>
             <a href="{% url 'biblioteca:categoria_list' %}"{% if seccion|slice:":10" == "categoria_" %} aria-current="page"{% endif %}>Categorías</a>
