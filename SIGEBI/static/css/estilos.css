@@ -224,6 +224,7 @@ h2 { font-size: 1.2rem; margin: 1.5rem 0 0.75rem; }
     border-radius: 999px;
     font-size: 0.85rem;
     font-weight: 600;
+    white-space: nowrap;
 }
 
 .badge-disponible { background: var(--verde-claro); color: var(--verde); }
@@ -287,6 +288,7 @@ h2 { font-size: 1.2rem; margin: 1.5rem 0 0.75rem; }
 .formulario input[type="text"],
 .formulario input[type="password"],
 .formulario input[type="number"],
+.formulario input[type="date"],
 .formulario input[type="search"],
 .formulario input[type="file"],
 .formulario select,

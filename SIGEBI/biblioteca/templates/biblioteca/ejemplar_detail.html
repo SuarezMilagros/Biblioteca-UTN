@@ -30,8 +30,56 @@
 
         <dt>Observaciones</dt>
         <dd>{{ object.observaciones|default:"Sin observaciones" }}</dd>
+
+        {% if prestamo_activo %}
+        <dt>Prestado a</dt>
+        <dd><a href="{% url 'biblioteca:persona_detail' prestamo_activo.persona_id %}">{{ prestamo_activo.persona }}</a></dd>
+
+        <dt>Vence</dt>
+        <dd>{{ prestamo_activo.fecha_vencimiento|date:"d/m/Y" }} {% with prestamo=prestamo_activo %}{% include 'biblioteca/_estado_prestamo.html' %}{% endwith %}</dd>
+        {% endif %}
     </dl>
+
+    <div class="acciones-formulario">
+        {% if prestamo_activo %}
+            {% if perms.biblioteca.change_prestamo %}
+            <a class="boton" href="{% url 'biblioteca:prestamo_devolver' prestamo_activo.pk %}">Registrar devolución</a>
+            {% endif %}
+        {% elif perms.biblioteca.add_prestamo %}
+            <a class="boton" href="{% url 'biblioteca:prestamo_create' object.pk %}">Prestar</a>
+        {% endif %}
+    </div>
 </section>
+
+<h2>Historial de préstamos</h2>
+{% if prestamos %}
+<div class="tabla-contenedor">
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Persona</th>
+                <th scope="col">Préstamo</th>
+                <th scope="col">Vencimiento</th>
+                <th scope="col">Devolución</th>
+                <th scope="col">Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for prestamo in prestamos %}
+            <tr>
+                <td data-etiqueta="Persona"><a href="{% url 'biblioteca:persona_detail' prestamo.persona_id %}">{{ prestamo.persona }}</a></td>
+                <td data-etiqueta="Préstamo">{{ prestamo.fecha_prestamo|date:"d/m/Y" }}</td>
+                <td data-etiqueta="Vencimiento">{{ prestamo.fecha_vencimiento|date:"d/m/Y" }}</td>
+                <td data-etiqueta="Devolución">{{ prestamo.fecha_devolucion|date:"d/m/Y"|default:"—" }}</td>
+                <td data-etiqueta="Estado">{% include 'biblioteca/_estado_prestamo.html' %}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="vacio">Este ejemplar todavía no se prestó.</p>
+{% endif %}
 
 <p style="margin-top: 1.5rem;"><a href="{% url 'biblioteca:libro_detail' object.libro_id %}">← Volver al libro</a></p>
 {% endblock %}

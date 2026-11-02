@@ -28,6 +28,7 @@ urlpatterns = [
     path('ejemplares/nuevo/', views.EjemplarCreateView.as_view(), name='ejemplar_create'),
     path('ejemplares/<int:pk>/', views.EjemplarDetailView.as_view(), name='ejemplar_detail'),
     path('ejemplares/<int:pk>/editar/', views.EjemplarUpdateView.as_view(), name='ejemplar_update'),
+    path('ejemplares/<int:pk>/prestar/', views.PrestamoCreateView.as_view(), name='prestamo_create'),
 
     path('personas/', views.PersonaListView.as_view(), name='persona_list'),
     path('personas/nueva/', views.PersonaCreateView.as_view(), name='persona_create'),
@@ -35,4 +36,7 @@ urlpatterns = [
     path('personas/<int:pk>/editar/', views.PersonaUpdateView.as_view(), name='persona_update'),
     path('personas/<int:pk>/baja/', views.PersonaBajaView.as_view(), name='persona_baja'),
     path('personas/<int:pk>/reactivar/', views.PersonaReactivarView.as_view(), name='persona_reactivar'),
+
+    path('prestamos/', views.PrestamoListView.as_view(), name='prestamo_list'),
+    path('prestamos/<int:pk>/devolver/', views.DevolucionView.as_view(), name='prestamo_devolver'),
 ]

@@ -72,12 +72,9 @@
                 <td data-etiqueta="Vencimiento">{{ prestamo.fecha_vencimiento|date:"d/m/Y" }}</td>
                 <td data-etiqueta="Devolución">{{ prestamo.fecha_devolucion|date:"d/m/Y"|default:"—" }}</td>
                 <td data-etiqueta="Estado">
-                    {% if prestamo.vencido %}
-                        <span class="badge badge-vencido">Vencido</span>
-                    {% elif prestamo.activo %}
-                        <span class="badge badge-prestado">Sin devolver</span>
-                    {% else %}
-                        <span class="badge badge-disponible">Devuelto</span>
+                    {% include 'biblioteca/_estado_prestamo.html' %}
+                    {% if prestamo.activo and perms.biblioteca.change_prestamo %}
+                    <br><a href="{% url 'biblioteca:prestamo_devolver' prestamo.pk %}">Registrar devolución</a>
                     {% endif %}
                 </td>
             </tr>
