@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.db import IntegrityError, transaction
-from django.db.models import Q
+from django.db.models import Count, Exists, OuterRef, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -13,6 +13,7 @@ from .forms import (
     AutorForm, CategoriaForm, DevolucionForm, EditorialForm, EjemplarForm, LibroForm, PersonaForm,
     PrestamoForm,
 )
+from .informes import ExportarCSVMixin, nombre_de_archivo
 from .models import Autor, Categoria, Editorial, Ejemplar, Libro, Persona, Prestamo
 
 ELEMENTOS_POR_PAGINA = 20
@@ -184,15 +185,38 @@ class LibroUpdateView(PermissionRequiredMixin, GuardarRegistroMixin, UpdateView)
 
 # ---------- Ejemplares ----------
 
-class EjemplarListView(PermissionRequiredMixin, ListView):
+class EjemplarListView(PermissionRequiredMixin, ExportarCSVMixin, ListView):
     permission_required = 'biblioteca.view_ejemplar'
     model = Ejemplar
     template_name = 'biblioteca/ejemplar_list.html'
     ordering = ['codigo_inventario']
     paginate_by = ELEMENTOS_POR_PAGINA
 
+    # Informe del catálogo de ejemplares (D5).
+    encabezados_csv = [
+        'Código de inventario', 'ID de inventario', 'Título', 'Autor', 'Editorial',
+        'Categoría', 'ISBN', 'Disponibilidad', 'Observaciones',
+    ]
+
     def get_queryset(self):
         return super().get_queryset().select_related('libro')
+
+    def queryset_csv(self, queryset):
+        prestamo_activo = Prestamo.objects.filter(ejemplar=OuterRef('pk'), fecha_devolucion__isnull=True)
+        return queryset.select_related('libro__autor', 'libro__editorial', 'libro__categoria').annotate(
+            prestado=Exists(prestamo_activo)
+        )
+
+    def nombre_csv(self):
+        return nombre_de_archivo('ejemplares')
+
+    def fila_csv(self, ejemplar):
+        libro = ejemplar.libro
+        return [
+            ejemplar.codigo_inventario, ejemplar.id_inventario, libro.titulo, libro.autor,
+            libro.editorial, libro.categoria, libro.isbn,
+            'Prestado' if ejemplar.prestado else 'Disponible', ejemplar.observaciones,
+        ]
 
 
 class EjemplarDetailView(PermissionRequiredMixin, DetailView):
@@ -251,12 +275,29 @@ ESTADOS_DE_PERSONA = {
 }
 
 
-class PersonaListView(PermissionRequiredMixin, ListView):
+class PersonaListView(PermissionRequiredMixin, ExportarCSVMixin, ListView):
     permission_required = 'biblioteca.view_persona'
     model = Persona
     template_name = 'biblioteca/persona_list.html'
     ordering = ['apellido', 'nombre']
     paginate_by = ELEMENTOS_POR_PAGINA
+
+    # Informe de personas (D5, agregado a pedido del equipo).
+    encabezados_csv = ['Apellido', 'Nombre', 'Documento', 'Tipo', 'Legajo', 'Estado', 'Préstamos sin devolver']
+
+    def queryset_csv(self, queryset):
+        return queryset.annotate(
+            sin_devolver=Count('prestamos', filter=Q(prestamos__fecha_devolucion__isnull=True))
+        )
+
+    def nombre_csv(self):
+        return nombre_de_archivo('personas', self.estado())
+
+    def fila_csv(self, persona):
+        return [
+            persona.apellido, persona.nombre, persona.documento, persona.get_tipo_display(),
+            persona.legajo, 'Activa' if persona.activo else 'Dada de baja', persona.sin_devolver,
+        ]
 
     def estado(self):
         estado = self.request.GET.get('estado', 'activas')
@@ -371,11 +412,40 @@ ESTADOS_DE_PRESTAMO = {
 }
 
 
-class PrestamoListView(PermissionRequiredMixin, ListView):
+class PrestamoListView(PermissionRequiredMixin, ExportarCSVMixin, ListView):
     permission_required = 'biblioteca.view_prestamo'
     model = Prestamo
     template_name = 'biblioteca/prestamo_list.html'
     paginate_by = ELEMENTOS_POR_PAGINA
+
+    # Informes de préstamos sin devolver, vencidos, devueltos o todos (D5): exporta el filtro elegido.
+    encabezados_csv = [
+        'Código de inventario', 'Título', 'Apellido y nombre', 'Documento', 'Tipo',
+        'Fecha de préstamo', 'Vencimiento', 'Devolución', 'Estado', 'Días de atraso', 'Registrado por',
+    ]
+
+    def queryset_csv(self, queryset):
+        return queryset.select_related('usuario_sistema')
+
+    def nombre_csv(self):
+        return nombre_de_archivo('prestamos', self.estado())
+
+    def fila_csv(self, prestamo):
+        hoy = timezone.localdate()
+        if prestamo.vencido:
+            estado, atraso = 'Vencido', (hoy - prestamo.fecha_vencimiento).days
+        elif prestamo.activo:
+            estado, atraso = 'Sin devolver', 0
+        else:
+            estado, atraso = 'Devuelto', ''
+        persona = prestamo.persona
+        usuario = prestamo.usuario_sistema
+        return [
+            prestamo.ejemplar.codigo_inventario, prestamo.ejemplar.libro.titulo, persona,
+            persona.documento, persona.get_tipo_display(), prestamo.fecha_prestamo,
+            prestamo.fecha_vencimiento, prestamo.fecha_devolucion, estado, atraso,
+            usuario.get_full_name() or usuario.get_username(),
+        ]
 
     def estado(self):
         estado = self.request.GET.get('estado', 'vigentes')

@@ -5,7 +5,10 @@
 {% block contenido %}
 <div class="encabezado-seccion">
     <h1>Préstamos</h1>
-    <a class="boton-secundario" href="{% url 'biblioteca:ejemplar_list' %}">Prestar un ejemplar</a>
+    <div class="botones-encabezado">
+        {% if object_list %}<a class="boton-secundario" href="{% querystring formato='csv' page=None %}">Exportar CSV</a>{% endif %}
+        <a class="boton-secundario" href="{% url 'biblioteca:ejemplar_list' %}">Prestar un ejemplar</a>
+    </div>
 </div>
 
 <form method="get" class="busqueda" role="search" action="{% url 'biblioteca:prestamo_list' %}">

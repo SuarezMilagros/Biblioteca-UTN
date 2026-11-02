@@ -109,6 +109,12 @@ h2 { font-size: 1.2rem; margin: 1.5rem 0 0.75rem; }
 
 .encabezado-seccion h1 { margin: 0; }
 
+.botones-encabezado {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
 .sr-only {
     position: absolute;
     width: 1px;

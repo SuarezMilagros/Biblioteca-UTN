@@ -5,9 +5,12 @@
 {% block contenido %}
 <div class="encabezado-seccion">
     <h1>Personas</h1>
-    {% if perms.biblioteca.add_persona %}
-    <a class="boton" href="{% url 'biblioteca:persona_create' %}">Nueva persona</a>
-    {% endif %}
+    <div class="botones-encabezado">
+        {% if object_list %}<a class="boton-secundario" href="{% querystring formato='csv' page=None %}">Exportar CSV</a>{% endif %}
+        {% if perms.biblioteca.add_persona %}
+        <a class="boton" href="{% url 'biblioteca:persona_create' %}">Nueva persona</a>
+        {% endif %}
+    </div>
 </div>
 
 <form method="get" class="busqueda" role="search" action="{% url 'biblioteca:persona_list' %}">
