@@ -11,6 +11,21 @@
     </div>
 </div>
 
+<form method="get" class="busqueda" role="search" action="{% url 'biblioteca:ejemplar_list' %}">
+    <label for="q" class="sr-only">Buscar por código de inventario, ID o título</label>
+    <input type="search" id="q" name="q" value="{{ q }}" placeholder="Código de inventario, ID o título" autofocus>
+    <label for="estado" class="sr-only">Estado</label>
+    <select id="estado" name="estado">
+        <option value="activos"{% if estado == 'activos' %} selected{% endif %}>Activos</option>
+        <option value="baja"{% if estado == 'baja' %} selected{% endif %}>Dados de baja</option>
+        <option value="todos"{% if estado == 'todos' %} selected{% endif %}>Todos</option>
+    </select>
+    <button type="submit" class="boton">Buscar</button>
+    {% if q or estado != 'activos' %}
+        <a href="{% url 'biblioteca:ejemplar_list' %}">Quitar filtros</a>
+    {% endif %}
+</form>
+
 {% if object_list %}
 <div class="tabla-contenedor">
     <table class="tabla">
@@ -19,7 +34,7 @@
                 <th scope="col">Código de inventario</th>
                 <th scope="col">ID de inventario</th>
                 <th scope="col">Libro</th>
-                <th scope="col">Disponibilidad</th>
+                <th scope="col">Estado</th>
                 <th scope="col"><span class="sr-only">Acciones</span></th>
             </tr>
         </thead>
@@ -29,13 +44,7 @@
                 <td data-etiqueta="Código">{{ ejemplar.codigo_inventario }}</td>
                 <td data-etiqueta="ID">{{ ejemplar.id_inventario|default:"—" }}</td>
                 <td data-etiqueta="Libro"><a href="{% url 'biblioteca:libro_detail' ejemplar.libro_id %}">{{ ejemplar.libro.titulo }}</a></td>
-                <td data-etiqueta="Disponibilidad">
-                    {% if ejemplar.disponible %}
-                        <span class="badge badge-disponible">Disponible</span>
-                    {% else %}
-                        <span class="badge badge-prestado">Prestado</span>
-                    {% endif %}
-                </td>
+                <td data-etiqueta="Estado">{% include 'biblioteca/_estado_ejemplar.html' %}</td>
                 <td class="acciones">
                     <a href="{% url 'biblioteca:ejemplar_detail' ejemplar.pk %}">Ver</a>
                     <a href="{% url 'biblioteca:ejemplar_update' ejemplar.pk %}">Editar</a>
@@ -47,6 +56,12 @@
 </div>
 {% include 'biblioteca/_paginacion.html' %}
 {% else %}
-<p class="vacio">Todavía no hay ejemplares registrados.</p>
+    {% if q %}
+    <p class="vacio">No se encontraron ejemplares con «{{ q }}».</p>
+    {% elif estado == 'baja' %}
+    <p class="vacio">No hay ejemplares dados de baja.</p>
+    {% else %}
+    <p class="vacio">Todavía no hay ejemplares registrados.</p>
+    {% endif %}
 {% endif %}
 {% endblock %}

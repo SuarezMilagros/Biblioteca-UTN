@@ -121,13 +121,24 @@ class InformeDeEjemplaresTests(InformesTestCase):
         filas = self.filas(self.exportar('biblioteca:ejemplar_list'))
         self.assertEqual(filas[0], [
             'Código de inventario', 'ID de inventario', 'Título', 'Autor', 'Editorial',
-            'Categoría', 'ISBN', 'Disponibilidad', 'Observaciones',
+            'Categoría', 'ISBN', 'Estado', 'Motivo de baja', 'Fecha de baja', 'Observaciones',
         ])
+        comunes = ['Cálculo I', 'Ledesma, Hugo', 'Ediciones del Valle', 'Matemática', '978-987-1']
         self.assertEqual(filas[1:], [
-            ['CAL-001', '101', 'Cálculo I', 'Ledesma, Hugo', 'Ediciones del Valle', 'Matemática', '978-987-1', 'Prestado', ''],
-            ['CAL-002', '', 'Cálculo I', 'Ledesma, Hugo', 'Ediciones del Valle', 'Matemática', '978-987-1', 'Prestado', 'Tapa rota'],
-            ['CAL-003', '', 'Cálculo I', 'Ledesma, Hugo', 'Ediciones del Valle', 'Matemática', '978-987-1', 'Disponible', ''],
+            ['CAL-001', '101', *comunes, 'Prestado', '', '', ''],
+            ['CAL-002', '', *comunes, 'Prestado', '', '', 'Tapa rota'],
+            ['CAL-003', '', *comunes, 'Disponible', '', '', ''],
         ])
+
+    def test_ejemplar_dado_de_baja_con_motivo_y_fecha(self):
+        Ejemplar.objects.create(
+            codigo_inventario='CAL-009', libro=self.libro, activo=False,
+            motivo_baja=Ejemplar.MotivoBaja.PERDIDO, fecha_baja=timezone.localdate(),
+        )
+        self.assertEqual(len(self.filas(self.exportar('biblioteca:ejemplar_list'))), 4)  # solo activos
+        filas = self.filas(self.exportar('biblioteca:ejemplar_list', estado='baja'))
+        self.assertEqual(filas[1][0], 'CAL-009')
+        self.assertEqual(filas[1][7:10], ['Dado de baja', 'Perdido', self.fecha(0)])
 
     def test_exporta_todas_las_paginas(self):
         for numero in range(ELEMENTOS_POR_PAGINA + 5):

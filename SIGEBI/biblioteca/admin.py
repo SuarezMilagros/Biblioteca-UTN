@@ -30,7 +30,8 @@ class LibroAdmin(admin.ModelAdmin):
 
 @admin.register(Ejemplar)
 class EjemplarAdmin(admin.ModelAdmin):
-    list_display = ('codigo_inventario', 'libro', 'esta_disponible')
+    list_display = ('codigo_inventario', 'libro', 'activo', 'esta_disponible')
+    list_filter = ('activo', 'motivo_baja')
     search_fields = ('codigo_inventario', 'libro__titulo')
 
     @admin.display(boolean=True, description='Disponible')

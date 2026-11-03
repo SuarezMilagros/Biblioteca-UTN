@@ -1,0 +1,10 @@
+{% comment %}
+    Insignia del estado de un ejemplar. Requiere la variable `ejemplar`.
+{% endcomment %}
+{% if not ejemplar.activo %}
+    <span class="badge badge-baja">Dado de baja</span>
+{% elif ejemplar.disponible %}
+    <span class="badge badge-disponible">Disponible</span>
+{% else %}
+    <span class="badge badge-prestado">Prestado</span>
+{% endif %}
