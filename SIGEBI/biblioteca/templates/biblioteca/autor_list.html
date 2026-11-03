@@ -1,14 +1,23 @@
 {% extends 'base.html' %}
+{% load interfaz %}
 
 {% block titulo %}Autores · SIGEBI{% endblock %}
+{% block seccion %}Catálogo / <strong>Autores</strong>{% endblock %}
 
 {% block contenido %}
 <div class="encabezado-seccion">
-    <h1>Autores</h1>
-    <a class="boton" href="{% url 'biblioteca:autor_create' %}">Nuevo autor</a>
+    <div>
+        <p class="sobretitulo">Catálogo</p>
+        <h1>Autores</h1>
+        <p class="bajada">Personas autoras de los libros del catálogo.</p>
+    </div>
+    <div class="botones-encabezado">
+        <a class="boton" href="{% url 'biblioteca:autor_create' %}">{% icono 'mas' %}Nuevo autor</a>
+    </div>
 </div>
 
 {% if object_list %}
+<p class="resumen-listado">{{ paginator.count }} registro{{ paginator.count|pluralize }}</p>
 <div class="tabla-contenedor">
     <table class="tabla">
         <thead>
@@ -21,18 +30,17 @@
         <tbody>
         {% for autor in object_list %}
             <tr>
-                <td data-etiqueta="Apellido">{{ autor.apellido }}</td>
+                <td data-etiqueta="Apellido"><strong>{{ autor.apellido }}</strong></td>
                 <td data-etiqueta="Nombre">{{ autor.nombre }}</td>
-                <td class="acciones">
-                    <a href="{% url 'biblioteca:autor_update' autor.pk %}">Editar</a>
-                </td>
+                <td class="acciones"><a href="{% url 'biblioteca:autor_update' autor.pk %}">{% icono 'editar' %}Editar</a></td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
 </div>
-{% include 'biblioteca/_paginacion.html' %}
+{% include 'componentes/paginacion.html' %}
 {% else %}
-<p class="vacio">Todavía no hay autores registrados.</p>
+{% url 'biblioteca:autor_create' as url_nuevo %}
+{% include 'componentes/vacio.html' with icono='autor' titulo='Todavía no hay autores registrados.' texto='Cuando cargues un autor, aparecerá en esta lista.' accion_url=url_nuevo accion_texto='Nuevo autor' %}
 {% endif %}
 {% endblock %}

@@ -1,15 +1,24 @@
 {% extends 'base.html' %}
+{% load interfaz %}
 
 {% block titulo %}{% if object %}Editar autor{% else %}Nuevo autor{% endif %} · SIGEBI{% endblock %}
+{% block seccion %}Catálogo / Autores / <strong>{% if object %}Editar{% else %}Nuevo registro{% endif %}</strong>{% endblock %}
 
 {% block contenido %}
-<h1>{% if object %}Editar autor{% else %}Nuevo autor{% endif %}</h1>
+<a class="volver" href="{% url 'biblioteca:autor_list' %}">{% icono 'volver' %}Volver a autores</a>
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Catálogo</p>
+        <h1>{% if object %}Editar autor{% else %}Nuevo autor{% endif %}</h1>
+        <p class="bajada">Nombre y apellido de la persona autora. <span class="leyenda-obligatorios">Los campos con <span class="obligatorio">*</span> son obligatorios.</span></p>
+    </div>
+</div>
 
-<form method="post" class="formulario tarjeta">
+<form method="post" class="formulario tarjeta formulario-angosto">
     {% csrf_token %}
-    {% include 'biblioteca/_formulario.html' %}
+    {% include 'componentes/formulario.html' %}
     <div class="acciones-formulario">
-        <button type="submit" class="boton">Guardar</button>
+        <button type="submit" class="boton">{% icono 'exito' %}Guardar</button>
         <a class="boton-secundario" href="{% url 'biblioteca:autor_list' %}">Cancelar</a>
     </div>
 </form>

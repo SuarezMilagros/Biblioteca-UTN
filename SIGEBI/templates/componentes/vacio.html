@@ -1,0 +1,11 @@
+{% comment %}
+    Estado vacío: cuando un listado no tiene registros o una búsqueda no encontró nada.
+    Parámetros: icono, titulo, texto; opcionales: accion_url y accion_texto (solo acciones que existen).
+{% endcomment %}
+{% load interfaz %}
+<div class="vacio">
+    <span class="vacio-icono">{% icono icono|default:'buscar' %}</span>
+    {% if titulo %}<p class="vacio-titulo">{{ titulo }}</p>{% endif %}
+    {% if texto %}<p>{{ texto }}</p>{% endif %}
+    {% if accion_url %}<a class="boton-secundario" href="{{ accion_url }}">{% icono 'mas' %}{{ accion_texto }}</a>{% endif %}
+</div>

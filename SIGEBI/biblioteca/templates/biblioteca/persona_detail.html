@@ -1,55 +1,95 @@
 {% extends 'base.html' %}
+{% load interfaz %}
 
 {% block titulo %}{{ object }} · SIGEBI{% endblock %}
+{% block seccion %}Operación / Personas / <strong>{{ object }}</strong>{% endblock %}
 
 {% block contenido %}
+<a class="volver" href="{% url 'biblioteca:persona_list' %}">{% icono 'volver' %}Volver a personas</a>
+
 <div class="encabezado-seccion">
-    <h1>{{ object.apellido }}, {{ object.nombre }}</h1>
+    <div class="ficha">
+        <span class="avatar avatar-grande" aria-hidden="true">{{ object.nombre|slice:":1"|upper }}{{ object.apellido|slice:":1"|upper }}</span>
+        <div>
+            <h1>{{ object.apellido }}, {{ object.nombre }}</h1>
+            <div class="etiquetas">
+                <span class="badge badge-rol {% if object.tipo == 'PROFESOR' %}badge-info{% else %}badge-neutro{% endif %}">{{ object.get_tipo_display }}</span>
+                {% if object.activo %}
+                    <span class="badge badge-disponible">Activa</span>
+                {% else %}
+                    <span class="badge badge-baja">Dada de baja</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
     {% if perms.biblioteca.change_persona %}
-    <a class="boton-secundario" href="{% url 'biblioteca:persona_update' object.pk %}">Editar persona</a>
+    <div class="botones-encabezado">
+        <a class="boton-secundario" href="{% url 'biblioteca:persona_update' object.pk %}">{% icono 'editar' %}Editar persona</a>
+    </div>
     {% endif %}
 </div>
 
-<section class="tarjeta">
-    <dl class="detalle">
-        <dt>Documento</dt>
-        <dd>{{ object.documento }}</dd>
+<div class="dos-columnas">
+    <section class="tarjeta" aria-labelledby="titulo-datos-persona">
+        <div class="tarjeta-titulo"><h2 id="titulo-datos-persona">Datos</h2></div>
+        <dl class="detalle">
+            <dt>Documento</dt>
+            <dd>{{ object.documento }}</dd>
 
-        <dt>Tipo</dt>
-        <dd>{{ object.get_tipo_display }}</dd>
+            <dt>Tipo</dt>
+            <dd>{{ object.get_tipo_display }}</dd>
 
-        <dt>Legajo</dt>
-        <dd>{{ object.legajo|default:"No registrado" }}</dd>
+            <dt>Legajo</dt>
+            <dd>{{ object.legajo|default:"No registrado" }}</dd>
 
-        <dt>Estado</dt>
-        <dd>
-            {% if object.activo %}
-                <span class="badge badge-disponible">Activa</span>
-            {% else %}
-                <span class="badge badge-baja">Dada de baja</span>
-            {% endif %}
-        </dd>
-    </dl>
+            <dt>Estado</dt>
+            <dd>
+                {% if object.activo %}
+                    <span class="badge badge-disponible">Activa</span>
+                {% else %}
+                    <span class="badge badge-baja">Dada de baja</span>
+                {% endif %}
+            </dd>
+        </dl>
+    </section>
 
-    {% if perms.biblioteca.change_persona %}
-    <div class="acciones-formulario">
+    <div class="columna">
+        <section class="tarjeta" aria-labelledby="titulo-resumen-persona">
+            <div class="tarjeta-titulo"><h2 id="titulo-resumen-persona">Resumen de préstamos</h2></div>
+            <div class="cifras">
+                <div class="cifra"><strong>{{ prestamos|length }}</strong><span>En total</span></div>
+                <div class="cifra"><strong>{{ prestamos_sin_devolver }}</strong><span>Sin devolver</span></div>
+                <div class="cifra"><strong>{{ prestamos_vencidos }}</strong><span>Vencidos</span></div>
+            </div>
+        </section>
+
+        {% if perms.biblioteca.change_persona %}
         {% if object.activo %}
-        <form method="post" action="{% url 'biblioteca:persona_baja' object.pk %}">
-            {% csrf_token %}
-            <button type="submit" class="boton-secundario">Dar de baja</button>
-        </form>
-        <small class="ayuda">Una persona dada de baja no puede recibir préstamos nuevos. No se puede dar de baja si tiene préstamos sin devolver.</small>
+        <section class="tarjeta zona-baja" aria-labelledby="titulo-baja-persona">
+            <div class="tarjeta-titulo"><h2 id="titulo-baja-persona">Dar de baja</h2></div>
+            <p class="ayuda">Una persona dada de baja no puede recibir préstamos nuevos. No se puede dar de baja si tiene préstamos sin devolver.</p>
+            <form method="post" action="{% url 'biblioteca:persona_baja' object.pk %}" class="formulario-baja"
+                  data-confirmar="{{ object }} no podrá recibir préstamos nuevos hasta que se la reactive. Se conserva su historial."
+                  data-confirmar-titulo="¿Dar de baja a esta persona?" data-confirmar-boton="Dar de baja">
+                {% csrf_token %}
+                <button type="submit" class="boton-peligro">{% icono 'baja' %}Dar de baja</button>
+            </form>
+        </section>
         {% else %}
-        <form method="post" action="{% url 'biblioteca:persona_reactivar' object.pk %}">
-            {% csrf_token %}
-            <button type="submit" class="boton-secundario">Reactivar</button>
-        </form>
+        <section class="tarjeta" aria-labelledby="titulo-reactivar-persona">
+            <div class="tarjeta-titulo"><h2 id="titulo-reactivar-persona">Volver a habilitar</h2></div>
+            <p class="texto-suave">Al reactivarla, la persona puede volver a recibir préstamos.</p>
+            <form method="post" action="{% url 'biblioteca:persona_reactivar' object.pk %}" class="formulario-baja">
+                {% csrf_token %}
+                <button type="submit" class="boton-secundario">{% icono 'reactivar' %}Reactivar</button>
+            </form>
+        </section>
+        {% endif %}
         {% endif %}
     </div>
-    {% endif %}
-</section>
+</div>
 
-<h2>Préstamos</h2>
+<div class="subencabezado"><h2>Préstamos</h2></div>
 {% if prestamos %}
 <div class="tabla-contenedor">
     <table class="tabla">
@@ -61,20 +101,21 @@
                 <th scope="col">Vencimiento</th>
                 <th scope="col">Devolución</th>
                 <th scope="col">Estado</th>
+                <th scope="col"><span class="sr-only">Acciones</span></th>
             </tr>
         </thead>
         <tbody>
         {% for prestamo in prestamos %}
             <tr>
-                <td data-etiqueta="Ejemplar"><a href="{% url 'biblioteca:ejemplar_detail' prestamo.ejemplar_id %}">{{ prestamo.ejemplar.codigo_inventario }}</a></td>
+                <td data-etiqueta="Ejemplar"><a class="codigo" href="{% url 'biblioteca:ejemplar_detail' prestamo.ejemplar_id %}">{{ prestamo.ejemplar.codigo_inventario }}</a></td>
                 <td data-etiqueta="Libro">{{ prestamo.ejemplar.libro.titulo }}</td>
                 <td data-etiqueta="Préstamo">{{ prestamo.fecha_prestamo|date:"d/m/Y" }}</td>
                 <td data-etiqueta="Vencimiento">{{ prestamo.fecha_vencimiento|date:"d/m/Y" }}</td>
                 <td data-etiqueta="Devolución">{{ prestamo.fecha_devolucion|date:"d/m/Y"|default:"—" }}</td>
-                <td data-etiqueta="Estado">
-                    {% include 'biblioteca/_estado_prestamo.html' %}
+                <td data-etiqueta="Estado">{% include 'biblioteca/_estado_prestamo.html' %}</td>
+                <td class="acciones">
                     {% if prestamo.activo and perms.biblioteca.change_prestamo %}
-                    <br><a href="{% url 'biblioteca:prestamo_devolver' prestamo.pk %}">Registrar devolución</a>
+                    <a href="{% url 'biblioteca:prestamo_devolver' prestamo.pk %}">{% icono 'devolver' %}Registrar devolución</a>
                     {% endif %}
                 </td>
             </tr>
@@ -83,8 +124,6 @@
     </table>
 </div>
 {% else %}
-<p class="vacio">Esta persona no tiene préstamos registrados.</p>
+{% include 'componentes/vacio.html' with icono='prestamo' titulo='Esta persona no tiene préstamos registrados.' %}
 {% endif %}
-
-<p style="margin-top: 1.5rem;"><a href="{% url 'biblioteca:persona_list' %}">← Volver a personas</a></p>
 {% endblock %}

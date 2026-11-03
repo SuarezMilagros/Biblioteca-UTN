@@ -19,11 +19,11 @@ restricciones de integridad y la búsqueda sin tildes (`unaccent`).
 Ejecución de verificación al preparar la documentación (03/11/2026), con Python 3.13, Django 5.2.18 y PostgreSQL 16:
 
 ```
-Found 268 test(s).
+Found 291 test(s).
 Creating test database for alias 'default'...
 System check identified no issues (0 silenced).
 ----------------------------------------------------------------------
-Ran 268 tests
+Ran 291 tests
 
 OK
 Destroying test database for alias 'default'...
@@ -33,7 +33,7 @@ Destroying test database for alias 'default'...
 
 ## 3. Pruebas por módulo
 
-### 3.1. Aplicación `biblioteca` (183 pruebas)
+### 3.1. Aplicación `biblioteca` (200 pruebas)
 
 | Archivo | Pruebas | Qué verifica |
 |---|---|---|
@@ -47,8 +47,9 @@ Destroying test database for alias 'default'...
 | `test_prestamos.py` | 40 | Préstamo con vencimiento a 14 días, controles, préstamos simultáneos, devolución y regla D8 en la base, listados. |
 | `test_ejemplares_baja.py` | 18 | Baja lógica de ejemplares con motivo y fecha, coherencia en la base, búsqueda por código. |
 | `test_informes.py` | 20 | Exportación CSV: formato para Excel, filtros, todas las páginas, protección contra fórmulas, permisos. |
+| `test_rediseno.py` | 17 | Interfaz: indicadores reales del panel, aviso de vencidos, página de Informes, disponibilidad por libro, permisos y estructura accesible. |
 
-### 3.2. Aplicación `cuentas` (85 pruebas)
+### 3.2. Aplicación `cuentas` (87 pruebas)
 
 | Archivo | Pruebas | Qué verifica |
 |---|---|---|
@@ -60,6 +61,13 @@ Destroying test database for alias 'default'...
 | `test_navegacion.py` | 7 | Menú según el rol y página "Acceso no permitido" (403). |
 | `test_ajustes.py` | 9 | Altas simultáneas sin error 500 (CA-A9), falla del correo (CA-A8, CA-R5), sesión de 8 horas, botón Salir, enlace de recuperación. |
 | `test_correo.py` | 10 | Configuración SMTP desde el entorno y comando `probar_correo` sin mostrar la contraseña. |
+| `test_contexto.py` | 2 | Rol que muestra la cabecera según los grupos de la cuenta. |
+
+### 3.3. Aplicación `interfaz` (4 pruebas)
+
+| Archivo | Pruebas | Qué verifica |
+|---|---|---|
+| `tests.py` | 4 | Íconos decorativos (no toman foco), ícono desconocido sin error, iniciales y porcentajes. |
 
 ## 4. Verificación de que las pruebas detectan errores
 

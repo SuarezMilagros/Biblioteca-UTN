@@ -52,6 +52,7 @@ Navegador ──HTTP──► config/urls.py ──► vista (views.py) ──�
 - **`biblioteca`**: catálogo, ejemplares, personas, préstamos, devoluciones e informes.
 - **`cuentas`**: cuentas del personal, roles (grupos de Django), login por correo, alta de cuentas con
   definición de contraseña por correo y el comando `probar_correo`.
+- **`interfaz`**: sin modelos; etiquetas de plantilla compartidas (íconos y filtros de presentación).
 - **`config`**: configuración, rutas y el sitio de administración restringido a superusuarios.
 
 ### 3.2. Reutilización
@@ -59,6 +60,31 @@ Navegador ──HTTP──► config/urls.py ──► vista (views.py) ──�
 - `GuardarRegistroMixin`: guarda y, si la base rechaza un dato repetido, vuelve al formulario con un error en lugar de un 500.
 - `ExportarCSVMixin`: agrega la exportación CSV a cualquier listado, respetando sus filtros.
 - Parciales de plantillas para formularios, paginación y estados (de préstamo y de ejemplar).
+
+### 3.3. Interfaz de usuario
+
+La interfaz es un sistema de diseño propio, sin frameworks ni dependencias externas:
+
+- **Estilos** (`static/css/estilos.css`): variables de color y espacio en `:root`, con la paleta institucional
+  (naranja de acento, superficies blancas sobre gris claro). Los colores de texto se ajustaron para cumplir
+  el contraste WCAG AA (4,5:1): por ejemplo, el botón primario usa `#D43812` en lugar de `#F0441E` y el texto
+  secundario usa `#5F6672` en lugar de `#8A9099`.
+- **Estructura** (`templates/base.html`): menú lateral agrupado (Operación, Catálogo, Gestión), cabecera con
+  ubicación, aviso de préstamos vencidos y perfil (nombre y rol). En pantallas de hasta 900 px el menú pasa a
+  ser un panel que se abre con un botón; sin JavaScript se muestra completo arriba.
+- **Componentes compartidos** (sin dependencia de ninguna app de negocio): la app `interfaz` tiene los íconos
+  SVG y filtros de presentación (`{% load interfaz %}`, etiqueta `{% icono %}`), y `templates/componentes/` tiene
+  campos de formulario, errores, estados vacíos, paginación y avisos. Las insignias de estado de ejemplares y
+  préstamos (`biblioteca/_estado_*.html`) quedan en `biblioteca` porque dependen de sus modelos.
+- **Comportamiento** (`static/js/main.js`, mejora progresiva): modal de confirmación para dar de baja
+  (`data-confirmar`), estado de carga y bloqueo de doble envío, avisos que se pueden cerrar, mostrar u ocultar
+  la contraseña, vista previa de la portada y menú lateral en el teléfono (con cierre por Esc).
+- **Datos de presentación:** cada app aporta sus variables a la cabecera común: `cuentas/contexto.py` el rol
+  (`rol_usuario`) y `biblioteca/contexto.py` la cantidad de préstamos vencidos (`prestamos_vencidos_total`).
+  La plantilla base documenta al inicio qué variables espera; el panel (`inicio`) y la página de Informes (`InformesView`) calculan indicadores con
+  consultas de solo lectura y respetan los permisos de cada rol.
+- **Accesibilidad:** enlace "Saltar al contenido", foco visible, navegación completa por teclado, etiquetas
+  en todos los campos, `aria-current` en la sección activa y textos alternativos en las barras de los informes.
 
 ## 4. Modelo de datos
 
@@ -279,5 +305,5 @@ Todas tienen operación inversa. Las migraciones `biblioteca.0007` a `0009` se p
 
 ## 10. Pruebas
 
-La suite automática tiene **268 pruebas** (Django `TestCase` sobre PostgreSQL). El detalle por módulo y
+La suite automática tiene **291 pruebas** (Django `TestCase` sobre PostgreSQL). El detalle por módulo y
 el resultado están en [Evidencias de pruebas](evidencias-de-pruebas.md).

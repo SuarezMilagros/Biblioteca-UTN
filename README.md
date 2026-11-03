@@ -128,7 +128,7 @@ El superusuario crea las cuentas del personal desde **Cuentas** (ver el manual d
 python manage.py test
 ```
 
-Resultado esperado: **268 pruebas, OK**. El detalle está en [Evidencias de pruebas](docs/evidencias-de-pruebas.md).
+Resultado esperado: **291 pruebas, OK**. El detalle está en [Evidencias de pruebas](docs/evidencias-de-pruebas.md).
 
 ## 4. Roles
 
@@ -184,7 +184,8 @@ Biblioteca-UTN/
     │   ├── templates/
     │   └── tests/
     ├── cuentas/              Cuentas del personal, roles, login por correo, recuperación de contraseña
-    ├── templates/            Plantilla base, login, recuperación de contraseña y página 403
+    ├── interfaz/             Íconos y filtros de presentación compartidos (sin modelos)
+    ├── templates/            Plantilla base, componentes compartidos, login, contraseñas y página 403
     └── static/               CSS y JavaScript
 ```
 

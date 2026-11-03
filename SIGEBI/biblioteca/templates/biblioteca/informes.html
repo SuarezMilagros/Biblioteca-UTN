@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% load interfaz %}
+
+{% block titulo %}Informes · SIGEBI{% endblock %}
+{% block seccion %}Gestión / <strong>Informes</strong>{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Gestión</p>
+        <h1>Informes</h1>
+        <p class="bajada">Estado actual de la biblioteca y exportación de datos en CSV (se abren con Excel o LibreOffice).</p>
+    </div>
+</div>
+
+<div class="grilla-informes">
+    {% if prestamos %}
+    <section class="tarjeta" aria-labelledby="titulo-informe-prestamos">
+        <div class="tarjeta-titulo">
+            <h2 id="titulo-informe-prestamos">Préstamos</h2>
+            <span class="badge badge-neutro">{{ prestamos.total }} en total</span>
+        </div>
+        {% with total=prestamos.total %}
+        <div class="distribucion" role="img" aria-label="Préstamos: {{ prestamos.al_dia }} al día, {{ prestamos.vencidos }} vencidos y {{ prestamos.devueltos }} devueltos">
+            <span class="fondo-ambar" style="width: {{ prestamos.al_dia|porcentaje:total }}%"></span>
+            <span class="fondo-rojo" style="width: {{ prestamos.vencidos|porcentaje:total }}%"></span>
+            <span class="fondo-verde" style="width: {{ prestamos.devueltos|porcentaje:total }}%"></span>
+        </div>
+        {% endwith %}
+        <ul class="leyenda">
+            <li><span class="punto fondo-ambar"></span>Sin devolver, al día <strong>{{ prestamos.al_dia }}</strong></li>
+            <li><span class="punto fondo-rojo"></span>Vencidos <strong>{{ prestamos.vencidos }}</strong></li>
+            <li><span class="punto fondo-verde"></span>Devueltos <strong>{{ prestamos.devueltos }}</strong></li>
+        </ul>
+        <div class="botones-encabezado">
+            <a class="boton" href="{% url 'biblioteca:prestamo_list' %}?estado=vencidos&amp;formato=csv">{% icono 'descargar' %}Vencidos (CSV)</a>
+            <a class="boton-secundario" href="{% url 'biblioteca:prestamo_list' %}?estado=vigentes&amp;formato=csv">{% icono 'descargar' %}Sin devolver</a>
+            <a class="boton-secundario" href="{% url 'biblioteca:prestamo_list' %}?estado=todos&amp;formato=csv">{% icono 'descargar' %}Todos</a>
+        </div>
+    </section>
+    {% endif %}
+
+    {% if ejemplares %}
+    <section class="tarjeta" aria-labelledby="titulo-informe-ejemplares">
+        <div class="tarjeta-titulo">
+            <h2 id="titulo-informe-ejemplares">Catálogo de ejemplares</h2>
+            <span class="badge badge-neutro">{{ ejemplares.total }} en total</span>
+        </div>
+        {% with total=ejemplares.total %}
+        <div class="distribucion" role="img" aria-label="Ejemplares: {{ ejemplares.disponibles }} disponibles, {{ ejemplares.prestados }} prestados y {{ ejemplares.baja }} dados de baja">
+            <span class="fondo-verde" style="width: {{ ejemplares.disponibles|porcentaje:total }}%"></span>
+            <span class="fondo-ambar" style="width: {{ ejemplares.prestados|porcentaje:total }}%"></span>
+            <span class="fondo-gris" style="width: {{ ejemplares.baja|porcentaje:total }}%"></span>
+        </div>
+        {% endwith %}
+        <ul class="leyenda">
+            <li><span class="punto fondo-verde"></span>Disponibles <strong>{{ ejemplares.disponibles }}</strong></li>
+            <li><span class="punto fondo-ambar"></span>Prestados <strong>{{ ejemplares.prestados }}</strong></li>
+            <li><span class="punto fondo-gris"></span>Dados de baja <strong>{{ ejemplares.baja }}</strong></li>
+        </ul>
+        <div class="botones-encabezado">
+            <a class="boton" href="{% url 'biblioteca:ejemplar_list' %}?formato=csv">{% icono 'descargar' %}Activos (CSV)</a>
+            <a class="boton-secundario" href="{% url 'biblioteca:ejemplar_list' %}?estado=todos&amp;formato=csv">{% icono 'descargar' %}Todos</a>
+        </div>
+    </section>
+    {% endif %}
+
+    {% if personas %}
+    <section class="tarjeta" aria-labelledby="titulo-informe-personas">
+        <div class="tarjeta-titulo">
+            <h2 id="titulo-informe-personas">Personas</h2>
+            <span class="badge badge-neutro">{{ personas.total }} en total</span>
+        </div>
+        {% with total=personas.total %}
+        <div class="distribucion" role="img" aria-label="Personas: {{ personas.alumnos }} alumnos activos, {{ personas.profesores }} profesores activos y {{ personas.baja }} dadas de baja">
+            <span class="fondo-naranja" style="width: {{ personas.alumnos|porcentaje:total }}%"></span>
+            <span class="fondo-azul" style="width: {{ personas.profesores|porcentaje:total }}%"></span>
+            <span class="fondo-gris" style="width: {{ personas.baja|porcentaje:total }}%"></span>
+        </div>
+        {% endwith %}
+        <ul class="leyenda">
+            <li><span class="punto fondo-naranja"></span>Alumnos activos <strong>{{ personas.alumnos }}</strong></li>
+            <li><span class="punto fondo-azul"></span>Profesores activos <strong>{{ personas.profesores }}</strong></li>
+            <li><span class="punto fondo-gris"></span>Dadas de baja <strong>{{ personas.baja }}</strong></li>
+        </ul>
+        <div class="botones-encabezado">
+            <a class="boton" href="{% url 'biblioteca:persona_list' %}?formato=csv">{% icono 'descargar' %}Activas (CSV)</a>
+            <a class="boton-secundario" href="{% url 'biblioteca:persona_list' %}?estado=todas&amp;formato=csv">{% icono 'descargar' %}Todas</a>
+        </div>
+    </section>
+    {% endif %}
+</div>
+
+<p class="texto-suave">Para un informe filtrado (por ejemplo, los préstamos de una persona), buscá en el listado correspondiente y usá su botón «Exportar CSV»: el archivo trae exactamente lo que se ve en pantalla.</p>
+{% endblock %}

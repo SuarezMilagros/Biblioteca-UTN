@@ -1,17 +1,43 @@
 {% extends 'base.html' %}
+{% load interfaz %}
 
 {% block titulo %}Prestar {{ ejemplar.codigo_inventario }} · SIGEBI{% endblock %}
+{% block seccion %}Operación / Préstamos / <strong>Prestar {{ ejemplar.codigo_inventario }}</strong>{% endblock %}
 
 {% block contenido %}
-<h1>Prestar ejemplar {{ ejemplar.codigo_inventario }}</h1>
-<p class="texto-suave">{{ ejemplar.libro.titulo }}</p>
-
-<form method="post" class="formulario tarjeta">
-    {% csrf_token %}
-    {% include 'biblioteca/_formulario.html' %}
-    <div class="acciones-formulario">
-        <button type="submit" class="boton">Registrar préstamo</button>
-        <a class="boton-secundario" href="{% url 'biblioteca:ejemplar_detail' ejemplar.pk %}">Cancelar</a>
+<a class="volver" href="{% url 'biblioteca:ejemplar_detail' ejemplar.pk %}">{% icono 'volver' %}Volver al ejemplar</a>
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Préstamos</p>
+        <h1>Prestar ejemplar {{ ejemplar.codigo_inventario }}</h1>
+        <p class="bajada">{{ ejemplar.libro.titulo }}</p>
     </div>
-</form>
+</div>
+
+<div class="dos-columnas">
+    <form method="post" class="formulario tarjeta">
+        {% csrf_token %}
+        {% include 'componentes/errores_formulario.html' %}
+        <div class="campos">
+            {% include 'componentes/campo.html' with campo=form.documento clase='ancho-completo' %}
+            {% include 'componentes/campo.html' with campo=form.fecha_prestamo %}
+            {% include 'componentes/campo.html' with campo=form.fecha_vencimiento %}
+        </div>
+        <div class="acciones-formulario">
+            <button type="submit" class="boton">{% icono 'prestamo' %}Registrar préstamo</button>
+            <a class="boton-secundario" href="{% url 'biblioteca:ejemplar_detail' ejemplar.pk %}">Cancelar</a>
+        </div>
+    </form>
+
+    <aside class="tarjeta" aria-labelledby="titulo-resumen-prestamo">
+        <div class="tarjeta-titulo"><h2 id="titulo-resumen-prestamo">Ejemplar</h2>{% include 'biblioteca/_estado_ejemplar.html' %}</div>
+        <dl class="detalle">
+            <dt>Código</dt>
+            <dd>{{ ejemplar.codigo_inventario }}</dd>
+            <dt>Libro</dt>
+            <dd>{{ ejemplar.libro.titulo }}</dd>
+        </dl>
+        <p class="ayuda nota-tarjeta">El plazo es de 14 días corridos. Solo se presta a personas activas.</p>
+    </aside>
+</div>
 {% endblock %}

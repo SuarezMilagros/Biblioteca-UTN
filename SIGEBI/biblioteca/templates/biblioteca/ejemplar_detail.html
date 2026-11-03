@@ -1,78 +1,112 @@
 {% extends 'base.html' %}
+{% load interfaz %}
 
 {% block titulo %}Ejemplar {{ object.codigo_inventario }} · SIGEBI{% endblock %}
+{% block seccion %}Operación / Ejemplares / <strong>{{ object.codigo_inventario }}</strong>{% endblock %}
 
 {% block contenido %}
+<a class="volver" href="{% url 'biblioteca:libro_detail' object.libro_id %}">{% icono 'volver' %}Volver al libro</a>
+
 <div class="encabezado-seccion">
-    <h1>Ejemplar {{ object.codigo_inventario }}</h1>
-    <a class="boton-secundario" href="{% url 'biblioteca:ejemplar_update' object.pk %}">Editar ejemplar</a>
+    <div>
+        <p class="sobretitulo">Ejemplar</p>
+        <h1>Ejemplar {{ object.codigo_inventario }}</h1>
+        <p class="bajada"><a href="{% url 'biblioteca:libro_detail' object.libro_id %}">{{ object.libro.titulo }}</a></p>
+    </div>
+    <div class="botones-encabezado">
+        <a class="boton-secundario" href="{% url 'biblioteca:ejemplar_update' object.pk %}">{% icono 'editar' %}Editar ejemplar</a>
+    </div>
 </div>
 
-<section class="tarjeta">
-    <dl class="detalle">
-        <dt>Código de inventario</dt>
-        <dd>{{ object.codigo_inventario }}</dd>
+<div class="dos-columnas">
+    <section class="tarjeta" aria-labelledby="titulo-datos">
+        <div class="tarjeta-titulo"><h2 id="titulo-datos">Datos del ejemplar</h2></div>
+        <dl class="detalle">
+            <dt>Código de inventario</dt>
+            <dd>{{ object.codigo_inventario }}</dd>
 
-        <dt>ID de inventario</dt>
-        <dd>{{ object.id_inventario|default:"No registrado" }}</dd>
+            <dt>ID de inventario</dt>
+            <dd>{{ object.id_inventario|default:"No registrado" }}</dd>
 
-        <dt>Libro</dt>
-        <dd><a href="{% url 'biblioteca:libro_detail' object.libro_id %}">{{ object.libro.titulo }}</a></dd>
+            <dt>Libro</dt>
+            <dd><a href="{% url 'biblioteca:libro_detail' object.libro_id %}">{{ object.libro.titulo }}</a></dd>
 
-        <dt>Estado</dt>
-        <dd>{% with ejemplar=object %}{% include 'biblioteca/_estado_ejemplar.html' %}{% endwith %}</dd>
+            <dt>Estado</dt>
+            <dd>{% with ejemplar=object %}{% include 'biblioteca/_estado_ejemplar.html' %}{% endwith %}</dd>
 
-        {% if not object.activo %}
-        <dt>Motivo de baja</dt>
-        <dd>{{ object.get_motivo_baja_display }}</dd>
+            {% if not object.activo %}
+            <dt>Motivo de baja</dt>
+            <dd>{{ object.get_motivo_baja_display }}</dd>
 
-        <dt>Fecha de baja</dt>
-        <dd>{{ object.fecha_baja|date:"d/m/Y" }}</dd>
-        {% endif %}
-
-        <dt>Observaciones</dt>
-        <dd>{{ object.observaciones|default:"Sin observaciones" }}</dd>
-
-        {% if prestamo_activo %}
-        <dt>Prestado a</dt>
-        <dd><a href="{% url 'biblioteca:persona_detail' prestamo_activo.persona_id %}">{{ prestamo_activo.persona }}</a></dd>
-
-        <dt>Vence</dt>
-        <dd>{{ prestamo_activo.fecha_vencimiento|date:"d/m/Y" }} {% with prestamo=prestamo_activo %}{% include 'biblioteca/_estado_prestamo.html' %}{% endwith %}</dd>
-        {% endif %}
-    </dl>
-
-    <div class="acciones-formulario">
-        {% if prestamo_activo %}
-            {% if perms.biblioteca.change_prestamo %}
-            <a class="boton" href="{% url 'biblioteca:prestamo_devolver' prestamo_activo.pk %}">Registrar devolución</a>
+            <dt>Fecha de baja</dt>
+            <dd>{{ object.fecha_baja|date:"d/m/Y" }}</dd>
             {% endif %}
-        {% elif object.activo and perms.biblioteca.add_prestamo %}
-            <a class="boton" href="{% url 'biblioteca:prestamo_create' object.pk %}">Prestar</a>
+
+            <dt>Observaciones</dt>
+            <dd>{{ object.observaciones|default:"Sin observaciones" }}</dd>
+        </dl>
+    </section>
+
+    <div class="columna">
+        <section class="tarjeta" aria-labelledby="titulo-prestamo">
+            <div class="tarjeta-titulo"><h2 id="titulo-prestamo">Préstamo</h2></div>
+            {% if prestamo_activo %}
+            <div class="resumen-prestamo">
+                <span class="indicador-icono">{% icono 'persona' %}</span>
+                <dl class="detalle">
+                    <dt>Prestado a</dt>
+                    <dd><a href="{% url 'biblioteca:persona_detail' prestamo_activo.persona_id %}">{{ prestamo_activo.persona }}</a></dd>
+
+                    <dt>Vence</dt>
+                    <dd>{{ prestamo_activo.fecha_vencimiento|date:"d/m/Y" }} {% with prestamo=prestamo_activo %}{% include 'biblioteca/_estado_prestamo.html' %}{% endwith %}</dd>
+                </dl>
+            </div>
+            {% if perms.biblioteca.change_prestamo %}
+            <div class="acciones-formulario">
+                <a class="boton" href="{% url 'biblioteca:prestamo_devolver' prestamo_activo.pk %}">{% icono 'devolver' %}Registrar devolución</a>
+            </div>
+            {% endif %}
+            {% elif object.activo %}
+            <p class="texto-suave">El ejemplar está en la biblioteca y se puede prestar.</p>
+            {% if perms.biblioteca.add_prestamo %}
+            <a class="boton" href="{% url 'biblioteca:prestamo_create' object.pk %}">{% icono 'prestamo' %}Prestar</a>
+            {% endif %}
+            {% else %}
+            <p class="texto-suave">Un ejemplar dado de baja no se puede prestar.</p>
+            {% endif %}
+        </section>
+
+        {% if perms.biblioteca.change_ejemplar %}
+        {% if object.activo and not prestamo_activo %}
+        <section class="tarjeta zona-baja" aria-labelledby="titulo-baja">
+            <div class="tarjeta-titulo"><h2 id="titulo-baja">Dar de baja</h2></div>
+            <form method="post" action="{% url 'biblioteca:ejemplar_baja' object.pk %}" class="formulario formulario-baja"
+                  data-confirmar="El ejemplar {{ object.codigo_inventario }} no se podrá prestar hasta que se reactive. Se conserva su historial."
+                  data-confirmar-titulo="¿Dar de baja el ejemplar?" data-confirmar-boton="Dar de baja">
+                {% csrf_token %}
+                <div class="campo">
+                    <label for="{{ form_baja.motivo_baja.id_for_label }}">{{ form_baja.motivo_baja.label }}</label>
+                    {{ form_baja.motivo_baja }}
+                    <small class="ayuda">Un ejemplar dado de baja no se puede prestar. Se conserva su historial.</small>
+                </div>
+                <button type="submit" class="boton-peligro">{% icono 'baja' %}Dar de baja</button>
+            </form>
+        </section>
+        {% elif not object.activo %}
+        <section class="tarjeta" aria-labelledby="titulo-reactivar">
+            <div class="tarjeta-titulo"><h2 id="titulo-reactivar">Volver a habilitar</h2></div>
+            <p class="texto-suave">Si el ejemplar apareció o se reparó, se puede volver a prestar.</p>
+            <form method="post" action="{% url 'biblioteca:ejemplar_reactivar' object.pk %}" class="formulario-baja">
+                {% csrf_token %}
+                <button type="submit" class="boton-secundario">{% icono 'reactivar' %}Reactivar ejemplar</button>
+            </form>
+        </section>
+        {% endif %}
         {% endif %}
     </div>
+</div>
 
-    {% if perms.biblioteca.change_ejemplar %}
-    {% if object.activo and not prestamo_activo %}
-    <form method="post" action="{% url 'biblioteca:ejemplar_baja' object.pk %}" class="formulario formulario-baja">
-        {% csrf_token %}
-        <div class="campo">
-            <label for="{{ form_baja.motivo_baja.id_for_label }}">Dar de baja este ejemplar</label>
-            {{ form_baja.motivo_baja }}
-            <small class="ayuda">Un ejemplar dado de baja no se puede prestar. Se conserva su historial.</small>
-        </div>
-        <button type="submit" class="boton-secundario">Dar de baja</button>
-    </form>
-    {% elif not object.activo %}
-    <form method="post" action="{% url 'biblioteca:ejemplar_reactivar' object.pk %}" class="formulario-baja">
-        {% csrf_token %}
-        <button type="submit" class="boton-secundario">Reactivar ejemplar</button>
-    </form>
-    {% endif %}
-    {% endif %}
-</section>
-
-<h2>Historial de préstamos</h2>
+<div class="subencabezado"><h2>Historial de préstamos</h2></div>
 {% if prestamos %}
 <div class="tabla-contenedor">
     <table class="tabla">
@@ -99,8 +133,6 @@
     </table>
 </div>
 {% else %}
-<p class="vacio">Este ejemplar todavía no se prestó.</p>
+{% include 'componentes/vacio.html' with icono='prestamo' titulo='Este ejemplar todavía no se prestó.' %}
 {% endif %}
-
-<p style="margin-top: 1.5rem;"><a href="{% url 'biblioteca:libro_detail' object.libro_id %}">← Volver al libro</a></p>
 {% endblock %}

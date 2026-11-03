@@ -1,20 +1,71 @@
 {% extends 'base.html' %}
+{% load interfaz %}
 
 {% block titulo %}{% if object %}Editar libro{% else %}Nuevo libro{% endif %} · SIGEBI{% endblock %}
+{% block seccion %}Catálogo / Libros / <strong>{% if object %}Editar{% else %}Nuevo libro{% endif %}</strong>{% endblock %}
 
 {% block contenido %}
-<h1>{% if object %}Editar libro{% else %}Nuevo libro{% endif %}</h1>
+{% if object %}
+<a class="volver" href="{% url 'biblioteca:libro_detail' object.pk %}">{% icono 'volver' %}Volver al libro</a>
+{% else %}
+<a class="volver" href="{% url 'biblioteca:libro_list' %}">{% icono 'volver' %}Volver a libros</a>
+{% endif %}
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Catálogo</p>
+        <h1>{% if object %}Editar libro{% else %}Nuevo libro{% endif %}</h1>
+        <p class="bajada">Datos bibliográficos del título. Los ejemplares físicos se agregan después, desde el detalle del libro.
+            <span class="leyenda-obligatorios">Los campos con <span class="obligatorio">*</span> son obligatorios.</span></p>
+    </div>
+</div>
 
-<form method="post" enctype="multipart/form-data" class="formulario tarjeta">
+<form method="post" enctype="multipart/form-data" class="formulario">
     {% csrf_token %}
-    {% include 'biblioteca/_formulario.html' %}
-    <div class="acciones-formulario">
-        <button type="submit" class="boton">Guardar</button>
-        {% if object %}
-            <a class="boton-secundario" href="{% url 'biblioteca:libro_detail' object.pk %}">Cancelar</a>
-        {% else %}
-            <a class="boton-secundario" href="{% url 'biblioteca:libro_list' %}">Cancelar</a>
-        {% endif %}
+    <div class="dos-columnas">
+        <div class="tarjeta">
+            {% include 'componentes/errores_formulario.html' %}
+            <div class="seccion-formulario">
+                <h2>Datos del libro</h2>
+                <div class="campos">
+                    {% include 'componentes/campo.html' with campo=form.titulo clase='ancho-completo' %}
+                    {% include 'componentes/campo.html' with campo=form.isbn %}
+                </div>
+            </div>
+            <div class="seccion-formulario">
+                <h2>Clasificación</h2>
+                <div class="campos">
+                    {% include 'componentes/campo.html' with campo=form.autor %}
+                    {% include 'componentes/campo.html' with campo=form.editorial %}
+                    {% include 'componentes/campo.html' with campo=form.categoria %}
+                </div>
+                <p class="ayuda">¿Falta un autor, una editorial o una categoría? Cargalo primero desde su sección del menú Catálogo.</p>
+            </div>
+            <div class="seccion-formulario">
+                <h2>Portada</h2>
+                {% include 'componentes/campo.html' with campo=form.imagen %}
+            </div>
+            <div class="acciones-formulario">
+                <button type="submit" class="boton">{% icono 'exito' %}Guardar</button>
+                {% if object %}
+                    <a class="boton-secundario" href="{% url 'biblioteca:libro_detail' object.pk %}">Cancelar</a>
+                {% else %}
+                    <a class="boton-secundario" href="{% url 'biblioteca:libro_list' %}">Cancelar</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <aside class="tarjeta vista-previa" data-vista-previa aria-label="Vista previa">
+            <p class="sobretitulo">Vista previa</p>
+            <div data-previa-portada>
+                {% if object.imagen %}
+                <img class="portada" src="{{ object.imagen.url }}" alt="Portada actual">
+                {% else %}
+                <div class="portada-vacia">{% icono 'imagen' %}Sin imagen de portada</div>
+                {% endif %}
+            </div>
+            <p class="vista-previa-titulo" data-previa-titulo>{{ object.titulo|default:"Título del libro" }}</p>
+            <p class="vista-previa-autor" data-previa-autor>{% if object %}{{ object.autor }}{% else %}Autor{% endif %}</p>
+        </aside>
     </div>
 </form>
 {% endblock %}

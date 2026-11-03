@@ -1,58 +1,116 @@
-{% load static %}<!DOCTYPE html>
+{% load static interfaz %}{% comment %}
+    Estructura común de SIGEBI. Variables que usa, además de las de Django (user, perms, messages, request):
+      - rol_usuario               → cuentas/contexto.py
+      - prestamos_vencidos_total  → biblioteca/contexto.py
+    Si falta alguna (por ejemplo, en una prueba aislada), la cabecera se muestra igual, sin ese dato.
+    Bloques: titulo, seccion (ubicación en la cabecera), contenido, extra_css, extra_js.
+    JavaScript (static/js/main.js): data-confirmar, data-cerrar-menu, data-cerrar-mensaje,
+    data-mostrar-clave, data-vista-previa. Sin JavaScript todo sigue funcionando.
+{% endcomment %}<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block titulo %}SIGEBI{% endblock %}</title>
+    <script>document.documentElement.classList.add('js');</script>
     <link rel="stylesheet" href="{% static 'css/estilos.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
     <a class="saltar-contenido" href="#contenido">Saltar al contenido</a>
 
-    <header class="cabecera">
-        <div class="cabecera-superior">
-            <a class="marca" href="{% url 'biblioteca:inicio' %}">SIGEBI</a>
-            <span class="subtitulo">Sistema de Gestión de Biblioteca · UTN FRT, Extensión Áulica Concepción</span>
-        </div>
-        {% if user.is_authenticated %}
+    {% if user.is_authenticated %}
+    <div class="app" id="app">
         {% with seccion=request.resolver_match.url_name %}
-        <nav class="navegacion" aria-label="Principal">
-            <a href="{% url 'biblioteca:libro_list' %}"{% if seccion|slice:":6" == "libro_" %} aria-current="page"{% endif %}>Libros</a>
-            <a href="{% url 'biblioteca:ejemplar_list' %}"{% if seccion|slice:":9" == "ejemplar_" %} aria-current="page"{% endif %}>Ejemplares</a>
-            <a href="{% url 'biblioteca:prestamo_list' %}"{% if seccion|slice:":9" == "prestamo_" %} aria-current="page"{% endif %}>Préstamos</a>
-            <a href="{% url 'biblioteca:persona_list' %}"{% if seccion|slice:":8" == "persona_" %} aria-current="page"{% endif %}>Personas</a>
-            <a href="{% url 'biblioteca:autor_list' %}"{% if seccion|slice:":6" == "autor_" %} aria-current="page"{% endif %}>Autores</a>
-            <a href="{% url 'biblioteca:editorial_list' %}"{% if seccion|slice:":10" == "editorial_" %} aria-current="page"{% endif %}>Editoriales</a>
-            <a href="{% url 'biblioteca:categoria_list' %}"{% if seccion|slice:":10" == "categoria_" %} aria-current="page"{% endif %}>Categorías</a>
-            {% if perms.auth.view_user %}
-            <a href="{% url 'cuentas:usuario_list' %}"{% if seccion|slice:":8" == "usuario_" %} aria-current="page"{% endif %}>Cuentas</a>
-            {% endif %}
-            <a href="{% url 'password_change' %}"{% if seccion|slice:":15" == "password_change" %} aria-current="page"{% endif %}>Cambiar contraseña</a>
-            <form method="post" action="{% url 'logout' %}" class="formulario-salir">
-                {% csrf_token %}
-                <button type="submit" class="boton-enlace">Salir ({{ user.first_name|default:user.get_username }})</button>
-            </form>
-        </nav>
+        <aside class="lateral" id="menu-lateral" aria-label="Menú">
+            <div class="marca-fila">
+                <a class="marca" href="{% url 'biblioteca:inicio' %}">
+                    <span class="marca-logo">{% icono 'libro-abierto' %}</span>
+                    <span class="marca-texto"><strong>SIGEBI</strong><small>Biblioteca UTN FRT</small></span>
+                </a>
+                <button type="button" class="lateral-cerrar" data-cerrar-menu>{% icono 'cerrar' %}<span class="sr-only">Cerrar menú</span></button>
+            </div>
+
+            <nav class="navegacion" aria-label="Principal">
+                <p class="nav-grupo">Operación</p>
+                <a class="nav-enlace" href="{% url 'biblioteca:inicio' %}"{% if seccion == "inicio" %} aria-current="page"{% endif %}>{% icono 'inicio' %}Inicio</a>
+                <a class="nav-enlace" href="{% url 'biblioteca:prestamo_list' %}"{% if seccion|slice:":9" == "prestamo_" %} aria-current="page"{% endif %}>{% icono 'prestamo' %}Préstamos</a>
+                <a class="nav-enlace" href="{% url 'biblioteca:ejemplar_list' %}"{% if seccion|slice:":9" == "ejemplar_" %} aria-current="page"{% endif %}>{% icono 'ejemplar' %}Ejemplares</a>
+                <a class="nav-enlace" href="{% url 'biblioteca:persona_list' %}"{% if seccion|slice:":8" == "persona_" %} aria-current="page"{% endif %}>{% icono 'personas' %}Personas</a>
+
+                <p class="nav-grupo">Catálogo</p>
+                <a class="nav-enlace" href="{% url 'biblioteca:libro_list' %}"{% if seccion|slice:":6" == "libro_" %} aria-current="page"{% endif %}>{% icono 'libro' %}Libros</a>
+                <a class="nav-enlace" href="{% url 'biblioteca:autor_list' %}"{% if seccion|slice:":6" == "autor_" %} aria-current="page"{% endif %}>{% icono 'autor' %}Autores</a>
+                <a class="nav-enlace" href="{% url 'biblioteca:editorial_list' %}"{% if seccion|slice:":10" == "editorial_" %} aria-current="page"{% endif %}>{% icono 'editorial' %}Editoriales</a>
+                <a class="nav-enlace" href="{% url 'biblioteca:categoria_list' %}"{% if seccion|slice:":10" == "categoria_" %} aria-current="page"{% endif %}>{% icono 'categoria' %}Categorías</a>
+
+                <p class="nav-grupo">Gestión</p>
+                <a class="nav-enlace" href="{% url 'biblioteca:informes' %}"{% if seccion == "informes" %} aria-current="page"{% endif %}>{% icono 'informe' %}Informes</a>
+                {% if perms.auth.view_user %}
+                <a class="nav-enlace" href="{% url 'cuentas:usuario_list' %}"{% if seccion|slice:":8" == "usuario_" %} aria-current="page"{% endif %}>{% icono 'cuentas' %}Cuentas</a>
+                {% endif %}
+            </nav>
+
+            <div class="lateral-pie">
+                <a class="nav-enlace" href="{% url 'password_change' %}"{% if seccion|slice:":15" == "password_change" %} aria-current="page"{% endif %}>{% icono 'clave' %}Cambiar contraseña</a>
+                <form method="post" action="{% url 'logout' %}" class="formulario-salir">
+                    {% csrf_token %}
+                    <button type="submit" class="boton-salir">{% icono 'salir' %}Salir ({{ user.first_name|default:user.get_username }})</button>
+                </form>
+            </div>
+        </aside>
         {% endwith %}
-        {% endif %}
-    </header>
+        <div class="lateral-fondo" data-cerrar-menu></div>
 
-    <main class="contenido" id="contenido" tabindex="-1">
-        <div role="status">
-            {% if messages %}
-            <ul class="mensajes">
-                {% for message in messages %}
-                <li class="mensaje mensaje-{{ message.tags }}">{{ message }}</li>
-                {% endfor %}
-            </ul>
-            {% endif %}
+        <div class="area">
+            <header class="cabecera">
+                <button type="button" class="boton-menu" aria-controls="menu-lateral" aria-expanded="false">{% icono 'menu' %}<span class="sr-only">Abrir menú</span></button>
+                <div class="cabecera-titulo">{% block seccion %}SIGEBI{% endblock %}</div>
+                <div class="cabecera-acciones">
+                    {% if prestamos_vencidos_total %}
+                    <a class="aviso-vencidos" href="{% url 'biblioteca:prestamo_list' %}?estado=vencidos" title="Ver préstamos vencidos">
+                        {% icono 'campana' %}<span>{{ prestamos_vencidos_total }}<span class="aviso-texto"> vencido{{ prestamos_vencidos_total|pluralize }}</span></span>
+                    </a>
+                    {% endif %}
+                    <div class="perfil">
+                        <span class="avatar" aria-hidden="true">{{ user|iniciales }}</span>
+                        <span class="perfil-texto"><strong>{{ user.get_full_name|default:user.get_username }}</strong><small>{{ rol_usuario }}</small></span>
+                    </div>
+                </div>
+            </header>
+
+            <main class="contenido" id="contenido" tabindex="-1">
+    {% else %}
+    <div class="publico">
+        <main class="contenido" id="contenido" tabindex="-1">
+    {% endif %}
+                {% include 'componentes/mensajes.html' %}
+                {% block contenido %}{% endblock %}
+    {% if user.is_authenticated %}
+            </main>
+
+            <footer class="pie">SIGEBI · Release 1 — Biblioteca física · UTN FRT, Extensión Áulica Concepción</footer>
         </div>
+    </div>
 
-        {% block contenido %}{% endblock %}
-    </main>
-
-    <footer class="pie">SIGEBI · Release 1 — Biblioteca física</footer>
+    <dialog class="modal" id="modal-confirmar" aria-labelledby="modal-titulo">
+        <div class="modal-cuerpo">
+            <span class="vacio-icono icono-alerta">{% icono 'alerta' %}</span>
+            <div>
+                <h2 id="modal-titulo">Confirmar acción</h2>
+                <p id="modal-texto"></p>
+            </div>
+        </div>
+        <div class="modal-acciones">
+            <button type="button" class="boton-secundario" data-modal-cancelar>Cancelar</button>
+            <button type="button" class="boton" data-modal-aceptar>Confirmar</button>
+        </div>
+    </dialog>
+    {% else %}
+        </main>
+        <p class="publico-pie">{% icono 'candado' %}SIGEBI · Biblioteca UTN FRT, Extensión Áulica Concepción</p>
+    </div>
+    {% endif %}
 
     <script src="{% static 'js/main.js' %}"></script>
     {% block extra_js %}{% endblock %}
