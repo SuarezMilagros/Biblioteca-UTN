@@ -167,6 +167,9 @@ AUTHENTICATION_BACKENDS = ['cuentas.backends.CorreoBackend']
 # El enlace vence a la hora.
 PASSWORD_RESET_TIMEOUT = 3600
 
+# La sesión dura una jornada de trabajo (8 horas). Después hay que volver a ingresar.
+SESSION_COOKIE_AGE = 8 * 60 * 60
+
 # En desarrollo, el correo se imprime en la consola donde corre runserver.
 # El envío real se configura en la etapa 7, con variables de entorno.
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
