@@ -247,9 +247,8 @@ a:hover { color: var(--naranja-hover); }
 .acceso-marca { text-align: center; margin-bottom: 1.5rem; }
 .acceso-marca .marca-logo { width: 52px; height: 52px; border-radius: 14px; margin: 0 auto 0.75rem; }
 .acceso-marca .marca-logo .icono { width: 28px; height: 28px; }
-.acceso-institucion { font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto-suave); margin: 0; }
-.tarjeta-acceso h1 { font-size: 1.45rem; text-align: center; margin-bottom: 0.35rem; }
-.tarjeta-acceso .bajada { text-align: center; color: var(--texto-suave); margin-bottom: 1.5rem; }
+.acceso-institucion { font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto-suave); margin: 0; }.tarjeta-acceso h1 { font-size: 1.45rem; text-align: center; margin-bottom: 0.35rem; }
+.acceso-logo { display: block; width: 60px; max-height: 120px; height: auto; margin: 0 auto 0.75rem; }.tarjeta-acceso .bajada { text-align: center; color: var(--texto-suave); margin-bottom: 1.5rem; }
 .tarjeta-acceso .boton { width: 100%; justify-content: center; }
 .acceso-enlaces { margin-top: 1.25rem; text-align: center; font-size: 0.9rem; }
 .acceso-separador { border: 0; border-top: 1px solid var(--borde); margin: 1.5rem 0 1rem; }
