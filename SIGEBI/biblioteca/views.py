@@ -1,13 +1,15 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
-from django.db.models import Count, Exists, OuterRef, Q
+from django.db.models import Count, Exists, IntegerField, OuterRef, Q, Subquery
+from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import View
-from django.views.generic import CreateView, DetailView, FormView, ListView, UpdateView
+from django.views.generic import CreateView, DetailView, FormView, ListView, TemplateView, UpdateView
 
 from .forms import (
     MENSAJE_EJEMPLAR_DADO_DE_BAJA, AutorForm, CategoriaForm, DevolucionForm, EditorialForm,
@@ -20,9 +22,79 @@ ELEMENTOS_POR_PAGINA = 20
 MENSAJE_DATO_REPETIDO = 'Ya existe un registro con esos datos. Revisá los valores e intentá de nuevo.'
 
 
+def prestamo_activo_de(ejemplar_ref):
+    """Subconsulta: el ejemplar indicado tiene un préstamo sin devolver."""
+    return Exists(Prestamo.objects.filter(ejemplar=ejemplar_ref, fecha_devolucion__isnull=True))
+
+
 @login_required
 def inicio(request):
-    return render(request, 'biblioteca/inicio.html')
+    """Panel principal: indicadores y próximos vencimientos (solo lectura, según los permisos)."""
+    usuario = request.user
+    hoy = timezone.localdate()
+    contexto = {'hoy': hoy}
+    if usuario.has_perm('biblioteca.view_prestamo'):
+        sin_devolver = Prestamo.objects.filter(fecha_devolucion__isnull=True)
+        contexto['prestamos_sin_devolver'] = sin_devolver.count()
+        contexto['prestamos_vencidos'] = sin_devolver.filter(fecha_vencimiento__lt=hoy).count()
+        contexto['proximos_vencimientos'] = sin_devolver.select_related('persona', 'ejemplar__libro').order_by(
+            'fecha_vencimiento', 'pk'
+        )[:6]
+    if usuario.has_perm('biblioteca.view_ejemplar'):
+        activos = Ejemplar.objects.filter(activo=True)
+        contexto['ejemplares_activos'] = activos.count()
+        contexto['ejemplares_disponibles'] = activos.filter(~prestamo_activo_de(OuterRef('pk'))).count()
+    if usuario.has_perm('biblioteca.view_persona'):
+        contexto['personas_activas'] = Persona.objects.filter(activo=True).count()
+    if usuario.has_perm('biblioteca.view_libro'):
+        contexto['libros_total'] = Libro.objects.count()
+    return render(request, 'biblioteca/inicio.html', contexto)
+
+
+class InformesView(LoginRequiredMixin, TemplateView):
+    """Resumen estadístico y acceso a los informes CSV (D5). Muestra solo lo que cada rol puede ver."""
+
+    template_name = 'biblioteca/informes.html'
+    permisos = ('biblioteca.view_ejemplar', 'biblioteca.view_prestamo', 'biblioteca.view_persona')
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated and not any(request.user.has_perm(p) for p in self.permisos):
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        usuario = self.request.user
+        hoy = timezone.localdate()
+        if usuario.has_perm('biblioteca.view_ejemplar'):
+            activos = Ejemplar.objects.filter(activo=True)
+            prestados = activos.filter(prestamo_activo_de(OuterRef('pk'))).count()
+            total_activos = activos.count()
+            contexto['ejemplares'] = {
+                'disponibles': total_activos - prestados,
+                'prestados': prestados,
+                'baja': Ejemplar.objects.filter(activo=False).count(),
+                'total': Ejemplar.objects.count(),
+            }
+        if usuario.has_perm('biblioteca.view_prestamo'):
+            sin_devolver = Prestamo.objects.filter(fecha_devolucion__isnull=True)
+            vencidos = sin_devolver.filter(fecha_vencimiento__lt=hoy).count()
+            total_sin_devolver = sin_devolver.count()
+            contexto['prestamos'] = {
+                'al_dia': total_sin_devolver - vencidos,
+                'vencidos': vencidos,
+                'devueltos': Prestamo.objects.filter(fecha_devolucion__isnull=False).count(),
+                'total': Prestamo.objects.count(),
+            }
+        if usuario.has_perm('biblioteca.view_persona'):
+            contexto['personas'] = {
+                'activas': Persona.objects.filter(activo=True).count(),
+                'baja': Persona.objects.filter(activo=False).count(),
+                'alumnos': Persona.objects.filter(activo=True, tipo=Persona.Tipo.ALUMNO).count(),
+                'profesores': Persona.objects.filter(activo=True, tipo=Persona.Tipo.PROFESOR).count(),
+                'total': Persona.objects.count(),
+            }
+        return contexto
 
 
 class GuardarRegistroMixin:
@@ -137,7 +209,19 @@ class LibroListView(PermissionRequiredMixin, ListView):
     paginate_by = ELEMENTOS_POR_PAGINA
 
     def get_queryset(self):
-        queryset = super().get_queryset().select_related('autor', 'editorial', 'categoria')
+        # Para mostrar en el listado cuántos ejemplares activos tiene cada libro y cuántos están disponibles.
+        disponibles = (
+            Ejemplar.objects.filter(libro=OuterRef('pk'), activo=True)
+            .filter(~prestamo_activo_de(OuterRef('pk')))
+            .order_by()
+            .values('libro')
+            .annotate(cantidad=Count('pk'))
+            .values('cantidad')
+        )
+        queryset = super().get_queryset().select_related('autor', 'editorial', 'categoria').annotate(
+            ejemplares_activos=Count('ejemplares', filter=Q(ejemplares__activo=True), distinct=True),
+            ejemplares_disponibles=Coalesce(Subquery(disponibles, output_field=IntegerField()), 0),
+        )
         q = self.request.GET.get('q', '').strip()
         if q:
             # unaccent (PostgreSQL): "calculo" también encuentra "Cálculo I".
@@ -416,9 +500,13 @@ class PersonaDetailView(PermissionRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
-        contexto['prestamos'] = (
+        prestamos = list(
             self.object.prestamos.select_related('ejemplar__libro').order_by('-fecha_prestamo', '-pk')
         )
+        contexto['prestamos'] = prestamos
+        # Resumen para la ficha de la persona (se calcula sobre la lista ya cargada, sin consultas extra).
+        contexto['prestamos_sin_devolver'] = sum(1 for prestamo in prestamos if prestamo.activo)
+        contexto['prestamos_vencidos'] = sum(1 for prestamo in prestamos if prestamo.vencido)
         return contexto
 
 

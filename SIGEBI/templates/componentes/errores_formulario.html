@@ -1,0 +1,7 @@
+{% load interfaz %}
+{% if form.non_field_errors %}
+<div class="alerta-error" role="alert">
+    {% icono 'error' %}
+    <div>{% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}</div>
+</div>
+{% endif %}

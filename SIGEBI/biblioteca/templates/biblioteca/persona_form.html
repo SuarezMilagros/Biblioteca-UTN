@@ -1,15 +1,36 @@
 {% extends 'base.html' %}
+{% load interfaz %}
 
 {% block titulo %}{% if object %}Editar persona{% else %}Nueva persona{% endif %} · SIGEBI{% endblock %}
+{% block seccion %}Operación / Personas / <strong>{% if object %}Editar{% else %}Nueva persona{% endif %}</strong>{% endblock %}
 
 {% block contenido %}
-<h1>{% if object %}Editar persona{% else %}Nueva persona{% endif %}</h1>
+{% if object %}
+<a class="volver" href="{% url 'biblioteca:persona_detail' object.pk %}">{% icono 'volver' %}Volver a la persona</a>
+{% else %}
+<a class="volver" href="{% url 'biblioteca:persona_list' %}">{% icono 'volver' %}Volver a personas</a>
+{% endif %}
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Personas</p>
+        <h1>{% if object %}Editar persona{% else %}Nueva persona{% endif %}</h1>
+        <p class="bajada">Alumno o profesor que puede pedir préstamos.
+            <span class="leyenda-obligatorios">Los campos con <span class="obligatorio">*</span> son obligatorios.</span></p>
+    </div>
+</div>
 
-<form method="post" class="formulario tarjeta">
+<form method="post" class="formulario tarjeta formulario-angosto">
     {% csrf_token %}
-    {% include 'biblioteca/_formulario.html' %}
+    {% include 'componentes/errores_formulario.html' %}
+    <div class="campos">
+        {% include 'componentes/campo.html' with campo=form.nombre %}
+        {% include 'componentes/campo.html' with campo=form.apellido %}
+        {% include 'componentes/campo.html' with campo=form.documento %}
+        {% include 'componentes/campo.html' with campo=form.tipo %}
+        {% include 'componentes/campo.html' with campo=form.legajo %}
+    </div>
     <div class="acciones-formulario">
-        <button type="submit" class="boton">Guardar</button>
+        <button type="submit" class="boton">{% icono 'exito' %}Guardar</button>
         <a class="boton-secundario" href="{% if object %}{% url 'biblioteca:persona_detail' object.pk %}{% else %}{% url 'biblioteca:persona_list' %}{% endif %}">Cancelar</a>
     </div>
 </form>

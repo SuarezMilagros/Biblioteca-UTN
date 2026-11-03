@@ -1,34 +1,39 @@
 {% extends 'base.html' %}
+{% load interfaz %}
 
 {% block titulo %}Ingresar · SIGEBI{% endblock %}
 
 {% block contenido %}
-<section class="tarjeta tarjeta-centrada">
+<section class="tarjeta-acceso">
+    {% include 'registration/_acceso_marca.html' %}
     <h1>Ingresar</h1>
+    <p class="bajada">Accedé con tu cuenta del personal de la biblioteca.</p>
 
     {% if form.non_field_errors %}
-    <div class="alerta-error">
-        {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+    <div class="alerta-error" role="alert">
+        {% icono 'error' %}
+        <div>{% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}</div>
     </div>
     {% endif %}
 
     <form method="post" action="{% url 'login' %}" class="formulario">
         {% csrf_token %}
-        <div class="campo">
+        <div class="campo{% if form.username.errors %} campo-error{% endif %}">
             <label for="{{ form.username.id_for_label }}">Correo electrónico</label>
-            {{ form.username }}
-            {% for error in form.username.errors %}<p class="campo-error">{{ error }}</p>{% endfor %}
+            <div class="campo-con-icono">
+                {% icono 'correo' %}
+                {{ form.username }}
+            </div>
+            {% for error in form.username.errors %}<p class="campo-error">{% icono 'error' %}{{ error }}</p>{% endfor %}
         </div>
-        <div class="campo">
-            <label for="{{ form.password.id_for_label }}">Contraseña</label>
-            {{ form.password }}
-            {% for error in form.password.errors %}<p class="campo-error">{{ error }}</p>{% endfor %}
-        </div>
+        {% include 'registration/_campo_clave.html' with campo=form.password etiqueta='Contraseña' %}
         <input type="hidden" name="next" value="{{ next }}">
         <div class="acciones-formulario">
-            <button type="submit" class="boton">Ingresar</button>
+            <button type="submit" class="boton">{% icono 'salir' %}Ingresar</button>
         </div>
     </form>
-    <p><a href="{% url 'password_reset' %}">¿Olvidaste tu contraseña?</a></p>
+    <p class="acceso-enlaces"><a href="{% url 'password_reset' %}">¿Olvidaste tu contraseña?</a></p>
+    <hr class="acceso-separador">
+    <p class="acceso-nota">Acceso exclusivo para el personal de la biblioteca.</p>
 </section>
 {% endblock %}

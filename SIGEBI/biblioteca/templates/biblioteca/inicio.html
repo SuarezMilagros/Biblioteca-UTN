@@ -1,45 +1,124 @@
 {% extends 'base.html' %}
+{% load interfaz %}
 
 {% block titulo %}Inicio · SIGEBI{% endblock %}
+{% block seccion %}<strong>Panel principal</strong>{% endblock %}
 
 {% block contenido %}
-    <h1>Gestión del catálogo</h1>
-    <p class="texto-suave">Elegí una sección para consultar o registrar información de la biblioteca.</p>
-
-    <div class="tarjetas">
-        <a href="{% url 'biblioteca:libro_list' %}">
-            <h2>Libros</h2>
-            <p>Buscar por título y ver el detalle de cada libro.</p>
-        </a>
-        <a href="{% url 'biblioteca:ejemplar_list' %}">
-            <h2>Ejemplares</h2>
-            <p>Copias físicas, con su ID y código de inventario.</p>
-        </a>
-        <a href="{% url 'biblioteca:prestamo_list' %}">
-            <h2>Préstamos</h2>
-            <p>Préstamos sin devolver, vencidos y devoluciones.</p>
-        </a>
-        <a href="{% url 'biblioteca:persona_list' %}">
-            <h2>Personas</h2>
-            <p>Alumnos y profesores que pueden pedir préstamos.</p>
-        </a>
-        <a href="{% url 'biblioteca:autor_list' %}">
-            <h2>Autores</h2>
-            <p>Alta y edición de autores.</p>
-        </a>
-        <a href="{% url 'biblioteca:editorial_list' %}">
-            <h2>Editoriales</h2>
-            <p>Alta y edición de editoriales.</p>
-        </a>
-        <a href="{% url 'biblioteca:categoria_list' %}">
-            <h2>Categorías</h2>
-            <p>Alta y edición de categorías.</p>
-        </a>
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Panel principal</p>
+        <h1>Hola, {{ user.first_name|default:user.get_username }}</h1>
+        <p class="bajada">Así está la biblioteca hoy, {{ hoy|date:"l j \d\e F" }}.</p>
     </div>
+</div>
 
-    {% if user.is_superuser %}
-    <p class="texto-suave" style="margin-top: 2rem;">
-        <a href="{% url 'admin:index' %}">Panel de administración</a>
-    </p>
+{% if perms.biblioteca.view_ejemplar %}
+<section class="tarjeta busqueda-rapida" aria-labelledby="titulo-busqueda-rapida">
+    <div class="busqueda-rapida-texto">
+        <h2 id="titulo-busqueda-rapida">Buscar un ejemplar</h2>
+        <p>Con el código de inventario completo se abre directamente, para prestarlo o registrar su devolución.</p>
+    </div>
+    <form method="get" class="busqueda" role="search" action="{% url 'biblioteca:ejemplar_list' %}">
+        <div class="campo-busqueda">
+            {% icono 'buscar' %}
+            <label for="busqueda-ejemplar" class="sr-only">Código de inventario, ID o título</label>
+            <input type="search" id="busqueda-ejemplar" name="q" placeholder="Código de inventario, ID o título">
+        </div>
+        <button type="submit" class="boton">Buscar</button>
+    </form>
+</section>
+{% endif %}
+
+<div class="indicadores">
+    {% if perms.biblioteca.view_prestamo %}
+    <a class="indicador" href="{% url 'biblioteca:prestamo_list' %}">
+        <span class="indicador-cabeza">Préstamos sin devolver <span class="indicador-icono">{% icono 'prestamo' %}</span></span>
+        <span class="indicador-valor">{{ prestamos_sin_devolver }}</span>
+        <span class="indicador-detalle">Ejemplares que están fuera de la biblioteca</span>
+    </a>
+    <a class="indicador {% if prestamos_vencidos %}indicador-alerta{% else %}indicador-ok{% endif %}" href="{% url 'biblioteca:prestamo_list' %}?estado=vencidos">
+        <span class="indicador-cabeza">Préstamos vencidos <span class="indicador-icono">{% icono 'reloj' %}</span></span>
+        <span class="indicador-valor">{{ prestamos_vencidos }}</span>
+        <span class="indicador-detalle">{% if prestamos_vencidos %}Necesitan seguimiento{% else %}Todas las devoluciones al día{% endif %}</span>
+    </a>
     {% endif %}
+    {% if perms.biblioteca.view_ejemplar %}
+    <a class="indicador" href="{% url 'biblioteca:ejemplar_list' %}">
+        <span class="indicador-cabeza">Ejemplares disponibles <span class="indicador-icono">{% icono 'ejemplar' %}</span></span>
+        <span class="indicador-valor">{{ ejemplares_disponibles }}</span>
+        <span class="indicador-detalle">de {{ ejemplares_activos }} ejemplar{{ ejemplares_activos|pluralize:"es" }} activo{{ ejemplares_activos|pluralize }}{% if libros_total is not None %} · {{ libros_total }} título{{ libros_total|pluralize }}{% endif %}</span>
+    </a>
+    {% endif %}
+    {% if perms.biblioteca.view_persona %}
+    <a class="indicador" href="{% url 'biblioteca:persona_list' %}">
+        <span class="indicador-cabeza">Personas activas <span class="indicador-icono">{% icono 'personas' %}</span></span>
+        <span class="indicador-valor">{{ personas_activas }}</span>
+        <span class="indicador-detalle">Alumnos y profesores habilitados</span>
+    </a>
+    {% endif %}
+</div>
+
+<div class="dos-columnas">
+    {% if perms.biblioteca.view_prestamo %}
+    <section class="tarjeta" aria-labelledby="titulo-vencimientos">
+        <div class="tarjeta-titulo">
+            <h2 id="titulo-vencimientos">Próximos vencimientos</h2>
+            <a class="boton-texto" href="{% url 'biblioteca:prestamo_list' %}">Ver todos</a>
+        </div>
+        {% if proximos_vencimientos %}
+        <div class="tabla-contenedor integrada">
+            <table class="tabla">
+                <thead>
+                    <tr>
+                        <th scope="col">Ejemplar</th>
+                        <th scope="col">Persona</th>
+                        <th scope="col">Vence</th>
+                        <th scope="col">Estado</th>
+                        <th scope="col"><span class="sr-only">Acciones</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for prestamo in proximos_vencimientos %}
+                    <tr>
+                        <td data-etiqueta="Ejemplar"><a href="{% url 'biblioteca:ejemplar_detail' prestamo.ejemplar_id %}" class="codigo">{{ prestamo.ejemplar.codigo_inventario }}</a><span class="secundario">{{ prestamo.ejemplar.libro.titulo }}</span></td>
+                        <td data-etiqueta="Persona">{{ prestamo.persona }}</td>
+                        <td data-etiqueta="Vence">{{ prestamo.fecha_vencimiento|date:"d/m/Y" }}</td>
+                        <td data-etiqueta="Estado">{% include 'biblioteca/_estado_prestamo.html' %}</td>
+                        <td class="acciones">
+                            {% if perms.biblioteca.change_prestamo %}<a href="{% url 'biblioteca:prestamo_devolver' prestamo.pk %}">{% icono 'devolver' %}Devolver</a>{% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        {% include 'componentes/vacio.html' with icono='exito' titulo='No hay préstamos sin devolver' texto='Todos los ejemplares prestados ya volvieron a la biblioteca.' %}
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <section class="tarjeta" aria-labelledby="titulo-accesos">
+        <div class="tarjeta-titulo"><h2 id="titulo-accesos">Accesos rápidos</h2></div>
+        <div class="accesos">
+            {% if perms.biblioteca.add_prestamo %}
+            <a class="acceso" href="{% url 'biblioteca:ejemplar_list' %}">{% icono 'prestamo' %}<span>Prestar un ejemplar<small>Buscalo y tocá «Prestar»</small></span></a>
+            {% endif %}
+            {% if perms.biblioteca.add_persona %}
+            <a class="acceso" href="{% url 'biblioteca:persona_create' %}">{% icono 'persona' %}<span>Registrar una persona<small>Alumno o profesor</small></span></a>
+            {% endif %}
+            {% if perms.biblioteca.add_libro %}
+            <a class="acceso" href="{% url 'biblioteca:libro_create' %}">{% icono 'libro' %}<span>Agregar un libro<small>Al catálogo, con su portada</small></span></a>
+            {% endif %}
+            <a class="acceso" href="{% url 'biblioteca:informes' %}">{% icono 'informe' %}<span>Informes<small>Estadísticas y exportación CSV</small></span></a>
+            {% if perms.auth.view_user %}
+            <a class="acceso" href="{% url 'cuentas:usuario_list' %}">{% icono 'cuentas' %}<span>Cuentas del personal<small>Altas y permisos</small></span></a>
+            {% endif %}
+            {% if user.is_superuser %}
+            <a class="acceso" href="{% url 'admin:index' %}">{% icono 'admin' %}<span>Panel de administración<small>Solo superusuarios</small></span></a>
+            {% endif %}
+        </div>
+    </section>
+</div>
 {% endblock %}

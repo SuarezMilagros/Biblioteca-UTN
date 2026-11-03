@@ -1,38 +1,49 @@
 {% extends 'base.html' %}
+{% load interfaz %}
 
 {% block titulo %}Préstamos · SIGEBI{% endblock %}
+{% block seccion %}Operación / <strong>Préstamos</strong>{% endblock %}
 
 {% block contenido %}
 <div class="encabezado-seccion">
-    <h1>Préstamos</h1>
+    <div>
+        <p class="sobretitulo">Operación</p>
+        <h1>Préstamos</h1>
+        <p class="bajada">Ejemplares prestados, vencimientos y devoluciones. Los más urgentes aparecen primero.</p>
+    </div>
     <div class="botones-encabezado">
-        {% if object_list %}<a class="boton-secundario" href="{% querystring formato='csv' page=None %}">Exportar CSV</a>{% endif %}
-        <a class="boton-secundario" href="{% url 'biblioteca:ejemplar_list' %}">Prestar un ejemplar</a>
+        {% if object_list %}<a class="boton-secundario" href="{% querystring formato='csv' page=None %}">{% icono 'descargar' %}Exportar CSV</a>{% endif %}
+        <a class="boton" href="{% url 'biblioteca:ejemplar_list' %}">{% icono 'prestamo' %}Prestar un ejemplar</a>
     </div>
 </div>
 
-<form method="get" class="busqueda" role="search" action="{% url 'biblioteca:prestamo_list' %}">
-    <label for="q" class="sr-only">Buscar por persona, documento, código o título</label>
-    <input type="search" id="q" name="q" value="{{ q }}" placeholder="Persona, documento, código o título">
-    <label for="estado" class="sr-only">Estado</label>
-    <select id="estado" name="estado">
-        {% for clave, titulo in estados %}
-        <option value="{{ clave }}"{% if estado == clave %} selected{% endif %}>{{ titulo }}</option>
-        {% endfor %}
-    </select>
-    <button type="submit" class="boton">Buscar</button>
-    {% if q or estado != 'vigentes' %}
-        <a href="{% url 'biblioteca:prestamo_list' %}">Quitar filtros</a>
-    {% endif %}
-</form>
+<div class="barra-filtros">
+    <form method="get" class="busqueda" role="search" action="{% url 'biblioteca:prestamo_list' %}">
+        <div class="campo-busqueda">
+            {% icono 'buscar' %}
+            <label for="q" class="sr-only">Buscar por persona, documento, código o título</label>
+            <input type="search" id="q" name="q" value="{{ q }}" placeholder="Persona, documento, código o título">
+        </div>
+        <label for="estado" class="sr-only">Estado</label>
+        <select id="estado" name="estado">
+            {% for clave, titulo in estados %}
+            <option value="{{ clave }}"{% if estado == clave %} selected{% endif %}>{{ titulo }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="boton">Buscar</button>
+        {% if q or estado != 'vigentes' %}
+            <a class="quitar-filtros" href="{% url 'biblioteca:prestamo_list' %}">Quitar filtros</a>
+        {% endif %}
+    </form>
+</div>
 
 {% if object_list %}
+<p class="resumen-listado">{{ paginator.count }} préstamo{{ paginator.count|pluralize }}{% if q %} para «{{ q }}»{% endif %}</p>
 <div class="tabla-contenedor">
     <table class="tabla">
         <thead>
             <tr>
                 <th scope="col">Ejemplar</th>
-                <th scope="col">Libro</th>
                 <th scope="col">Persona</th>
                 <th scope="col">Préstamo</th>
                 <th scope="col">Vencimiento</th>
@@ -44,16 +55,15 @@
         <tbody>
         {% for prestamo in object_list %}
             <tr>
-                <td data-etiqueta="Ejemplar"><a href="{% url 'biblioteca:ejemplar_detail' prestamo.ejemplar_id %}">{{ prestamo.ejemplar.codigo_inventario }}</a></td>
-                <td data-etiqueta="Libro">{{ prestamo.ejemplar.libro.titulo }}</td>
-                <td data-etiqueta="Persona"><a href="{% url 'biblioteca:persona_detail' prestamo.persona_id %}">{{ prestamo.persona }}</a></td>
+                <td data-etiqueta="Ejemplar"><a class="codigo" href="{% url 'biblioteca:ejemplar_detail' prestamo.ejemplar_id %}">{{ prestamo.ejemplar.codigo_inventario }}</a><span class="secundario">{{ prestamo.ejemplar.libro.titulo }}</span></td>
+                <td data-etiqueta="Persona"><a href="{% url 'biblioteca:persona_detail' prestamo.persona_id %}">{{ prestamo.persona }}</a><span class="secundario">{{ prestamo.persona.documento }}</span></td>
                 <td data-etiqueta="Préstamo">{{ prestamo.fecha_prestamo|date:"d/m/Y" }}</td>
                 <td data-etiqueta="Vencimiento">{{ prestamo.fecha_vencimiento|date:"d/m/Y" }}</td>
                 <td data-etiqueta="Devolución">{{ prestamo.fecha_devolucion|date:"d/m/Y"|default:"—" }}</td>
                 <td data-etiqueta="Estado">{% include 'biblioteca/_estado_prestamo.html' %}</td>
                 <td class="acciones">
                     {% if prestamo.activo and perms.biblioteca.change_prestamo %}
-                    <a href="{% url 'biblioteca:prestamo_devolver' prestamo.pk %}" aria-label="Registrar devolución de {{ prestamo.ejemplar.codigo_inventario }}">Devolver</a>
+                    <a href="{% url 'biblioteca:prestamo_devolver' prestamo.pk %}" aria-label="Registrar devolución de {{ prestamo.ejemplar.codigo_inventario }}">{% icono 'devolver' %}Devolver</a>
                     {% endif %}
                 </td>
             </tr>
@@ -61,16 +71,20 @@
         </tbody>
     </table>
 </div>
-{% include 'biblioteca/_paginacion.html' %}
+{% include 'componentes/paginacion.html' %}
 {% else %}
     {% if q %}
-    <p class="vacio">No se encontraron préstamos con «{{ q }}».</p>
+    <div class="vacio">
+        <span class="vacio-icono">{% icono 'buscar' %}</span>
+        <p class="vacio-titulo">No se encontraron préstamos con «{{ q }}».</p>
+        <p>Probá con «Todos» en el filtro de estado.</p>
+    </div>
     {% elif estado == 'vencidos' %}
-    <p class="vacio">No hay préstamos vencidos.</p>
+    {% include 'componentes/vacio.html' with icono='exito' titulo='No hay préstamos vencidos.' texto='Todas las devoluciones están al día.' %}
     {% elif estado == 'vigentes' %}
-    <p class="vacio">No hay préstamos sin devolver.</p>
+    {% include 'componentes/vacio.html' with icono='exito' titulo='No hay préstamos sin devolver.' texto='Todos los ejemplares están en la biblioteca.' %}
     {% else %}
-    <p class="vacio">No hay préstamos para mostrar.</p>
+    {% include 'componentes/vacio.html' with icono='prestamo' titulo='No hay préstamos para mostrar.' %}
     {% endif %}
 {% endif %}
 {% endblock %}

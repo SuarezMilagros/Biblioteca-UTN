@@ -1,23 +1,37 @@
 {% extends 'base.html' %}
+{% load interfaz %}
 
 {% block titulo %}Libros · SIGEBI{% endblock %}
+{% block seccion %}Catálogo / <strong>Libros</strong>{% endblock %}
 
 {% block contenido %}
 <div class="encabezado-seccion">
-    <h1>Libros</h1>
-    <a class="boton" href="{% url 'biblioteca:libro_create' %}">Nuevo libro</a>
+    <div>
+        <p class="sobretitulo">Catálogo</p>
+        <h1>Libros</h1>
+        <p class="bajada">Títulos del catálogo y la disponibilidad de sus ejemplares.</p>
+    </div>
+    <div class="botones-encabezado">
+        <a class="boton" href="{% url 'biblioteca:libro_create' %}">{% icono 'mas' %}Nuevo libro</a>
+    </div>
 </div>
 
-<form method="get" class="busqueda" role="search" action="{% url 'biblioteca:libro_list' %}">
-    <label for="q" class="sr-only">Buscar por título</label>
-    <input type="search" id="q" name="q" value="{{ q }}" placeholder="Buscar por título">
-    <button type="submit" class="boton">Buscar</button>
-    {% if q %}
-        <a href="{% url 'biblioteca:libro_list' %}">Quitar búsqueda</a>
-    {% endif %}
-</form>
+<div class="barra-filtros">
+    <form method="get" class="busqueda" role="search" action="{% url 'biblioteca:libro_list' %}">
+        <div class="campo-busqueda">
+            {% icono 'buscar' %}
+            <label for="q" class="sr-only">Buscar por título</label>
+            <input type="search" id="q" name="q" value="{{ q }}" placeholder="Buscar por título (sin importar las tildes)">
+        </div>
+        <button type="submit" class="boton">Buscar</button>
+        {% if q %}
+            <a class="quitar-filtros" href="{% url 'biblioteca:libro_list' %}">Quitar búsqueda</a>
+        {% endif %}
+    </form>
+</div>
 
 {% if object_list %}
+<p class="resumen-listado">{{ paginator.count }} título{{ paginator.count|pluralize }}{% if q %} para «{{ q }}»{% endif %}</p>
 <div class="tabla-contenedor">
     <table class="tabla">
         <thead>
@@ -26,32 +40,50 @@
                 <th scope="col">Autor</th>
                 <th scope="col">Editorial</th>
                 <th scope="col">Categoría</th>
-                <th scope="col">ISBN</th>
+                <th scope="col">Disponibilidad</th>
                 <th scope="col"><span class="sr-only">Acciones</span></th>
             </tr>
         </thead>
         <tbody>
         {% for libro in object_list %}
             <tr>
-                <td data-etiqueta="Título"><a href="{% url 'biblioteca:libro_detail' libro.pk %}">{{ libro.titulo }}</a></td>
+                <td data-etiqueta="Título">
+                    <div class="celda-libro">
+                        <span class="miniatura" aria-hidden="true">{% if libro.imagen %}<img src="{{ libro.imagen.url }}" alt="">{% else %}{{ libro.titulo|slice:":1"|upper }}{% endif %}</span>
+                        <span><a href="{% url 'biblioteca:libro_detail' libro.pk %}">{{ libro.titulo }}</a><span class="secundario">{% if libro.isbn %}ISBN {{ libro.isbn }}{% else %}Sin ISBN{% endif %}</span></span>
+                    </div>
+                </td>
                 <td data-etiqueta="Autor">{{ libro.autor }}</td>
                 <td data-etiqueta="Editorial">{{ libro.editorial }}</td>
-                <td data-etiqueta="Categoría">{{ libro.categoria }}</td>
-                <td data-etiqueta="ISBN">{{ libro.isbn|default:"—" }}</td>
+                <td data-etiqueta="Categoría"><span class="badge badge-etiqueta">{{ libro.categoria }}</span></td>
+                <td data-etiqueta="Disponibilidad" class="disponibilidad">
+                    {% if libro.ejemplares_activos %}
+                        {% if libro.ejemplares_disponibles %}<span class="badge badge-disponible">{{ libro.ejemplares_disponibles }} disponible{{ libro.ejemplares_disponibles|pluralize }}</span>{% else %}<span class="badge badge-prestado">Ninguno disponible</span>{% endif %}
+                        <span class="secundario">de {{ libro.ejemplares_activos }} ejemplar{{ libro.ejemplares_activos|pluralize:"es" }}</span>
+                    {% else %}
+                        <span class="badge badge-baja">Sin ejemplares</span>
+                    {% endif %}
+                </td>
                 <td class="acciones">
-                    <a href="{% url 'biblioteca:libro_update' libro.pk %}">Editar</a>
+                    <a href="{% url 'biblioteca:libro_detail' libro.pk %}">{% icono 'ver' %}Ver</a>
+                    <a href="{% url 'biblioteca:libro_update' libro.pk %}">{% icono 'editar' %}Editar</a>
                 </td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
 </div>
-{% include 'biblioteca/_paginacion.html' %}
+{% include 'componentes/paginacion.html' %}
 {% else %}
     {% if q %}
-    <p class="vacio">No se encontraron libros con «{{ q }}».</p>
+    <div class="vacio">
+        <span class="vacio-icono">{% icono 'buscar' %}</span>
+        <p class="vacio-titulo">No se encontraron libros con «{{ q }}».</p>
+        <p>Probá con otra palabra del título.</p>
+    </div>
     {% else %}
-    <p class="vacio">Todavía no hay libros registrados.</p>
+    {% url 'biblioteca:libro_create' as url_nuevo %}
+    {% include 'componentes/vacio.html' with icono='libro' titulo='Todavía no hay libros registrados.' texto='Empezá cargando el primer título del catálogo.' accion_url=url_nuevo accion_texto='Nuevo libro' %}
     {% endif %}
 {% endif %}
 {% endblock %}

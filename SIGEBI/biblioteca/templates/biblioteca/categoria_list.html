@@ -1,14 +1,23 @@
 {% extends 'base.html' %}
+{% load interfaz %}
 
 {% block titulo %}Categorías · SIGEBI{% endblock %}
+{% block seccion %}Catálogo / <strong>Categorías</strong>{% endblock %}
 
 {% block contenido %}
 <div class="encabezado-seccion">
-    <h1>Categorías</h1>
-    <a class="boton" href="{% url 'biblioteca:categoria_create' %}">Nueva categoría</a>
+    <div>
+        <p class="sobretitulo">Catálogo</p>
+        <h1>Categorías</h1>
+        <p class="bajada">Temas con los que se clasifican los libros.</p>
+    </div>
+    <div class="botones-encabezado">
+        <a class="boton" href="{% url 'biblioteca:categoria_create' %}">{% icono 'mas' %}Nueva categoría</a>
+    </div>
 </div>
 
 {% if object_list %}
+<p class="resumen-listado">{{ paginator.count }} registro{{ paginator.count|pluralize }}</p>
 <div class="tabla-contenedor">
     <table class="tabla">
         <thead>
@@ -21,18 +30,17 @@
         <tbody>
         {% for categoria in object_list %}
             <tr>
-                <td data-etiqueta="Nombre">{{ categoria.nombre }}</td>
-                <td data-etiqueta="Descripción">{{ categoria.descripcion|default:"—"|truncatechars:80 }}</td>
-                <td class="acciones">
-                    <a href="{% url 'biblioteca:categoria_update' categoria.pk %}">Editar</a>
-                </td>
+                <td data-etiqueta="Nombre"><strong>{{ categoria.nombre }}</strong></td>
+                <td data-etiqueta="Descripción" class="texto-suave">{{ categoria.descripcion|default:"—"|truncatechars:80 }}</td>
+                <td class="acciones"><a href="{% url 'biblioteca:categoria_update' categoria.pk %}">{% icono 'editar' %}Editar</a></td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
 </div>
-{% include 'biblioteca/_paginacion.html' %}
+{% include 'componentes/paginacion.html' %}
 {% else %}
-<p class="vacio">Todavía no hay categorías registradas.</p>
+{% url 'biblioteca:categoria_create' as url_nuevo %}
+{% include 'componentes/vacio.html' with icono='categoria' titulo='Todavía no hay categorías registradas.' texto='Cuando cargues una categoría, aparecerá en esta lista.' accion_url=url_nuevo accion_texto='Nueva categoría' %}
 {% endif %}
 {% endblock %}

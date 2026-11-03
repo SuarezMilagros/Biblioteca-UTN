@@ -1,53 +1,77 @@
 {% extends 'base.html' %}
+{% load interfaz %}
 
 {% block titulo %}Cuentas · SIGEBI{% endblock %}
+{% block seccion %}Gestión / <strong>Cuentas</strong>{% endblock %}
 
 {% block contenido %}
-<section class="tarjeta">
-    <h1>Cuentas</h1>
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Gestión</p>
+        <h1>Cuentas</h1>
+        <p class="bajada">Personal de la biblioteca con acceso a SIGEBI. Las cuentas no se borran: se desactivan.</p>
+    </div>
     {% if perms.auth.add_user %}
-    <p><a class="boton" href="{% url 'cuentas:usuario_create' %}">Nueva cuenta</a></p>
+    <div class="botones-encabezado">
+        <a class="boton" href="{% url 'cuentas:usuario_create' %}">{% icono 'mas' %}Nueva cuenta</a>
+    </div>
     {% endif %}
+</div>
 
-    <form method="get" class="formulario">
-        <div class="campo">
-            <label for="q">Buscar</label>
-            <input type="search" id="q" name="q" value="{{ q }}">
+<div class="barra-filtros">
+    <form method="get" class="busqueda" role="search">
+        <div class="campo-busqueda">
+            {% icono 'buscar' %}
+            <label for="q" class="sr-only">Buscar por documento, nombre o correo</label>
+            <input type="search" id="q" name="q" value="{{ q }}" placeholder="Documento, nombre o correo">
         </div>
-        <div class="acciones-formulario">
-            <button type="submit" class="boton">Buscar</button>
-        </div>
+        <button type="submit" class="boton">Buscar</button>
+        {% if q %}<a class="quitar-filtros" href="{% url 'cuentas:usuario_list' %}">Quitar búsqueda</a>{% endif %}
     </form>
+</div>
 
+{% if usuarios %}
+<div class="tabla-contenedor">
     <table class="tabla">
         <thead>
             <tr>
-                <th>Documento</th>
-                <th>Nombre</th>
-                <th>Correo</th>
-                <th>Rol</th>
-                <th>Estado</th>
-                <th></th>
+                <th scope="col">Persona</th>
+                <th scope="col">Documento</th>
+                <th scope="col">Rol</th>
+                <th scope="col">Estado</th>
+                <th scope="col"><span class="sr-only">Acciones</span></th>
             </tr>
         </thead>
         <tbody>
         {% for usuario in usuarios %}
             <tr>
-                <td>{{ usuario.username }}</td>
-                <td>{{ usuario.get_full_name }}</td>
-                <td>{{ usuario.email }}</td>
-                <td>{% for grupo in usuario.groups.all %}{{ grupo.name }}{% endfor %}</td>
-                <td>{% if usuario.is_active %}Activa{% else %}Desactivada{% endif %}</td>
-                <td>
+                <td data-etiqueta="Persona">
+                    <div class="celda-libro">
+                        <span class="avatar avatar-suave" aria-hidden="true">{{ usuario|iniciales }}</span>
+                        <span><strong>{{ usuario.get_full_name|default:usuario.username }}</strong><span class="secundario">{{ usuario.email }}</span></span>
+                    </div>
+                </td>
+                <td data-etiqueta="Documento" class="codigo">{{ usuario.username }}</td>
+                <td data-etiqueta="Rol">{% for grupo in usuario.groups.all %}<span class="badge badge-rol {% if grupo.name == 'Administrativo' %}badge-info{% else %}badge-neutro{% endif %}">{{ grupo.name }}</span>{% endfor %}</td>
+                <td data-etiqueta="Estado">
+                    {% if usuario.is_active %}<span class="badge badge-disponible">Activa</span>{% else %}<span class="badge badge-baja">Desactivada</span>{% endif %}
+                    {% if usuario.is_active and not usuario.has_usable_password %}<span class="secundario">Falta definir la contraseña</span>{% endif %}
+                </td>
+                <td class="acciones">
                     {% if usuario.puede_editar %}
-                    <a href="{% url 'cuentas:usuario_update' usuario.pk %}">Editar</a>
+                    <a href="{% url 'cuentas:usuario_update' usuario.pk %}">{% icono 'editar' %}Editar</a>
                     {% endif %}
                 </td>
             </tr>
-        {% empty %}
-            <tr><td colspan="6">No hay cuentas para mostrar.</td></tr>
         {% endfor %}
         </tbody>
     </table>
-</section>
+</div>
+{% else %}
+<div class="vacio">
+    <span class="vacio-icono">{% icono 'cuentas' %}</span>
+    <p class="vacio-titulo">No hay cuentas para mostrar.</p>
+    {% if q %}<p>No hay cuentas que coincidan con «{{ q }}».</p>{% endif %}
+</div>
+{% endif %}
 {% endblock %}

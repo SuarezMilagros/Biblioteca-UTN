@@ -1,31 +1,64 @@
 {% extends 'base.html' %}
+{% load interfaz %}
 
 {% block titulo %}Cuenta · SIGEBI{% endblock %}
+{% block seccion %}Gestión / Cuentas / <strong>{% if object %}Editar cuenta{% else %}Nueva cuenta{% endif %}</strong>{% endblock %}
 
 {% block contenido %}
-<section class="tarjeta tarjeta-centrada">
-    <h1>{% if object %}Editar cuenta{% else %}Nueva cuenta{% endif %}</h1>
+<a class="volver" href="{% url 'cuentas:usuario_list' %}">{% icono 'volver' %}Volver a cuentas</a>
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Cuentas</p>
+        <h1>{% if object %}Editar cuenta{% else %}Nueva cuenta{% endif %}</h1>
+        <p class="bajada">{% if object %}Datos y permisos de la cuenta.{% else %}No se escribe ninguna contraseña: la persona recibe un correo para definirla (el enlace vence en una hora).{% endif %}</p>
+    </div>
+</div>
 
-    <form method="post" class="formulario">
+<div class="dos-columnas">
+    <form method="post" class="formulario tarjeta">
         {% csrf_token %}
-        {% for campo in form %}
-        <div class="campo">
-            <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
-            {{ campo }}
-            {% for error in campo.errors %}<p class="campo-error">{{ error }}</p>{% endfor %}
+        {% include 'componentes/errores_formulario.html' %}
+        <div class="seccion-formulario">
+            <h2>Datos personales</h2>
+            <div class="campos">
+                {% include 'componentes/campo.html' with campo=form.first_name %}
+                {% include 'componentes/campo.html' with campo=form.last_name %}
+                {% include 'componentes/campo.html' with campo=form.username %}
+                {% include 'componentes/campo.html' with campo=form.email %}
+            </div>
         </div>
-        {% endfor %}
-        {% for error in form.non_field_errors %}<p class="campo-error">{{ error }}</p>{% endfor %}
+        <div class="seccion-formulario">
+            <h2>Acceso</h2>
+            <div class="campos">
+                {% include 'componentes/campo.html' with campo=form.rol %}
+                {% include 'componentes/campo.html' with campo=form.is_active clase='ancho-completo' %}
+            </div>
+        </div>
         <div class="acciones-formulario">
-            <button type="submit" class="boton">Guardar</button>
+            <button type="submit" class="boton">{% icono 'exito' %}Guardar</button>
+            <a class="boton-secundario" href="{% url 'cuentas:usuario_list' %}">Cancelar</a>
         </div>
     </form>
 
-    {% if object and not object.has_usable_password and object.is_active %}
-    <form method="post" action="{% url 'cuentas:usuario_reenviar_definicion' object.pk %}" class="formulario">
-        {% csrf_token %}
-        <button type="submit" class="boton">Reenviar correo de definición</button>
-    </form>
-    {% endif %}
-</section>
+    <aside class="columna">
+        <section class="tarjeta" aria-labelledby="titulo-roles">
+            <div class="tarjeta-titulo"><h2 id="titulo-roles">Roles</h2></div>
+            <p><span class="badge badge-rol badge-neutro">Bibliotecario</span></p>
+            <p class="ayuda">Catálogo, personas, préstamos, devoluciones e informes.</p>
+            <p><span class="badge badge-rol badge-info">Administrativo</span></p>
+            <p class="ayuda">Todo lo anterior y, además, las cuentas de los bibliotecarios. Solo un superusuario crea administrativos.</p>
+        </section>
+
+        {% if object and not object.has_usable_password and object.is_active %}
+        <section class="tarjeta" aria-labelledby="titulo-reenvio">
+            <div class="tarjeta-titulo"><h2 id="titulo-reenvio">Contraseña pendiente</h2></div>
+            <p class="texto-suave">Esta persona todavía no definió su contraseña.</p>
+            <form method="post" action="{% url 'cuentas:usuario_reenviar_definicion' object.pk %}" class="formulario">
+                {% csrf_token %}
+                <button type="submit" class="boton-secundario">{% icono 'correo' %}Reenviar correo de definición</button>
+            </form>
+        </section>
+        {% endif %}
+    </aside>
+</div>
 {% endblock %}

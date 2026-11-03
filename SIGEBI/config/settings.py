@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.postgres',
+    'interfaz',
     'biblioteca',
     'cuentas',
 ]
@@ -81,6 +82,9 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                # Variables de la cabecera común (ver la lista al inicio de templates/base.html).
+                'cuentas.contexto.interfaz',      # rol_usuario
+                'biblioteca.contexto.interfaz',   # prestamos_vencidos_total
             ],
         },
     },

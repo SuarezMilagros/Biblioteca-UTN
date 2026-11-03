@@ -1,10 +1,4 @@
 {% comment %}
     Insignia del estado de un préstamo. Requiere la variable `prestamo`.
 {% endcomment %}
-{% if prestamo.vencido %}
-    <span class="badge badge-vencido">Vencido</span>
-{% elif prestamo.activo %}
-    <span class="badge badge-prestado">Sin devolver</span>
-{% else %}
-    <span class="badge badge-disponible">Devuelto</span>
-{% endif %}
+{% if prestamo.vencido %}<span class="badge badge-vencido">Vencido</span>{% elif prestamo.activo %}<span class="badge badge-prestado">Sin devolver</span>{% else %}<span class="badge badge-disponible">Devuelto</span>{% endif %}

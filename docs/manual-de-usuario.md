@@ -38,7 +38,7 @@ datos de prueba (`cargar_datos_prueba`).
 Si el correo o la contraseña no son correctos, el sistema muestra un único mensaje ("El correo o la
 contraseña no son correctos") sin indicar cuál de los dos falló. Así nadie puede averiguar qué cuentas existen.
 
-La sesión dura **8 horas**. Para salir, usá el botón **Salir (tu nombre)** arriba a la derecha.
+La sesión dura **8 horas**. Para salir, usá **Salir (tu nombre)**, al pie del menú lateral.
 
 ### 1.1. Primera vez: definir la contraseña
 
@@ -62,9 +62,30 @@ Por seguridad, la pantalla muestra el mismo mensaje exista o no una cuenta con e
 
 ![Inicio](capturas/03-inicio.png)
 
-Después de ingresar, la pantalla de **Inicio** muestra accesos a cada sección. El **menú superior** está
-siempre visible: Libros, Ejemplares, Préstamos, Personas, Autores, Editoriales, Categorías,
-**Cuentas** (solo para Administrativos) y **Cambiar contraseña**. La sección en la que estás aparece subrayada.
+Después de ingresar se abre el **panel principal**, con el estado de la biblioteca en ese momento:
+
+- **Buscar un ejemplar:** escribí el código de inventario completo y se abre directamente el ejemplar,
+  listo para prestarlo o registrar su devolución.
+- **Indicadores:** préstamos sin devolver, préstamos vencidos (en rojo si hay alguno), ejemplares
+  disponibles y personas activas. Cada indicador lleva al listado correspondiente.
+- **Próximos vencimientos:** los préstamos sin devolver, empezando por los más urgentes, con el acceso
+  directo para registrar la devolución.
+- **Accesos rápidos** a las tareas más frecuentes.
+
+El **menú lateral** está siempre visible y agrupa las secciones:
+
+| Grupo | Secciones |
+|---|---|
+| Operación | Inicio, Préstamos, Ejemplares, Personas |
+| Catálogo | Libros, Autores, Editoriales, Categorías |
+| Gestión | Informes y **Cuentas** (solo Administrativos) |
+
+Al pie del menú están **Cambiar contraseña** y **Salir**. La sección en la que estás aparece resaltada en naranja.
+En la cabecera se ven tu nombre y tu rol, y un **aviso rojo con la cantidad de préstamos vencidos**
+(si los hay): al tocarlo se abre el listado de vencidos.
+
+Los mensajes de confirmación (verde), aviso (amarillo) y error (rojo) aparecen arriba del contenido y se
+pueden cerrar con la **✕**.
 
 ---
 
@@ -208,7 +229,7 @@ El documento se guarda sin puntos ni espacios y **no se puede repetir**.
 ### 7.1. Dar de baja o reactivar una persona
 
 En el detalle de la persona, **Dar de baja** la deja inactiva: no puede recibir préstamos nuevos, pero se
-conserva su historial. **No se puede dar de baja a una persona con préstamos sin devolver.**
+conserva su historial. Antes de hacerlo, el sistema pide **confirmar** en una ventana; con **Cancelar** no cambia nada. **No se puede dar de baja a una persona con préstamos sin devolver.**
 Para volver a habilitarla, usá **Reactivar**.
 
 ---
@@ -218,7 +239,7 @@ Para volver a habilitarla, usá **Reactivar**.
 Cuando un ejemplar se pierde, se daña o se descarta, se da de baja desde su detalle:
 
 1. Elegí el **motivo**: Perdido, Dañado, Descarte u Otro.
-2. Tocá **Dar de baja**.
+2. Tocá **Dar de baja** y confirmá en la ventana que aparece (con **Cancelar** no cambia nada).
 
 ![Ejemplar dado de baja](capturas/18-ejemplar-dado-de-baja.png)
 
@@ -230,7 +251,10 @@ Si fue un error (por ejemplo, apareció el ejemplar perdido), usá **Reactivar e
 
 ## 9. Informes CSV
 
-Los listados de **Ejemplares**, **Préstamos** y **Personas** tienen el botón **Exportar CSV**
+La sección **Informes** (menú lateral, grupo Gestión) muestra el estado de préstamos, ejemplares y personas
+con barras de colores y los botones para descargar los informes más usados.
+
+Además, los listados de **Ejemplares**, **Préstamos** y **Personas** tienen el botón **Exportar CSV**
 (se ve en las capturas de esas secciones). El archivo trae **exactamente lo que estás viendo**: la misma
 búsqueda y el mismo filtro, con todas las páginas.
 
@@ -290,8 +314,9 @@ que escribe la dirección de Cuentas), el sistema muestra **Acceso no permitido*
 
 ![Préstamos en el teléfono](capturas/23-telefono-prestamos.png)
 
-Todas las pantallas se adaptan al teléfono: el menú se acomoda en varias líneas y las tablas se muestran
-como tarjetas, sin desplazamiento horizontal.
+Todas las pantallas se adaptan al teléfono y a la tablet. En pantallas chicas el menú lateral se oculta:
+se abre con el botón **☰** de la cabecera y se cierra con la **✕**, tocando fuera del menú o con la tecla Esc.
+Las tablas se muestran como tarjetas, sin desplazamiento horizontal.
 
 ---
 

@@ -12,6 +12,7 @@ class CategoriaForm(forms.ModelForm):
     class Meta:
         model = Categoria
         fields = ['nombre', 'descripcion']
+        labels = {'descripcion': 'Descripción'}
 
 
 class AutorForm(forms.ModelForm):
@@ -31,6 +32,8 @@ class LibroForm(forms.ModelForm):
         model = Libro
         fields = ['titulo', 'isbn', 'imagen', 'categoria', 'autor', 'editorial']
         labels = {
+            'titulo': 'Título',
+            'categoria': 'Categoría',
             'isbn': 'ISBN (opcional)',
             'imagen': 'Imagen de portada (opcional)',
         }

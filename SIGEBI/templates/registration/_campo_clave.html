@@ -1,0 +1,11 @@
+{% comment %}Campo de contraseña con ícono y botón para mostrarla. Requiere `campo` y `etiqueta`.{% endcomment %}
+{% load interfaz %}
+<div class="campo{% if campo.errors %} campo-error{% endif %}">
+    <label for="{{ campo.id_for_label }}">{{ etiqueta }}</label>
+    <div class="campo-con-icono">
+        {% icono 'candado' %}
+        {{ campo }}
+        <button type="button" class="mostrar-clave" data-mostrar-clave="{{ campo.id_for_label }}" aria-pressed="false" hidden>Mostrar</button>
+    </div>
+    {% for error in campo.errors %}<p class="campo-error">{% icono 'error' %}{{ error }}</p>{% endfor %}
+</div>

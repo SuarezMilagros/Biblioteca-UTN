@@ -1,0 +1,8 @@
+{% comment %}
+    Campos de un ModelForm, uno debajo del otro. Requiere la variable `form`.
+    Se incluye desde las plantillas de alta y edición.
+{% endcomment %}
+{% include 'componentes/errores_formulario.html' %}
+{% for campo in form %}
+    {% include 'componentes/campo.html' with campo=campo %}
+{% endfor %}

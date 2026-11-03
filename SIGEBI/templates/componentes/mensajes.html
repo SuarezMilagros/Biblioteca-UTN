@@ -1,0 +1,14 @@
+{% load interfaz %}
+<div role="status">
+    {% if messages %}
+    <ul class="mensajes">
+        {% for message in messages %}
+        <li class="mensaje mensaje-{{ message.tags }}">
+            {% if message.level_tag == 'success' %}{% icono 'exito' %}{% elif message.level_tag == 'error' %}{% icono 'error' %}{% elif message.level_tag == 'warning' %}{% icono 'alerta' %}{% else %}{% icono 'info' %}{% endif %}
+            <span class="mensaje-texto">{{ message }}</span>
+            <button type="button" class="mensaje-cerrar" data-cerrar-mensaje hidden>{% icono 'cerrar' %}<span class="sr-only">Cerrar aviso</span></button>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</div>

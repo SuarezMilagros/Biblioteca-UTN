@@ -1,32 +1,48 @@
 {% extends 'base.html' %}
+{% load interfaz %}
 
 {% block titulo %}Devolución de {{ prestamo.ejemplar.codigo_inventario }} · SIGEBI{% endblock %}
+{% block seccion %}Operación / Préstamos / <strong>Devolución</strong>{% endblock %}
 
 {% block contenido %}
-<h1>Registrar devolución</h1>
-
-<section class="tarjeta">
-    <dl class="detalle">
-        <dt>Ejemplar</dt>
-        <dd>{{ prestamo.ejemplar.codigo_inventario }} · {{ prestamo.ejemplar.libro.titulo }}</dd>
-
-        <dt>Persona</dt>
-        <dd>{{ prestamo.persona }} ({{ prestamo.persona.documento }})</dd>
-
-        <dt>Préstamo</dt>
-        <dd>{{ prestamo.fecha_prestamo|date:"d/m/Y" }}</dd>
-
-        <dt>Vencimiento</dt>
-        <dd>{{ prestamo.fecha_vencimiento|date:"d/m/Y" }} {% include 'biblioteca/_estado_prestamo.html' %}</dd>
-    </dl>
-</section>
-
-<form method="post" class="formulario tarjeta" style="margin-top: 1rem;">
-    {% csrf_token %}
-    {% include 'biblioteca/_formulario.html' %}
-    <div class="acciones-formulario">
-        <button type="submit" class="boton">Registrar devolución</button>
-        <a class="boton-secundario" href="{% url 'biblioteca:ejemplar_detail' prestamo.ejemplar_id %}">Cancelar</a>
+<a class="volver" href="{% url 'biblioteca:ejemplar_detail' prestamo.ejemplar_id %}">{% icono 'volver' %}Volver al ejemplar</a>
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Préstamos</p>
+        <h1>Registrar devolución</h1>
+        <p class="bajada">{{ prestamo.ejemplar.codigo_inventario }} · {{ prestamo.ejemplar.libro.titulo }}</p>
     </div>
-</form>
+</div>
+
+{% if prestamo.vencido %}
+<div class="alerta-aviso" role="note">{% icono 'reloj' %}<p>Este préstamo venció el {{ prestamo.fecha_vencimiento|date:"d/m/Y" }}.</p></div>
+{% endif %}
+
+<div class="dos-columnas">
+    <form method="post" class="formulario tarjeta">
+        {% csrf_token %}
+        {% include 'componentes/formulario.html' %}
+        <div class="acciones-formulario">
+            <button type="submit" class="boton">{% icono 'devolver' %}Registrar devolución</button>
+            <a class="boton-secundario" href="{% url 'biblioteca:ejemplar_detail' prestamo.ejemplar_id %}">Cancelar</a>
+        </div>
+    </form>
+
+    <aside class="tarjeta" aria-labelledby="titulo-datos-prestamo">
+        <div class="tarjeta-titulo"><h2 id="titulo-datos-prestamo">Préstamo</h2>{% include 'biblioteca/_estado_prestamo.html' %}</div>
+        <dl class="detalle">
+            <dt>Ejemplar</dt>
+            <dd>{{ prestamo.ejemplar.codigo_inventario }} · {{ prestamo.ejemplar.libro.titulo }}</dd>
+
+            <dt>Persona</dt>
+            <dd>{{ prestamo.persona }} ({{ prestamo.persona.documento }})</dd>
+
+            <dt>Préstamo</dt>
+            <dd>{{ prestamo.fecha_prestamo|date:"d/m/Y" }}</dd>
+
+            <dt>Vencimiento</dt>
+            <dd>{{ prestamo.fecha_vencimiento|date:"d/m/Y" }}</dd>
+        </dl>
+    </aside>
+</div>
 {% endblock %}
