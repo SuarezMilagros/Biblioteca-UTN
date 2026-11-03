@@ -19,14 +19,16 @@
         <dt>Libro</dt>
         <dd><a href="{% url 'biblioteca:libro_detail' object.libro_id %}">{{ object.libro.titulo }}</a></dd>
 
-        <dt>Disponibilidad</dt>
-        <dd>
-            {% if object.disponible %}
-                <span class="badge badge-disponible">Disponible</span>
-            {% else %}
-                <span class="badge badge-prestado">Prestado</span>
-            {% endif %}
-        </dd>
+        <dt>Estado</dt>
+        <dd>{% with ejemplar=object %}{% include 'biblioteca/_estado_ejemplar.html' %}{% endwith %}</dd>
+
+        {% if not object.activo %}
+        <dt>Motivo de baja</dt>
+        <dd>{{ object.get_motivo_baja_display }}</dd>
+
+        <dt>Fecha de baja</dt>
+        <dd>{{ object.fecha_baja|date:"d/m/Y" }}</dd>
+        {% endif %}
 
         <dt>Observaciones</dt>
         <dd>{{ object.observaciones|default:"Sin observaciones" }}</dd>
@@ -45,10 +47,29 @@
             {% if perms.biblioteca.change_prestamo %}
             <a class="boton" href="{% url 'biblioteca:prestamo_devolver' prestamo_activo.pk %}">Registrar devolución</a>
             {% endif %}
-        {% elif perms.biblioteca.add_prestamo %}
+        {% elif object.activo and perms.biblioteca.add_prestamo %}
             <a class="boton" href="{% url 'biblioteca:prestamo_create' object.pk %}">Prestar</a>
         {% endif %}
     </div>
+
+    {% if perms.biblioteca.change_ejemplar %}
+    {% if object.activo and not prestamo_activo %}
+    <form method="post" action="{% url 'biblioteca:ejemplar_baja' object.pk %}" class="formulario formulario-baja">
+        {% csrf_token %}
+        <div class="campo">
+            <label for="{{ form_baja.motivo_baja.id_for_label }}">Dar de baja este ejemplar</label>
+            {{ form_baja.motivo_baja }}
+            <small class="ayuda">Un ejemplar dado de baja no se puede prestar. Se conserva su historial.</small>
+        </div>
+        <button type="submit" class="boton-secundario">Dar de baja</button>
+    </form>
+    {% elif not object.activo %}
+    <form method="post" action="{% url 'biblioteca:ejemplar_reactivar' object.pk %}" class="formulario-baja">
+        {% csrf_token %}
+        <button type="submit" class="boton-secundario">Reactivar ejemplar</button>
+    </form>
+    {% endif %}
+    {% endif %}
 </section>
 
 <h2>Historial de préstamos</h2>

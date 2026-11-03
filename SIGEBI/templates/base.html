@@ -31,7 +31,7 @@
             <a href="{% url 'password_change' %}"{% if seccion|slice:":15" == "password_change" %} aria-current="page"{% endif %}>Cambiar contraseña</a>
             <form method="post" action="{% url 'logout' %}" class="formulario-salir">
                 {% csrf_token %}
-                <button type="submit" class="boton-enlace">Salir ({{ user.get_username }})</button>
+                <button type="submit" class="boton-enlace">Salir ({{ user.first_name|default:user.get_username }})</button>
             </form>
         </nav>
         {% endwith %}

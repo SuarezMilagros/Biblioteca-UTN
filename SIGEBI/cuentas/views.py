@@ -10,6 +10,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.contrib.auth.models import Group
 from django.core.exceptions import PermissionDenied
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
@@ -33,6 +34,30 @@ def puede_gestionar(solicitante, usuario):
     if usuario.pk == solicitante.pk or solicitante.is_superuser:
         return True
     return not usuario.is_superuser and usuario.groups.filter(name=BIBLIOTECARIO).exists()
+
+
+def guardar_cuenta(form, guardar):
+    """Ejecuta `guardar` y, si la base rechaza un documento o correo repetido, lo marca en el formulario.
+
+    Pasa cuando dos personas dan de alta (o editan) la misma cuenta al mismo tiempo:
+    las dos pasan la validación del formulario, pero la base acepta solo la primera
+    (CA-A9). En lugar de un error 500, se muestra el error junto al campo.
+    Devuelve True si se guardó.
+    """
+    try:
+        with transaction.atomic():
+            guardar()
+    except IntegrityError:
+        Usuario = get_user_model()
+        otras = Usuario.objects.exclude(pk=form.instance.pk) if form.instance.pk else Usuario.objects.all()
+        if otras.filter(username=form.cleaned_data.get('username')).exists():
+            form.add_error('username', 'Ya existe una cuenta con ese documento.')
+        elif otras.filter(email__iexact=form.cleaned_data.get('email', '')).exists():
+            form.add_error('email', 'Ya existe una cuenta con ese correo.')
+        else:
+            form.add_error(None, 'No se pudo guardar la cuenta. Revisá los datos e intentá de nuevo.')
+        return False
+    return True
 
 
 def asignar_rol(usuario, nombre_rol):
@@ -83,8 +108,14 @@ class UsuarioCreateView(PermissionRequiredMixin, CreateView):
         usuario = form.save(commit=False)
         # Nadie escribe ni ve una contraseña: la define la persona desde el correo.
         usuario.set_unusable_password()
-        usuario.save()
-        asignar_rol(usuario, form.cleaned_data['rol'])
+
+        def guardar():
+            usuario.save()
+            asignar_rol(usuario, form.cleaned_data['rol'])
+
+        if not guardar_cuenta(form, guardar):
+            usuario.pk = None
+            return self.form_invalid(form)
         try:
             enviar_correo_definicion(self.request, usuario)
         except ERRORES_DE_ENVIO:
@@ -121,8 +152,12 @@ class UsuarioUpdateView(PermissionRequiredMixin, UpdateView):
         return kwargs
 
     def form_valid(self, form):
-        usuario = form.save()
-        asignar_rol(usuario, form.cleaned_data['rol'])
+        def guardar():
+            usuario = form.save()
+            asignar_rol(usuario, form.cleaned_data['rol'])
+
+        if not guardar_cuenta(form, guardar):
+            return self.form_invalid(form)
         messages.success(self.request, 'Cuenta actualizada.')
         return redirect('cuentas:usuario_list')
 

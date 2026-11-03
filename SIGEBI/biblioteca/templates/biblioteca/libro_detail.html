@@ -44,7 +44,7 @@
             <tr>
                 <th scope="col">Código de inventario</th>
                 <th scope="col">ID de inventario</th>
-                <th scope="col">Disponibilidad</th>
+                <th scope="col">Estado</th>
                 <th scope="col"><span class="sr-only">Acciones</span></th>
             </tr>
         </thead>
@@ -54,11 +54,7 @@
                 <td data-etiqueta="Código">{{ ejemplar.codigo_inventario }}</td>
                 <td data-etiqueta="ID">{{ ejemplar.id_inventario|default:"—" }}</td>
                 <td data-etiqueta="Disponibilidad">
-                    {% if ejemplar.disponible %}
-                        <span class="badge badge-disponible">Disponible</span>
-                    {% else %}
-                        <span class="badge badge-prestado">Prestado</span>
-                    {% endif %}
+                    {% include 'biblioteca/_estado_ejemplar.html' %}
                 </td>
                 <td class="acciones">
                     <a href="{% url 'biblioteca:ejemplar_detail' ejemplar.pk %}">Ver</a>

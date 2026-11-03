@@ -10,8 +10,8 @@ from django.views import View
 from django.views.generic import CreateView, DetailView, FormView, ListView, UpdateView
 
 from .forms import (
-    AutorForm, CategoriaForm, DevolucionForm, EditorialForm, EjemplarForm, LibroForm, PersonaForm,
-    PrestamoForm,
+    MENSAJE_EJEMPLAR_DADO_DE_BAJA, AutorForm, CategoriaForm, DevolucionForm, EditorialForm,
+    EjemplarBajaForm, EjemplarForm, LibroForm, PersonaForm, PrestamoForm,
 )
 from .informes import ExportarCSVMixin, nombre_de_archivo
 from .models import Autor, Categoria, Editorial, Ejemplar, Libro, Persona, Prestamo
@@ -185,6 +185,14 @@ class LibroUpdateView(PermissionRequiredMixin, GuardarRegistroMixin, UpdateView)
 
 # ---------- Ejemplares ----------
 
+# Filtro del listado de ejemplares: valor del parámetro `estado` -> filtro sobre `activo`.
+ESTADOS_DE_EJEMPLAR = {
+    'activos': {'activo': True},
+    'baja': {'activo': False},
+    'todos': {},
+}
+
+
 class EjemplarListView(PermissionRequiredMixin, ExportarCSVMixin, ListView):
     permission_required = 'biblioteca.view_ejemplar'
     model = Ejemplar
@@ -195,27 +203,58 @@ class EjemplarListView(PermissionRequiredMixin, ExportarCSVMixin, ListView):
     # Informe del catálogo de ejemplares (D5).
     encabezados_csv = [
         'Código de inventario', 'ID de inventario', 'Título', 'Autor', 'Editorial',
-        'Categoría', 'ISBN', 'Disponibilidad', 'Observaciones',
+        'Categoría', 'ISBN', 'Estado', 'Motivo de baja', 'Fecha de baja', 'Observaciones',
     ]
 
+    def estado(self):
+        estado = self.request.GET.get('estado', 'activos')
+        return estado if estado in ESTADOS_DE_EJEMPLAR else 'activos'
+
+    def get(self, request, *args, **kwargs):
+        # Búsqueda por código de inventario (mostrador): si el código coincide exacto,
+        # se abre directamente ese ejemplar.
+        q = request.GET.get('q', '').strip()
+        if q and request.GET.get('formato') != 'csv':
+            exacto = Ejemplar.objects.filter(codigo_inventario__iexact=Ejemplar.normalizar_codigo(q)).first()
+            if exacto is not None:
+                return redirect('biblioteca:ejemplar_detail', pk=exacto.pk)
+        return super().get(request, *args, **kwargs)
+
     def get_queryset(self):
-        return super().get_queryset().select_related('libro')
+        queryset = super().get_queryset().select_related('libro').filter(**ESTADOS_DE_EJEMPLAR[self.estado()])
+        q = self.request.GET.get('q', '').strip()
+        if q:
+            filtro = Q(codigo_inventario__icontains=q) | Q(libro__titulo__unaccent__icontains=q)
+            if q.isdigit():
+                filtro |= Q(id_inventario=int(q))
+            queryset = queryset.filter(filtro)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        contexto['q'] = self.request.GET.get('q', '').strip()
+        contexto['estado'] = self.estado()
+        return contexto
 
     def queryset_csv(self, queryset):
         prestamo_activo = Prestamo.objects.filter(ejemplar=OuterRef('pk'), fecha_devolucion__isnull=True)
         return queryset.select_related('libro__autor', 'libro__editorial', 'libro__categoria').annotate(
-            prestado=Exists(prestamo_activo)
+            con_prestamo_activo=Exists(prestamo_activo)
         )
 
     def nombre_csv(self):
-        return nombre_de_archivo('ejemplares')
+        return nombre_de_archivo('ejemplares', self.estado())
 
     def fila_csv(self, ejemplar):
         libro = ejemplar.libro
+        if not ejemplar.activo:
+            estado = 'Dado de baja'
+        else:
+            estado = 'Prestado' if ejemplar.con_prestamo_activo else 'Disponible'
         return [
             ejemplar.codigo_inventario, ejemplar.id_inventario, libro.titulo, libro.autor,
-            libro.editorial, libro.categoria, libro.isbn,
-            'Prestado' if ejemplar.prestado else 'Disponible', ejemplar.observaciones,
+            libro.editorial, libro.categoria, libro.isbn, estado,
+            ejemplar.get_motivo_baja_display(), ejemplar.fecha_baja, ejemplar.observaciones,
         ]
 
 
@@ -232,7 +271,53 @@ class EjemplarDetailView(PermissionRequiredMixin, DetailView):
         prestamos = self.object.prestamos.select_related('persona').order_by('-fecha_prestamo', '-pk')
         contexto['prestamos'] = prestamos
         contexto['prestamo_activo'] = next((p for p in prestamos if p.activo), None)
+        contexto['form_baja'] = EjemplarBajaForm()
         return contexto
+
+
+class EjemplarBajaView(PermissionRequiredMixin, View):
+    """Baja lógica de un ejemplar (perdido, dañado, descarte u otro). Conserva su historial."""
+
+    permission_required = 'biblioteca.change_ejemplar'
+    http_method_names = ['post']
+
+    def post(self, request, pk):
+        ejemplar = get_object_or_404(Ejemplar, pk=pk)
+        form = EjemplarBajaForm(request.POST)
+        if not ejemplar.activo:
+            messages.info(request, f'El ejemplar {ejemplar} ya estaba dado de baja.')
+        elif ejemplar.prestado:
+            messages.error(
+                request, f'No se puede dar de baja el ejemplar {ejemplar}: tiene un préstamo sin devolver.'
+            )
+        elif not form.is_valid():
+            messages.error(request, 'Elegí el motivo de la baja.')
+        else:
+            ejemplar.activo = False
+            ejemplar.motivo_baja = form.cleaned_data['motivo_baja']
+            ejemplar.fecha_baja = timezone.localdate()
+            ejemplar.save(update_fields=['activo', 'motivo_baja', 'fecha_baja'])
+            messages.success(
+                request, f'El ejemplar {ejemplar} quedó dado de baja ({ejemplar.get_motivo_baja_display()}).'
+            )
+        return redirect('biblioteca:ejemplar_detail', pk=ejemplar.pk)
+
+
+class EjemplarReactivarView(PermissionRequiredMixin, View):
+    permission_required = 'biblioteca.change_ejemplar'
+    http_method_names = ['post']
+
+    def post(self, request, pk):
+        ejemplar = get_object_or_404(Ejemplar, pk=pk)
+        if ejemplar.activo:
+            messages.info(request, f'El ejemplar {ejemplar} ya estaba activo.')
+        else:
+            ejemplar.activo = True
+            ejemplar.motivo_baja = ''
+            ejemplar.fecha_baja = None
+            ejemplar.save(update_fields=['activo', 'motivo_baja', 'fecha_baja'])
+            messages.success(request, f'El ejemplar {ejemplar} volvió a estar activo.')
+        return redirect('biblioteca:ejemplar_detail', pk=ejemplar.pk)
 
 
 class EjemplarCreateView(PermissionRequiredMixin, GuardarRegistroMixin, CreateView):
@@ -487,6 +572,9 @@ class PrestamoCreateView(PermissionRequiredMixin, FormView):
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
+        if not self.ejemplar.activo:
+            messages.error(request, MENSAJE_EJEMPLAR_DADO_DE_BAJA)
+            return redirect('biblioteca:ejemplar_detail', pk=self.ejemplar.pk)
         if not self.ejemplar.disponible:
             messages.error(request, MENSAJE_EJEMPLAR_YA_PRESTADO)
             return redirect('biblioteca:ejemplar_detail', pk=self.ejemplar.pk)

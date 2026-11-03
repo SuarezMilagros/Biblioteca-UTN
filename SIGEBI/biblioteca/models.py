@@ -101,6 +101,23 @@ class Ejemplar(models.Model):
         related_name='ejemplares',
     )
 
+    class MotivoBaja(models.TextChoices):
+        PERDIDO = 'PERDIDO', 'Perdido'
+        DANADO = 'DANADO', 'Dañado'
+        DESCARTE = 'DESCARTE', 'Descarte'
+        OTRO = 'OTRO', 'Otro'
+
+    # Baja lógica: el ejemplar no se borra porque tiene historial de préstamos.
+    activo = models.BooleanField(
+        default=True,
+        verbose_name='activo',
+        help_text='Un ejemplar dado de baja no se puede prestar.',
+    )
+    motivo_baja = models.CharField(
+        max_length=20, choices=MotivoBaja.choices, blank=True, verbose_name='motivo de baja'
+    )
+    fecha_baja = models.DateField(null=True, blank=True, verbose_name='fecha de baja')
+
     class Meta:
         verbose_name = 'ejemplar'
         verbose_name_plural = 'ejemplares'
@@ -109,6 +126,15 @@ class Ejemplar(models.Model):
                 Upper('codigo_inventario'),
                 name='codigo_inventario_unico',
                 violation_error_message='Ya existe un ejemplar con ese código de inventario.',
+            ),
+            # Un ejemplar activo no tiene datos de baja; uno dado de baja tiene motivo y fecha.
+            models.CheckConstraint(
+                condition=(
+                    models.Q(activo=True, motivo_baja='', fecha_baja__isnull=True)
+                    | (models.Q(activo=False, fecha_baja__isnull=False) & ~models.Q(motivo_baja=''))
+                ),
+                name='ejemplar_baja_coherente',
+                violation_error_message='Un ejemplar dado de baja necesita motivo y fecha de baja.',
             ),
         ]
 
@@ -129,8 +155,13 @@ class Ejemplar(models.Model):
         super().save(*args, **kwargs)
 
     @property
+    def prestado(self):
+        return self.prestamos.filter(fecha_devolucion__isnull=True).exists()
+
+    @property
     def disponible(self):
-        return not self.prestamos.filter(fecha_devolucion__isnull=True).exists()
+        """Se puede prestar: está activo y no tiene un préstamo sin devolver."""
+        return self.activo and not self.prestado
 
 
 class Persona(models.Model):

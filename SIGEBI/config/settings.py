@@ -167,6 +167,38 @@ AUTHENTICATION_BACKENDS = ['cuentas.backends.CorreoBackend']
 # El enlace vence a la hora.
 PASSWORD_RESET_TIMEOUT = 3600
 
-# En desarrollo, el correo se imprime en la consola donde corre runserver.
-# El envío real se configura en la etapa 7, con variables de entorno.
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# La sesión dura una jornada de trabajo (8 horas). Después hay que volver a ingresar.
+SESSION_COOKIE_AGE = 8 * 60 * 60
+
+# Correo (decisión D-C6). Todo se lee de SIGEBI/.env; ver SIGEBI/.env.example.
+# Sin EMAIL_HOST, el correo no se envía: se muestra en la consola donde corre runserver.
+# Para comprobar la configuración: python manage.py probar_correo tu-correo@ejemplo.com
+
+
+def _variable(nombre, por_defecto=''):
+    """Lee una variable de entorno. Si falta o quedó vacía en el .env, usa el valor por defecto."""
+    return os.getenv(nombre, '').strip() or por_defecto
+
+
+def _variable_si_no(nombre, por_defecto):
+    return _variable(nombre, por_defecto).lower() in ('true', '1', 'si', 'sí')
+
+
+EMAIL_HOST = _variable('EMAIL_HOST')
+DEFAULT_FROM_EMAIL = _variable('DEFAULT_FROM_EMAIL', 'SIGEBI <no-responder@localhost>')
+if EMAIL_HOST:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    try:
+        EMAIL_PORT = int(_variable('EMAIL_PORT', '587'))
+    except ValueError:
+        raise ImproperlyConfigured('EMAIL_PORT tiene que ser un número (por ejemplo, 587).')
+    EMAIL_HOST_USER = _variable('EMAIL_HOST_USER')
+    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+    EMAIL_USE_TLS = _variable_si_no('EMAIL_USE_TLS', 'True')
+    EMAIL_USE_SSL = _variable_si_no('EMAIL_USE_SSL', 'False')
+    if EMAIL_USE_TLS and EMAIL_USE_SSL:
+        raise ImproperlyConfigured('EMAIL_USE_TLS y EMAIL_USE_SSL no pueden estar las dos en True.')
+    # Si el servidor no responde, el envío se corta a los 10 segundos en lugar de colgar la pantalla.
+    EMAIL_TIMEOUT = 10
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

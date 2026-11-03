@@ -5,6 +5,7 @@ from .models import Autor, Categoria, Editorial, Ejemplar, Libro, Persona, Prest
 
 MENSAJE_CODIGO_REPETIDO = 'Ya existe un ejemplar con ese código de inventario.'
 MENSAJE_DOCUMENTO_REPETIDO = 'Ya existe una persona con ese documento.'
+MENSAJE_EJEMPLAR_DADO_DE_BAJA = 'Este ejemplar está dado de baja: no se puede prestar.'
 
 
 class CategoriaForm(forms.ModelForm):
@@ -154,6 +155,8 @@ class PrestamoForm(forms.Form):
 
     def clean(self):
         datos = super().clean()
+        if not self.ejemplar.activo:
+            raise forms.ValidationError(MENSAJE_EJEMPLAR_DADO_DE_BAJA)
         if not self.ejemplar.disponible:
             raise forms.ValidationError('Este ejemplar ya está prestado. Primero hay que registrar su devolución.')
         fecha_prestamo = datos.get('fecha_prestamo')
@@ -188,3 +191,9 @@ class DevolucionForm(forms.Form):
         if fecha > timezone.localdate():
             raise forms.ValidationError('La fecha de devolución no puede ser futura.')
         return fecha
+
+
+class EjemplarBajaForm(forms.Form):
+    """Baja lógica de un ejemplar: se guarda el motivo y la fecha (hoy)."""
+
+    motivo_baja = forms.ChoiceField(label='Motivo de la baja', choices=Ejemplar.MotivoBaja.choices)
