@@ -16,14 +16,14 @@ restricciones de integridad y la búsqueda sin tildes (`unaccent`).
 
 ## 2. Resultado de referencia
 
-Ejecución de verificación al preparar la documentación (03/11/2026), con Python 3.13, Django 5.2.18 y PostgreSQL 16:
+Ejecución de verificación al preparar la documentación (04/11/2026), con Python 3.13, Django 5.2.18 y PostgreSQL 16:
 
 ```
-Found 291 test(s).
+Found 318 test(s).
 Creating test database for alias 'default'...
 System check identified no issues (0 silenced).
 ----------------------------------------------------------------------
-Ran 291 tests
+Ran 318 tests
 
 OK
 Destroying test database for alias 'default'...
@@ -33,7 +33,7 @@ Destroying test database for alias 'default'...
 
 ## 3. Pruebas por módulo
 
-### 3.1. Aplicación `biblioteca` (200 pruebas)
+### 3.1. Aplicación `biblioteca` (227 pruebas)
 
 | Archivo | Pruebas | Qué verifica |
 |---|---|---|
@@ -47,6 +47,7 @@ Destroying test database for alias 'default'...
 | `test_prestamos.py` | 40 | Préstamo con vencimiento a 14 días, controles, préstamos simultáneos, devolución y regla D8 en la base, listados. |
 | `test_ejemplares_baja.py` | 18 | Baja lógica de ejemplares con motivo y fecha, coherencia en la base, búsqueda por código. |
 | `test_informes.py` | 20 | Exportación CSV: formato para Excel, filtros, todas las páginas, protección contra fórmulas, permisos. |
+| `test_importacion.py` | 27 | Importación del inventario en Excel: modo prueba sin cambios, carga repetible, código provisorio, varios autores, sin editorial, filas rechazadas, prestados, archivo inválido y limpieza de datos. |
 | `test_rediseno.py` | 17 | Interfaz: indicadores reales del panel, aviso de vencidos, página de Informes, disponibilidad por libro, permisos y estructura accesible. |
 
 ### 3.2. Aplicación `cuentas` (87 pruebas)
@@ -90,6 +91,10 @@ error en el código y se comprobó que las pruebas fallaran. Luego se restauró 
 | Quitar la apertura directa por código exacto | 3 pruebas de búsqueda por código |
 | Quitar la restricción de coherencia de baja | `test_la_base_exige_coherencia_entre_estado_y_datos_de_baja` |
 | No capturar altas de cuentas simultáneas | 3 pruebas de `test_ajustes` |
+| Importación: el modo prueba guarda los datos | `test_sin_guardar_no_queda_nada_en_la_base` |
+| Importación: sin control de ID o numeración repetidos | 2 pruebas de `test_importacion` |
+| Importación: no omitir los ejemplares ya cargados | `test_se_puede_repetir_sin_duplicar` |
+| Importación: sin código provisorio | `test_sin_numeracion_recibe_codigo_provisorio` |
 
 ## 5. Pruebas manuales en el navegador
 

@@ -26,11 +26,12 @@ de negocio y las decisiones técnicas de SIGEBI tal como están implementadas en
 | Interfaz | Plantillas de Django, HTML, CSS y JavaScript, sin frameworks externos |
 | Configuración | python-dotenv: los secretos se leen de `SIGEBI/.env`, que no se versiona |
 | Imágenes | Pillow (portadas de libros) |
+| Importación del inventario | openpyxl 3.1.5 (lectura de archivos .xlsx) |
 | Gestión del trabajo | Scrum con tablero en Trello, Git y GitHub con Pull Requests |
 
 ## 3. Arquitectura
 
-SIGEBI es un monolito Django con dos aplicaciones y una separación de responsabilidades por capas:
+SIGEBI es un monolito Django con tres aplicaciones (`biblioteca`, `cuentas` e `interfaz`) y una separación de responsabilidades por capas:
 
 ```
 Navegador ──HTTP──► config/urls.py ──► vista (views.py) ──► formulario (forms.py) ──► modelo (models.py) ──► PostgreSQL
@@ -45,7 +46,7 @@ Navegador ──HTTP──► config/urls.py ──► vista (views.py) ──�
 | **Formularios** | Validación de datos de entrada y mensajes de error junto al campo. | `biblioteca/forms.py`, `cuentas/forms.py` |
 | **Vistas** | Control de acceso por permiso, orquestación de cada operación, manejo de errores sin respuestas 500. | `biblioteca/views.py`, `cuentas/views.py` |
 | **Plantillas** | Presentación. Parciales reutilizables (`_formulario.html`, `_paginacion.html`, `_estado_*.html`). | `templates/`, `*/templates/` |
-| **Servicios** | Exportación CSV (`biblioteca/informes.py`), correo de definición de contraseña (`cuentas/correo.py`), roles (`cuentas/roles.py`). | |
+| **Servicios** | Exportación CSV (`biblioteca/informes.py`), importación del inventario en Excel (`biblioteca/importacion.py`), correo de definición de contraseña (`cuentas/correo.py`), roles (`cuentas/roles.py`). | |
 
 ### 3.1. Aplicaciones
 
@@ -278,6 +279,7 @@ Si el envío falla al crear una cuenta, la cuenta se crea igual, se avisa y se p
 | D8 | Devolución no anterior al préstamo, en la aplicación y en la base | Confirmada |
 | Baja | Baja lógica de personas y ejemplares; las cuentas se desactivan | Confirmada |
 | Sesión | 8 horas | Confirmada |
+| I1–I8 | Reglas para importar el inventario en Excel (sección 11) | Confirmadas por el equipo (Sprint 6) |
 
 ### 8.1. Desviaciones técnicas
 
@@ -305,5 +307,40 @@ Todas tienen operación inversa. Las migraciones `biblioteca.0007` a `0009` se p
 
 ## 10. Pruebas
 
-La suite automática tiene **291 pruebas** (Django `TestCase` sobre PostgreSQL). El detalle por módulo y
+La suite automática tiene **318 pruebas** (Django `TestCase` sobre PostgreSQL). El detalle por módulo y
 el resultado están en [Evidencias de pruebas](evidencias-de-pruebas.md).
+
+## 11. Importación del inventario en Excel (Sprint 6)
+
+El comando `python manage.py importar_inventario <archivo.xlsx>` carga el inventario que usaba la biblioteca.
+La lógica está en `biblioteca/importacion.py`, separada en dos pasos:
+
+1. **Lectura** (`leer_planilla`): ubica el encabezado (no depende de la posición de las columnas), limpia cada
+   celda y valida la fila. No toca la base de datos.
+2. **Carga** (`importar`): crea categorías, autores, editoriales, libros y ejemplares dentro de **una transacción**.
+   Sin `--guardar`, la transacción se deshace al final: el modo prueba recorre exactamente el mismo camino que
+   la carga real y por eso su informe es fiel. Cada fila se guarda en un punto de guardado propio: si una falla,
+   se descarta solo esa fila.
+
+Categorías, autores, editoriales y libros existentes se reutilizan comparando **sin tildes ni mayúsculas**
+(`unaccent`), así que una segunda corrida no duplica nada. Un ejemplar cuyo código ya existe se omite.
+
+**Reglas acordadas por el equipo (03/11/2026)** para los datos incompletos del Excel real:
+
+| ID | Situación en el Excel | Qué hace la importación |
+|---|---|---|
+| I1 | Ejemplar sin numeración (206 de 318) | Código provisorio `SN-<ID>` (por ejemplo, `SN-0045`), editable después. |
+| I2 | Varios autores en una celda (separados por salto de línea, `;`, `/`, `&`, " y " o punto entre apellidos) | El libro queda con el primer autor; los demás se guardan en las observaciones del ejemplar. El modelo no cambia (un autor por libro). |
+| I3 | Sin editorial | Editorial "Sin editorial". |
+| I4 | Formato | Se lee el `.xlsx` con openpyxl, que conserva los saltos de línea dentro de las celdas. |
+| I5 | ID o numeración repetidos, o dos numeraciones en una celda | Se rechazan **todas** las filas involucradas y se informan con su número de fila. |
+| I6 | Estado "Prestado" | Se carga disponible y se informa. El préstamo se registra a mano: el Excel no dice a quién ni desde cuándo, y no se inventan personas ni fechas (criterio del Sprint 2). |
+| I7 | Fecha de inventario | Se agrega a las observaciones ("Inventariado el 14/10/2024"). |
+| I8 | Nombre y apellido en una sola celda | "Apellido, Nombre" se respeta; si no hay coma, la última palabra es el apellido (con partículas como "de" y sufijos como "Jr."). Se quitan títulos como "Lic." o "Ing.". Se revisa con `--detalle`. |
+
+Otros criterios: el ISBN se extrae del texto de la celda (se prefiere el de 13 dígitos); si no tiene 10 o 13
+dígitos, el libro queda sin ISBN y se avisa. Un autor sin dato queda como "Sin autor".
+
+**Resultado con el Excel real** (`BibliotecaAnexo.xlsx`, 318 filas), en una base de prueba: 311 ejemplares y
+261 libros cargados, 206 con código provisorio, 7 filas rechazadas (una numeración repetida, tres celdas con
+dos numeraciones y el ID 227 repetido) y 7 ejemplares que figuraban prestados. Una segunda corrida no agregó nada.
