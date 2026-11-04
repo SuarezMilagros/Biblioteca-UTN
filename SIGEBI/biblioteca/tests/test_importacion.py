@@ -293,7 +293,9 @@ class LimpiezaDeDatosTests(SimpleTestCase):
             'ISBN- 13: 978-970-10-6524-2\nISBN-10: 970-10-6524-7': '978-970-10-6524-2',
             'ISBN-10: 970-10-6524-7\nISBN-13: 978-970-10-6524-2': '978-970-10-6524-2',
             'ISBN 0-07-019092-5': '0-07-019092-5',
+            'ISBN 13 978-970-10-6111-4\nISBN 970-10-6111-X': '978-970-10-6111-4',
             'ISBN 84-283-199-X': '',  # le falta un dígito en el Excel
+            '0000000000': '',  # relleno, no un ISBN
             ' - ': '',
         }
         for texto, esperado in casos.items():
