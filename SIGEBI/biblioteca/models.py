@@ -32,7 +32,8 @@ class Autor(models.Model):
         verbose_name_plural = 'autores'
 
     def __str__(self):
-        return f'{self.apellido}, {self.nombre}'
+        # Hay autores con solo apellido (por ejemplo, los cargados del inventario en Excel).
+        return f'{self.apellido}, {self.nombre}' if self.nombre else self.apellido
 
 
 class Editorial(models.Model):

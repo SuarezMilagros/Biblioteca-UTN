@@ -128,7 +128,7 @@ El superusuario crea las cuentas del personal desde **Cuentas** (ver el manual d
 python manage.py test
 ```
 
-Resultado esperado: **291 pruebas, OK**. El detalle está en [Evidencias de pruebas](docs/evidencias-de-pruebas.md).
+Resultado esperado: **318 pruebas, OK**. El detalle está en [Evidencias de pruebas](docs/evidencias-de-pruebas.md).
 
 ## 4. Roles
 
@@ -164,7 +164,35 @@ python manage.py probar_correo tu-correo@ejemplo.com
 El comando informa si el correo se envió o por qué falló, sin mostrar la contraseña.
 Los enlaces para definir o recuperar la contraseña vencen en una hora.
 
-## 6. Estructura del proyecto
+## 6. Cargar el inventario desde Excel (Sprint 6)
+
+El inventario que la biblioteca llevaba en Excel (una fila por ejemplar, con las columnas ID, NOMBRE, AUTOR,
+CATEGORÍA, EDITORIAL, NUMERACIÓN, ISBN, OBSERVACIONES, FECHA DE INVENTARIO y Estado) se carga con un comando.
+**Primero se corre en modo prueba**, que no guarda nada y muestra qué haría:
+
+```bash
+python manage.py importar_inventario ruta/al/inventario.xlsx
+```
+
+Con `--detalle` lista además cada aviso y los autores que se van a crear, para revisar cómo se separaron
+nombre y apellido. Si el resultado es correcto, se guarda:
+
+```bash
+python manage.py importar_inventario ruta/al/inventario.xlsx --guardar
+```
+
+- Se puede correr varias veces: los ejemplares cuyo código ya existe se omiten.
+- Las filas con problemas (ID o numeración repetidos, una celda con dos numeraciones, sin título o sin
+  categoría) se **rechazan y se listan** con su número de fila; el resto se carga. Se corrigen en el Excel y se vuelve a importar.
+- Los ejemplares sin numeración reciben un código provisorio `SN-<ID>` (por ejemplo, `SN-0045`), que se
+  puede cambiar después desde **Ejemplares** cuando tengan su número físico.
+- Los que en el Excel figuran como **prestados** se cargan disponibles y se listan: el préstamo se registra en
+  SIGEBI con la persona y las fechas reales.
+- Las reglas completas están en la [documentación técnica](docs/documentacion-tecnica.md), sección 11.
+
+Conviene probarlo primero en una base de prueba (otra base en el `.env`) antes de la base definitiva.
+
+## 7. Estructura del proyecto
 
 ```
 Biblioteca-UTN/
@@ -180,6 +208,7 @@ Biblioteca-UTN/
     │   ├── forms.py          Validaciones de los formularios
     │   ├── views.py          Pantallas y reglas de cada operación
     │   ├── informes.py       Exportación CSV
+    │   ├── importacion.py    Importación del inventario en Excel
     │   ├── migrations/
     │   ├── templates/
     │   └── tests/
@@ -189,13 +218,13 @@ Biblioteca-UTN/
     └── static/               CSS y JavaScript
 ```
 
-## 7. Flujo de trabajo del equipo
+## 8. Flujo de trabajo del equipo
 
 - Cada integrante trabaja en su rama (`emmanuel`, `milagros`, …) y los cambios llegan a `main` por Pull Request.
 - Antes de empezar a trabajar: `git pull origin main`, `python manage.py migrate` y `python manage.py test`.
 - Nunca se suben `.env`, archivos `.patch`, `staticfiles/` ni `.DS_Store` (están en `.gitignore`).
 
-## 8. Limitaciones conocidas
+## 9. Limitaciones conocidas
 
 - **Intentos de ingreso:** no hay límite de intentos fallidos de login. Se decidió no agregar dependencias
   nuevas en Release 1; queda como mejora para un despliegue en producción.
