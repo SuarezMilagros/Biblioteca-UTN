@@ -241,7 +241,7 @@ class LibroDetailView(PermissionRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
-        contexto['ejemplares'] = self.object.ejemplares.order_by('codigo_inventario')
+        contexto['ejemplares'] = self.object.ejemplares.con_estado_de_prestamo().order_by('codigo_inventario')
         return contexto
 
 
@@ -305,7 +305,10 @@ class EjemplarListView(PermissionRequiredMixin, ExportarCSVMixin, ListView):
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
-        queryset = super().get_queryset().select_related('libro').filter(**ESTADOS_DE_EJEMPLAR[self.estado()])
+        queryset = (
+            super().get_queryset().select_related('libro').con_estado_de_prestamo()
+            .filter(**ESTADOS_DE_EJEMPLAR[self.estado()])
+        )
         q = self.request.GET.get('q', '').strip()
         if q:
             filtro = Q(codigo_inventario__icontains=q) | Q(libro__titulo__unaccent__icontains=q)
@@ -321,10 +324,8 @@ class EjemplarListView(PermissionRequiredMixin, ExportarCSVMixin, ListView):
         return contexto
 
     def queryset_csv(self, queryset):
-        prestamo_activo = Prestamo.objects.filter(ejemplar=OuterRef('pk'), fecha_devolucion__isnull=True)
-        return queryset.select_related('libro__autor', 'libro__editorial', 'libro__categoria').annotate(
-            con_prestamo_activo=Exists(prestamo_activo)
-        )
+        # `get_queryset` ya trae `con_prestamo_activo` (con_estado_de_prestamo).
+        return queryset.select_related('libro__autor', 'libro__editorial', 'libro__categoria')
 
     def nombre_csv(self):
         return nombre_de_archivo('ejemplares', self.estado())

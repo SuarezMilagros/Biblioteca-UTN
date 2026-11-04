@@ -103,6 +103,57 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // ---------- Buscador en listas desplegables largas (S6-11) ----------
+    // Un <select data-buscador="Texto"> (ver con_buscador en biblioteca/forms.py) recibe un campo que
+    // filtra sus opciones mientras se escribe, sin distinguir tildes ni mayúsculas. Si hay coincidencias
+    // y la opción elegida no está entre ellas, se elige la primera. Sin JavaScript, la lista funciona igual.
+    const normalizar = (texto) => texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    document.querySelectorAll('select[data-buscador]').forEach((lista) => {
+        const opciones = Array.from(lista.options).map((opcion) => ({ opcion, texto: normalizar(opcion.text) }));
+        const buscador = document.createElement('input');
+        buscador.type = 'search';
+        buscador.className = 'buscador-lista';
+        buscador.placeholder = `${lista.dataset.buscador}…`;
+        buscador.autocomplete = 'off';
+        buscador.setAttribute('aria-label', lista.dataset.buscador);
+        const aviso = document.createElement('small');
+        aviso.className = 'ayuda';
+        aviso.id = `${lista.id}-coincidencias`;
+        aviso.setAttribute('role', 'status');
+        buscador.setAttribute('aria-describedby', aviso.id);
+        lista.before(buscador);
+        lista.after(aviso);
+
+        // Enter no envía el formulario: pasa a la lista para elegir entre las coincidencias.
+        buscador.addEventListener('keydown', (evento) => {
+            if (evento.key === 'Enter') {
+                evento.preventDefault();
+                lista.focus();
+            }
+        });
+        buscador.addEventListener('input', () => {
+            const termino = normalizar(buscador.value.trim());
+            const visibles = termino
+                ? opciones.filter((item) => item.opcion.value !== '' && item.texto.includes(termino))
+                : opciones;
+            if (visibles.length === 0) {
+                aviso.textContent = 'Sin coincidencias: la lista no cambió.';
+                return;
+            }
+            const valorAnterior = lista.value;
+            lista.replaceChildren(...visibles.map((item) => item.opcion));
+            if (visibles.some((item) => item.opcion.value === valorAnterior)) {
+                lista.value = valorAnterior;
+            } else {
+                lista.value = visibles[0].opcion.value;
+                lista.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            aviso.textContent = termino
+                ? `${visibles.length} ${visibles.length === 1 ? 'coincidencia' : 'coincidencias'}. Elegido: ${lista.selectedOptions[0].text}.`
+                : '';
+        });
+    });
+
     // ---------- Vista previa del libro (portada, título y autor) ----------
     const vistaPrevia = document.querySelector('[data-vista-previa]');
     if (vistaPrevia) {
