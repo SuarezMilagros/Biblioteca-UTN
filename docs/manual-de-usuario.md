@@ -95,7 +95,10 @@ pueden cerrar con la **✕**.
 
 ![Listado de libros](capturas/04-libros.png)
 
+- **Al entrar** no se muestra la lista completa: se ve cuántos títulos tiene el catálogo y el buscador.
+  Así la pantalla no carga todos los libros cada vez.
 - **Buscar:** escribí parte del título. No hace falta poner tildes: "administracion" encuentra "Administración".
+- **Ver todos los libros:** si necesitás recorrer el catálogo completo, tocá ese botón (se muestra de a 20 por página).
 - **Nuevo libro:** botón arriba a la derecha.
 - Tocá el título para ver el detalle.
 
@@ -136,7 +139,9 @@ por su **código de inventario** (la numeración escrita en el ejemplar).
   - Si escribís un código **completo** (por ejemplo `ADM-002`), se abre **directamente** ese ejemplar.
     Es lo más rápido cuando tenés el libro en la mano. No importan las mayúsculas.
   - Si escribís parte del código (por ejemplo `ADM`), se listan todos los que coinciden.
-- **Estado:** por defecto se ven los ejemplares **activos**. Elegí **Dados de baja** o **Todos** para ver el resto.
+- **Al entrar** no se muestra la lista: se ve cuántos ejemplares activos hay y el buscador. Para recorrerlos
+  todos, tocá **Ver todos los ejemplares activos**.
+- **Estado:** por defecto se buscan los ejemplares **activos**. Elegí **Dados de baja** o **Todos** para ver el resto.
 - **Nuevo ejemplar:** el código de inventario es obligatorio y no se puede repetir.
   - **La forma más cómoda** es entrar al libro y tocar **Agregar ejemplar**: el formulario se abre con el libro ya elegido.
   - Si lo cargás desde **Ejemplares → Nuevo ejemplar**, usá el campo de búsqueda que está arriba de la lista de

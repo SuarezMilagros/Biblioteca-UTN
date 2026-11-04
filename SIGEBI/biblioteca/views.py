@@ -27,6 +27,35 @@ def prestamo_activo_de(ejemplar_ref):
     return Exists(Prestamo.objects.filter(ejemplar=ejemplar_ref, fecha_devolucion__isnull=True))
 
 
+class BuscarAntesDeListarMixin:
+    """Listados del catálogo (S6-11): al entrar no se listan registros, solo el total.
+
+    Se listan cuando hay una búsqueda (`q`), un filtro (`filtro_aplicado`) o se pide «Ver todos» (`todos=1`).
+    Solo cambia la pantalla: la exportación CSV no pasa por acá y sigue exportando todo lo filtrado.
+    """
+
+    def filtro_aplicado(self):
+        return False
+
+    def hay_busqueda(self):
+        return (
+            bool(self.request.GET.get('q', '').strip())
+            or self.request.GET.get('todos') == '1'
+            or self.filtro_aplicado()
+        )
+
+    def get_context_data(self, **kwargs):
+        esperando_busqueda = not self.hay_busqueda()
+        if esperando_busqueda:
+            kwargs['object_list'] = self.object_list.none()
+        contexto = super().get_context_data(**kwargs)
+        contexto['esperando_busqueda'] = esperando_busqueda
+        contexto['todos'] = self.request.GET.get('todos') == '1'
+        if esperando_busqueda:
+            contexto['total_registros'] = self.object_list.order_by().count()
+        return contexto
+
+
 @login_required
 def inicio(request):
     """Panel principal: indicadores y próximos vencimientos (solo lectura, según los permisos)."""
@@ -201,7 +230,7 @@ class EditorialUpdateView(PermissionRequiredMixin, GuardarRegistroMixin, UpdateV
 
 # ---------- Libros ----------
 
-class LibroListView(PermissionRequiredMixin, ListView):
+class LibroListView(PermissionRequiredMixin, BuscarAntesDeListarMixin, ListView):
     permission_required = 'biblioteca.view_libro'
     model = Libro
     template_name = 'biblioteca/libro_list.html'
@@ -277,7 +306,7 @@ ESTADOS_DE_EJEMPLAR = {
 }
 
 
-class EjemplarListView(PermissionRequiredMixin, ExportarCSVMixin, ListView):
+class EjemplarListView(PermissionRequiredMixin, ExportarCSVMixin, BuscarAntesDeListarMixin, ListView):
     permission_required = 'biblioteca.view_ejemplar'
     model = Ejemplar
     template_name = 'biblioteca/ejemplar_list.html'
@@ -293,6 +322,9 @@ class EjemplarListView(PermissionRequiredMixin, ExportarCSVMixin, ListView):
     def estado(self):
         estado = self.request.GET.get('estado', 'activos')
         return estado if estado in ESTADOS_DE_EJEMPLAR else 'activos'
+
+    def filtro_aplicado(self):
+        return self.estado() != 'activos'
 
     def get(self, request, *args, **kwargs):
         # Búsqueda por código de inventario (mostrador): si el código coincide exacto,

@@ -31,7 +31,7 @@
             <option value="todos"{% if estado == 'todos' %} selected{% endif %}>Todos</option>
         </select>
         <button type="submit" class="boton">Buscar</button>
-        {% if q or estado != 'activos' %}
+        {% if q or estado != 'activos' or todos %}
             <a class="quitar-filtros" href="{% url 'biblioteca:ejemplar_list' %}">Quitar filtros</a>
         {% endif %}
     </form>
@@ -68,7 +68,14 @@
 </div>
 {% include 'componentes/paginacion.html' %}
 {% else %}
-    {% if q %}
+    {% if esperando_busqueda and total_registros %}
+    <div class="vacio">
+        <span class="vacio-icono">{% icono 'buscar' %}</span>
+        <p class="vacio-titulo">Buscá un ejemplar por código de inventario, ID o título.</p>
+        <p>Hay {{ total_registros }} ejemplar{{ total_registros|pluralize:"es" }} activo{{ total_registros|pluralize }}. Con el código completo se abre directamente el ejemplar.</p>
+        <a class="boton-secundario" href="?todos=1">{% icono 'ejemplar' %}Ver todos los ejemplares activos</a>
+    </div>
+    {% elif q %}
     <div class="vacio">
         <span class="vacio-icono">{% icono 'buscar' %}</span>
         <p class="vacio-titulo">No se encontraron ejemplares con «{{ q }}».</p>

@@ -231,6 +231,6 @@ class PermisosYPantallasTests(InformesTestCase):
         self.assertNotContains(respuesta, 'Exportar CSV')
 
     def test_sin_formato_se_ve_la_pantalla_normal(self):
-        respuesta = self.client.get(reverse('biblioteca:ejemplar_list'))
+        respuesta = self.client.get(reverse('biblioteca:ejemplar_list'), {'todos': '1'})
         self.assertEqual(respuesta['Content-Type'], 'text/html; charset=utf-8')
         self.assertContains(respuesta, 'Exportar CSV')

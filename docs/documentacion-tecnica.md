@@ -271,7 +271,7 @@ Si el envío falla al crear una cuenta, la cuenta se crea igual, se avisa y se p
 | D-C3 | La contraseña inicial la define la persona por correo | Confirmada |
 | D-C4 | Los enlaces vencen en una hora | Confirmada |
 | D-C5 | Administrativo = permisos del Bibliotecario + cuentas de Bibliotecarios; solo el superusuario crea Administrativos | Confirmada |
-| D-C6 | Correo por SMTP configurable (Gmail con contraseña de aplicación recomendado) | Implementada; prueba real pendiente del equipo |
+| D-C6 | Correo por SMTP configurable (Gmail con contraseña de aplicación recomendado) | Implementada; prueba real hecha por el equipo (04/11/2026) |
 | D-C7 | Nombre y apellido obligatorios en las cuentas | Confirmada |
 | D2 | Plazo de préstamo: 14 días corridos, editable | Confirmada |
 | D4 | Pantallas propias para personas y préstamos | Confirmada |
@@ -308,7 +308,7 @@ Todas tienen operación inversa. Las migraciones `biblioteca.0007` a `0009` se p
 
 ## 10. Pruebas
 
-La suite automática tiene **328 pruebas** (Django `TestCase` sobre PostgreSQL). El detalle por módulo y
+La suite automática tiene **336 pruebas** (Django `TestCase` sobre PostgreSQL). El detalle por módulo y
 el resultado están en [Evidencias de pruebas](evidencias-de-pruebas.md).
 
 ## 11. Importación del inventario en Excel (Sprint 6)
@@ -367,5 +367,9 @@ nunca cargan el catálogo completo. El problema era de **uso**, no de velocidad:
   escribe (sin distinguir tildes ni mayúsculas), elige la primera coincidencia si la opción elegida quedó afuera y lo
   anuncia en un aviso accesible (`role="status"`). Enter no envía el formulario. Sin JavaScript, la lista es la misma
   de siempre. No agrega dependencias ni rutas.
+- **Buscar antes de listar (decisión del equipo):** Libros y Ejemplares no listan registros al entrar; muestran el
+  total y el buscador. Se listan al buscar, al aplicar un filtro (estado del ejemplar) o con **Ver todos**
+  (`?todos=1`, que la paginación conserva). Lo resuelve `BuscarAntesDeListarMixin` (`biblioteca/views.py`): al
+  entrar solo se hace un `COUNT`. La exportación CSV no cambia y sigue exportando todo lo filtrado.
 - **Atajo existente:** "Agregar ejemplar" en el detalle del libro abre el formulario con el libro ya elegido.
 - Un buscador que consulte al servidor mientras se escribe se descartó por ahora: solo hace falta con decenas de miles de registros.
