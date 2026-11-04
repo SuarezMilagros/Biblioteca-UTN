@@ -216,9 +216,11 @@ class LibroTests(CatalogoBaseTestCase):
         respuesta = self.client.get(reverse('biblioteca:libro_list'), {'q': 'LCULO'})
         self.assertEqual([libro.titulo for libro in respuesta.context['object_list']], ['Cálculo I'])
 
-    def test_busqueda_sin_texto_muestra_todos(self):
+    def test_busqueda_sin_texto_pide_buscar(self):
+        # S6-11: una búsqueda vacía no lista todo el catálogo; muestra el total y «Ver todos».
         respuesta = self.client.get(reverse('biblioteca:libro_list'), {'q': ''})
-        self.assertIn(self.libro, respuesta.context['object_list'])
+        self.assertFalse(respuesta.context['object_list'])
+        self.assertContains(respuesta, 'Buscá un libro por su título.')
 
     def test_busqueda_sin_resultados_muestra_mensaje(self):
         respuesta = self.client.get(reverse('biblioteca:libro_list'), {'q': 'zzz'})
@@ -335,6 +337,6 @@ class EjemplarTests(CatalogoBaseTestCase):
         self.assertTrue(respuesta.context['object'].disponible)
 
     def test_listado_de_ejemplares(self):
-        respuesta = self.client.get(reverse('biblioteca:ejemplar_list'))
+        respuesta = self.client.get(reverse('biblioteca:ejemplar_list'), {'todos': '1'})
         self.assertEqual(respuesta.status_code, 200)
         self.assertContains(respuesta, 'CAL-001')

@@ -165,12 +165,13 @@ class InformesTests(RedisenoTestCase):
 
 class ListadoDeLibrosTests(RedisenoTestCase):
     def test_disponibilidad_por_libro(self):
-        libros = {libro.titulo: libro for libro in self.client.get(reverse('biblioteca:libro_list')).context['object_list']}
+        respuesta = self.client.get(reverse('biblioteca:libro_list'), {'todos': '1'})
+        libros = {libro.titulo: libro for libro in respuesta.context['object_list']}
         self.assertEqual((libros['Cálculo I'].ejemplares_activos, libros['Cálculo I'].ejemplares_disponibles), (3, 1))
         self.assertEqual((libros['Álgebra'].ejemplares_activos, libros['Álgebra'].ejemplares_disponibles), (0, 0))
 
     def test_muestra_el_estado_de_cada_libro(self):
-        respuesta = self.client.get(reverse('biblioteca:libro_list'))
+        respuesta = self.client.get(reverse('biblioteca:libro_list'), {'todos': '1'})
         self.assertContains(respuesta, '1 disponible')
         self.assertContains(respuesta, 'Sin ejemplares')
 

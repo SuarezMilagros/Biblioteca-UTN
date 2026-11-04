@@ -19,11 +19,11 @@ restricciones de integridad y la búsqueda sin tildes (`unaccent`).
 Ejecución de verificación al preparar la documentación (04/11/2026), con Python 3.13, Django 5.2.18 y PostgreSQL 16:
 
 ```
-Found 328 test(s).
+Found 336 test(s).
 Creating test database for alias 'default'...
 System check identified no issues (0 silenced).
 ----------------------------------------------------------------------
-Ran 328 tests
+Ran 336 tests
 
 OK
 Destroying test database for alias 'default'...
@@ -33,7 +33,7 @@ Destroying test database for alias 'default'...
 
 ## 3. Pruebas por módulo
 
-### 3.1. Aplicación `biblioteca` (237 pruebas)
+### 3.1. Aplicación `biblioteca` (245 pruebas)
 
 | Archivo | Pruebas | Qué verifica |
 |---|---|---|
@@ -47,7 +47,7 @@ Destroying test database for alias 'default'...
 | `test_prestamos.py` | 40 | Préstamo con vencimiento a 14 días, controles, préstamos simultáneos, devolución y regla D8 en la base, listados. |
 | `test_ejemplares_baja.py` | 18 | Baja lógica de ejemplares con motivo y fecha, coherencia en la base, búsqueda por código. |
 | `test_informes.py` | 20 | Exportación CSV: formato para Excel, filtros, todas las páginas, protección contra fórmulas, permisos. |
-| `test_catalogo_grande.py` | 10 | Catálogo grande: buscador en las listas largas, listados sin una consulta por fila, estado de préstamo correcto. |
+| `test_catalogo_grande.py` | 18 | Catálogo grande: Libros y Ejemplares se listan al buscar o con «Ver todos», el CSV sigue exportando todo, buscador en las listas largas, listados sin una consulta por fila, estado de préstamo correcto. |
 | `test_importacion.py` | 27 | Importación del inventario en Excel: modo prueba sin cambios, carga repetible, código provisorio, varios autores, sin editorial, filas rechazadas, prestados, archivo inválido y limpieza de datos. |
 | `test_rediseno.py` | 17 | Interfaz: indicadores reales del panel, aviso de vencidos, página de Informes, disponibilidad por libro, permisos y estructura accesible. |
 
@@ -96,6 +96,7 @@ error en el código y se comprobó que las pruebas fallaran. Luego se restauró 
 | Importación: sin control de ID o numeración repetidos | 2 pruebas de `test_importacion` |
 | Importación: no omitir los ejemplares ya cargados | `test_se_puede_repetir_sin_duplicar` |
 | Importación: sin código provisorio | `test_sin_numeracion_recibe_codigo_provisorio` |
+| Listar todo el catálogo al entrar, sin búsqueda | 3 pruebas de `BuscarAntesDeListarTests` |
 | Listado de ejemplares sin el estado de préstamo en la misma consulta | `test_el_listado_de_ejemplares_no_hace_una_consulta_por_fila` (y las pruebas del CSV de ejemplares) |
 
 ## 5. Pruebas manuales en el navegador
@@ -115,6 +116,6 @@ El CSV exportado se abrió como planilla con LibreOffice y las columnas y tildes
 |---|---|---|
 | Ejecutar `python manage.py test` en cada equipo | Cada integrante | _completar_ |
 | Abrir un CSV exportado con doble clic en **Microsoft Excel** | _completar_ | _completar_ |
-| Prueba real de correo: `python manage.py probar_correo` y alta de una cuenta recibiendo el correo | Titular de la cuenta de correo | _completar_ |
-| Subir una imagen de portada real desde el navegador | _completar_ | _completar_ |
+| Prueba real de correo: `python manage.py probar_correo` y alta de una cuenta recibiendo el correo | Milagros (titular de la cuenta de correo del proyecto) | Hecha; informada por el equipo el 04/11/2026 |
+| Subir una imagen de portada real desde el navegador | Equipo | Hecha; informada por el equipo el 04/11/2026 |
 | Instalación desde cero siguiendo el README | _completar_ | _completar_ |

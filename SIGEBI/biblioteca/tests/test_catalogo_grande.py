@@ -1,5 +1,6 @@
 """Catálogo grande (Sprint 6, S6-11).
 
+- Libros y Ejemplares se listan al buscar, filtrar o pedir «Ver todos»; al entrar solo se muestra el total.
 - Las listas desplegables largas (libro, autor, editorial, categoría) llevan la marca `data-buscador`,
   que main.js usa para agregarles un buscador. Sin JavaScript siguen siendo listas comunes.
 - Los listados de ejemplares saben qué ejemplares están prestados sin hacer una consulta por fila.
@@ -87,9 +88,9 @@ class BuscadorEnListasTests(CatalogoGrandeTestCase):
 class ConsultasPorListadoTests(CatalogoGrandeTestCase):
     def test_el_listado_de_ejemplares_no_hace_una_consulta_por_fila(self):
         self.crear_ejemplares(3)
-        con_pocos = self.consultas(reverse('biblioteca:ejemplar_list'))
+        con_pocos = self.consultas(reverse('biblioteca:ejemplar_list') + '?todos=1')
         self.crear_ejemplares(15, desde=3)
-        con_muchos = self.consultas(reverse('biblioteca:ejemplar_list'))
+        con_muchos = self.consultas(reverse('biblioteca:ejemplar_list') + '?todos=1')
         self.assertEqual(con_pocos, con_muchos)
 
     def test_el_detalle_del_libro_no_hace_una_consulta_por_ejemplar(self):
@@ -134,3 +135,65 @@ class EstadoDePrestamoTests(CatalogoGrandeTestCase):
         ejemplar = Ejemplar.objects.con_estado_de_prestamo().get(codigo_inventario='EJ-000')
         self.assertFalse(ejemplar.prestado)
         self.assertTrue(ejemplar.disponible)
+
+
+class BuscarAntesDeListarTests(CatalogoGrandeTestCase):
+    """Libros y Ejemplares: al entrar no se lista el catálogo; se lista al buscar, filtrar o pedir «Ver todos»."""
+
+    def test_al_entrar_a_libros_no_se_listan_registros(self):
+        Libro.objects.create(titulo='Física', **self.datos)
+        respuesta = self.client.get(reverse('biblioteca:libro_list'))
+        self.assertFalse(respuesta.context['object_list'])
+        self.assertContains(respuesta, 'El catálogo tiene 2 títulos.')
+        self.assertContains(respuesta, 'href="?todos=1"')
+        self.assertNotContains(respuesta, 'Cálculo I</a>')
+
+    def test_al_entrar_a_ejemplares_no_se_listan_registros(self):
+        self.crear_ejemplares(4)
+        respuesta = self.client.get(reverse('biblioteca:ejemplar_list'))
+        self.assertFalse(respuesta.context['object_list'])
+        self.assertContains(respuesta, 'Hay 4 ejemplares activos.')
+        self.assertNotContains(respuesta, 'EJ-001</a>')
+        self.assertNotContains(respuesta, 'Exportar CSV')
+
+    def test_al_entrar_no_se_consulta_el_listado(self):
+        self.crear_ejemplares(3)
+        with CaptureQueriesContext(connection) as capturadas:
+            self.client.get(reverse('biblioteca:ejemplar_list'))
+        sobre_ejemplares = [c['sql'] for c in capturadas.captured_queries if 'FROM "biblioteca_ejemplar"' in c['sql']]
+        # Solo se cuenta el total; no se trae ninguna fila de ejemplares.
+        self.assertEqual(len(sobre_ejemplares), 1)
+        self.assertTrue(sobre_ejemplares[0].startswith('SELECT COUNT(*)'))
+
+    def test_al_buscar_se_listan_los_resultados(self):
+        Libro.objects.create(titulo='Física', **self.datos)
+        respuesta = self.client.get(reverse('biblioteca:libro_list'), {'q': 'calculo'})
+        self.assertEqual([libro.titulo for libro in respuesta.context['object_list']], ['Cálculo I'])
+
+    def test_ver_todos_lista_y_la_paginacion_lo_conserva(self):
+        for numero in range(25):
+            Libro.objects.create(titulo=f'Libro {numero:02d}', **self.datos)
+        respuesta = self.client.get(reverse('biblioteca:libro_list'), {'todos': '1'})
+        self.assertEqual(len(respuesta.context['object_list']), 20)
+        self.assertContains(respuesta, '?todos=1&amp;page=2')
+        self.assertContains(respuesta, 'Quitar búsqueda')
+
+    def test_un_filtro_de_estado_tambien_lista(self):
+        Ejemplar.objects.create(
+            codigo_inventario='EJ-BAJA', libro=self.libro, activo=False,
+            motivo_baja=Ejemplar.MotivoBaja.PERDIDO, fecha_baja=timezone.localdate(),
+        )
+        respuesta = self.client.get(reverse('biblioteca:ejemplar_list'), {'estado': 'baja'})
+        self.assertEqual([ejemplar.codigo_inventario for ejemplar in respuesta.context['object_list']], ['EJ-BAJA'])
+
+    def test_el_csv_sigue_exportando_todo_sin_buscar(self):
+        self.crear_ejemplares(3)
+        respuesta = self.client.get(reverse('biblioteca:ejemplar_list'), {'formato': 'csv'})
+        self.assertEqual(respuesta['Content-Type'], 'text/csv; charset=utf-8')
+        self.assertEqual(respuesta.content.decode('utf-8-sig').count('EJ-00'), 3)
+
+    def test_catalogo_vacio_ofrece_cargar_el_primer_libro(self):
+        Libro.objects.all().delete()
+        respuesta = self.client.get(reverse('biblioteca:libro_list'))
+        self.assertContains(respuesta, 'Todavía no hay libros registrados.')
+        self.assertNotContains(respuesta, 'Ver todos los libros')

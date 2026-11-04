@@ -142,7 +142,7 @@ class ListadoYBusquedaDeEjemplaresTests(EjemplaresTestCase):
         return [e.codigo_inventario for e in respuesta.context['object_list']]
 
     def test_por_defecto_muestra_solo_activos(self):
-        self.assertEqual(self.codigos(self.listar()), ['ALG-001', 'CAL-001', 'CAL-002'])
+        self.assertEqual(self.codigos(self.listar(todos='1')), ['ALG-001', 'CAL-001', 'CAL-002'])
 
     def test_filtra_dados_de_baja_y_todos(self):
         self.assertEqual(self.codigos(self.listar(estado='baja')), ['ALG-099'])

@@ -21,10 +21,10 @@
         <div class="campo-busqueda">
             {% icono 'buscar' %}
             <label for="q" class="sr-only">Buscar por título</label>
-            <input type="search" id="q" name="q" value="{{ q }}" placeholder="Buscar por título (sin importar las tildes)">
+            <input type="search" id="q" name="q" value="{{ q }}" placeholder="Buscar por título (sin importar las tildes)" autofocus>
         </div>
         <button type="submit" class="boton">Buscar</button>
-        {% if q %}
+        {% if q or todos %}
             <a class="quitar-filtros" href="{% url 'biblioteca:libro_list' %}">Quitar búsqueda</a>
         {% endif %}
     </form>
@@ -75,7 +75,14 @@
 </div>
 {% include 'componentes/paginacion.html' %}
 {% else %}
-    {% if q %}
+    {% if esperando_busqueda and total_registros %}
+    <div class="vacio">
+        <span class="vacio-icono">{% icono 'buscar' %}</span>
+        <p class="vacio-titulo">Buscá un libro por su título.</p>
+        <p>El catálogo tiene {{ total_registros }} título{{ total_registros|pluralize }}. Escribí parte del título arriba; no hace falta poner tildes.</p>
+        <a class="boton-secundario" href="?todos=1">{% icono 'libro' %}Ver todos los libros</a>
+    </div>
+    {% elif q %}
     <div class="vacio">
         <span class="vacio-icono">{% icono 'buscar' %}</span>
         <p class="vacio-titulo">No se encontraron libros con «{{ q }}».</p>
