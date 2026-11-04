@@ -109,13 +109,15 @@ En ninguna pantalla hubo desplazamiento horizontal. Las capturas del [manual de 
 son de esas pruebas.
 
 El CSV exportado se abrió como planilla con LibreOffice y las columnas y tildes se vieron correctamente.
+Después el equipo lo abrió con doble clic en Microsoft Excel (sección 6).
 
 ## 6. Pendientes de verificación del equipo
 
 | Verificación | Responsable | Resultado |
 |---|---|---|
-| Ejecutar `python manage.py test` en cada equipo | Cada integrante | _completar_ |
-| Abrir un CSV exportado con doble clic en **Microsoft Excel** | _completar_ | _completar_ |
+| Ejecutar `python manage.py test` en cada equipo | Cada integrante | **336 pruebas OK**; informado por el equipo el 04/11/2026 |
+| Abrir un CSV exportado con doble clic en **Microsoft Excel** | Equipo | Hecha; informada por el equipo el 04/11/2026 |
+| Rotar la `SECRET_KEY` en el `.env` de cada integrante (decisión D7, sin registrar el valor) | Cada integrante | Milagros: hecha. Emmanuel: _pendiente_ |
 | Prueba real de correo: `python manage.py probar_correo` y alta de una cuenta recibiendo el correo | Milagros (titular de la cuenta de correo del proyecto) | Hecha; informada por el equipo el 04/11/2026 |
 | Subir una imagen de portada real desde el navegador | Equipo | Hecha; informada por el equipo el 04/11/2026 |
 | Instalación desde cero siguiendo el README | _completar_ | _completar_ |

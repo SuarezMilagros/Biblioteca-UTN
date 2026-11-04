@@ -8,6 +8,7 @@ datos de prueba (`cargar_datos_prueba`).
 
 > Los campos de fecha usan el calendario del navegador. En un navegador configurado en español se ven
 > como día/mes/año; en las capturas algunos aparecen como mes/día porque se tomaron con un navegador en inglés.
+> Por el mismo motivo, el botón para elegir la imagen de portada aparece como "Choose File".
 
 ## Índice
 

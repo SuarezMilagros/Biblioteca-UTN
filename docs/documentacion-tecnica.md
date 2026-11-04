@@ -73,6 +73,9 @@ La interfaz es un sistema de diseño propio, sin frameworks ni dependencias exte
 - **Estructura** (`templates/base.html`): menú lateral agrupado (Operación, Catálogo, Gestión), cabecera con
   ubicación, aviso de préstamos vencidos y perfil (nombre y rol). En pantallas de hasta 900 px el menú pasa a
   ser un panel que se abre con un botón; sin JavaScript se muestra completo arriba.
+- **Pantallas de acceso** (ingreso, recuperación y definición de contraseña): comparten el encabezado
+  `templates/registration/_acceso_marca.html`, con el **logo de la UTN** (`static/img/logo-utn.svg`, archivo SVG
+  estático, versionado en Git) y el nombre del sistema. El menú lateral mantiene el ícono propio de SIGEBI.
 - **Componentes compartidos** (sin dependencia de ninguna app de negocio): la app `interfaz` tiene los íconos
   SVG y filtros de presentación (`{% load interfaz %}`, etiqueta `{% icono %}`), y `templates/componentes/` tiene
   campos de formulario, errores, estados vacíos, paginación y avisos. Las insignias de estado de ejemplares y
@@ -281,6 +284,7 @@ Si el envío falla al crear una cuenta, la cuenta se crea igual, se avisa y se p
 | Baja | Baja lógica de personas y ejemplares; las cuentas se desactivan | Confirmada |
 | Sesión | 8 horas | Confirmada |
 | I1–I8 | Reglas para importar el inventario en Excel (sección 11) | Confirmadas por el equipo (Sprint 6) |
+| Despliegue | La instalación en producción (servidor, base única, carga definitiva del inventario) se hace al terminar la Release 2 | Decidida por el equipo (Sprint 6) |
 
 ### 8.1. Desviaciones técnicas
 
