@@ -110,6 +110,11 @@ Para cargar un libro completá título, categoría, autor y editorial (obligator
 El **ISBN** y la **imagen de portada** son opcionales: hay material sin ISBN, como tesis o fotocopias.
 Si la categoría, el autor o la editorial no existen, primero cargalos en su sección.
 
+**Buscar en las listas:** arriba de las listas de categoría, autor y editorial hay un campo de búsqueda.
+Escribí parte del nombre (sin tildes, por ejemplo "ishikawa") y la lista se reduce a las coincidencias; se
+elige la primera y debajo se indica cuál quedó elegida. Si no es la correcta, abrí la lista y elegí otra.
+Al borrar la búsqueda vuelve la lista completa.
+
 ### 3.2. Autores, editoriales y categorías
 
 ![Autores](capturas/07-autores.png)
@@ -133,6 +138,9 @@ por su **código de inventario** (la numeración escrita en el ejemplar).
   - Si escribís parte del código (por ejemplo `ADM`), se listan todos los que coinciden.
 - **Estado:** por defecto se ven los ejemplares **activos**. Elegí **Dados de baja** o **Todos** para ver el resto.
 - **Nuevo ejemplar:** el código de inventario es obligatorio y no se puede repetir.
+  - **La forma más cómoda** es entrar al libro y tocar **Agregar ejemplar**: el formulario se abre con el libro ya elegido.
+  - Si lo cargás desde **Ejemplares → Nuevo ejemplar**, usá el campo de búsqueda que está arriba de la lista de
+    libros: escribí parte del título y la lista se reduce a las coincidencias.
 
 ![Detalle de un ejemplar disponible](capturas/09-ejemplar-disponible.png)
 

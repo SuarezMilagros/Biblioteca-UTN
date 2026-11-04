@@ -79,7 +79,8 @@ La interfaz es un sistema de diseño propio, sin frameworks ni dependencias exte
   préstamos (`biblioteca/_estado_*.html`) quedan en `biblioteca` porque dependen de sus modelos.
 - **Comportamiento** (`static/js/main.js`, mejora progresiva): modal de confirmación para dar de baja
   (`data-confirmar`), estado de carga y bloqueo de doble envío, avisos que se pueden cerrar, mostrar u ocultar
-  la contraseña, vista previa de la portada y menú lateral en el teléfono (con cierre por Esc).
+  la contraseña, vista previa de la portada, menú lateral en el teléfono (con cierre por Esc) y un **buscador
+  sobre las listas desplegables largas** (`data-buscador`, ver sección 12).
 - **Datos de presentación:** cada app aporta sus variables a la cabecera común: `cuentas/contexto.py` el rol
   (`rol_usuario`) y `biblioteca/contexto.py` la cantidad de préstamos vencidos (`prestamos_vencidos_total`).
   La plantilla base documenta al inicio qué variables espera; el panel (`inicio`) y la página de Informes (`InformesView`) calculan indicadores con
@@ -307,7 +308,7 @@ Todas tienen operación inversa. Las migraciones `biblioteca.0007` a `0009` se p
 
 ## 10. Pruebas
 
-La suite automática tiene **318 pruebas** (Django `TestCase` sobre PostgreSQL). El detalle por módulo y
+La suite automática tiene **328 pruebas** (Django `TestCase` sobre PostgreSQL). El detalle por módulo y
 el resultado están en [Evidencias de pruebas](evidencias-de-pruebas.md).
 
 ## 11. Importación del inventario en Excel (Sprint 6)
@@ -344,3 +345,27 @@ dígitos, el libro queda sin ISBN y se avisa. Un autor sin dato queda como "Sin 
 **Resultado con el Excel real** (`BibliotecaAnexo.xlsx`, 318 filas), en una base de prueba: 311 ejemplares y
 261 libros cargados, 206 con código provisorio, 7 filas rechazadas (una numeración repetida, tres celdas con
 dos numeraciones y el ID 227 repetido) y 7 ejemplares que figuraban prestados. Una segunda corrida no agregó nada.
+
+## 12. Catálogo grande (Sprint 6, S6-11)
+
+Se midió el sistema con el inventario real cargado (311 ejemplares, 261 libros, 225 autores):
+
+| Pantalla | Antes | Después |
+|---|---|---|
+| Listado de ejemplares (20 por página) | 25 consultas (una por fila para saber si está prestado) | 5 consultas, sin importar cuántas filas haya |
+| Detalle de un libro | 1 consulta extra por ejemplar | Cantidad fija de consultas |
+| Nuevo libro / nuevo ejemplar | Listas de 225 autores y 261 libros sin forma de buscar | Buscador sobre cada lista |
+
+Todas las pantallas responden en menos de 40 ms; los listados ya estaban paginados (20 por página), así que
+nunca cargan el catálogo completo. El problema era de **uso**, no de velocidad: elegir un libro en una lista de 261.
+
+- **Estado de préstamo en la misma consulta:** `Ejemplar.objects.con_estado_de_prestamo()` agrega
+  `con_prestamo_activo` con una subconsulta `EXISTS`. La propiedad `Ejemplar.prestado` usa ese dato cuando está
+  y, si no, consulta la base como antes. Lo usan el listado de ejemplares, el detalle del libro y el CSV.
+- **Buscador en las listas:** los formularios marcan las listas largas con `con_buscador()` (`biblioteca/forms.py`),
+  que agrega el atributo `data-buscador`. `static/js/main.js` inserta un campo que filtra las opciones mientras se
+  escribe (sin distinguir tildes ni mayúsculas), elige la primera coincidencia si la opción elegida quedó afuera y lo
+  anuncia en un aviso accesible (`role="status"`). Enter no envía el formulario. Sin JavaScript, la lista es la misma
+  de siempre. No agrega dependencias ni rutas.
+- **Atajo existente:** "Agregar ejemplar" en el detalle del libro abre el formulario con el libro ya elegido.
+- Un buscador que consulte al servidor mientras se escribe se descartó por ahora: solo hace falta con decenas de miles de registros.

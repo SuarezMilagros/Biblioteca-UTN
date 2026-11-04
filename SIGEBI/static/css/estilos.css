@@ -623,6 +623,9 @@ a.indicador:hover { border-color: var(--naranja-borde); box-shadow: var(--sombra
     color: var(--rojo); font-size: 0.84rem; font-weight: 500; margin: 0.35rem 0 0;
 }
 .ayuda { display: block; color: var(--texto-suave); font-size: 0.82rem; margin-top: 0.3rem; }
+/* Buscador sobre una lista desplegable larga (S6-11, lo agrega main.js). */
+.formulario input.buscador-lista { margin-bottom: 0.4rem; background: var(--fondo); }
+.formulario input.buscador-lista:focus { background: var(--blanco); }
 .error-general { color: var(--rojo); }
 
 .campos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 1.25rem; }

@@ -27,6 +27,14 @@ class EditorialForm(forms.ModelForm):
         fields = ['nombre']
 
 
+def con_buscador(campo, texto):
+    """Marca una lista desplegable para que static/js/main.js le agregue un buscador (S6-11).
+
+    Sin JavaScript la lista funciona igual; el buscador solo filtra las opciones mientras se escribe.
+    """
+    campo.widget.attrs['data-buscador'] = texto
+
+
 class LibroForm(forms.ModelForm):
     class Meta:
         model = Libro
@@ -43,6 +51,9 @@ class LibroForm(forms.ModelForm):
         self.fields['categoria'].queryset = Categoria.objects.order_by('nombre')
         self.fields['autor'].queryset = Autor.objects.order_by('apellido', 'nombre')
         self.fields['editorial'].queryset = Editorial.objects.order_by('nombre')
+        con_buscador(self.fields['categoria'], 'Buscar categoría')
+        con_buscador(self.fields['autor'], 'Buscar autor')
+        con_buscador(self.fields['editorial'], 'Buscar editorial')
 
 
 class EjemplarForm(forms.ModelForm):
@@ -57,6 +68,7 @@ class EjemplarForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['libro'].queryset = Libro.objects.order_by('titulo')
+        con_buscador(self.fields['libro'], 'Buscar libro por título')
 
     def clean_codigo_inventario(self):
         # Se compara sin distinguir mayúsculas, igual que la restricción de la base.

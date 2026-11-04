@@ -80,6 +80,17 @@ class Libro(models.Model):
         return self.titulo
 
 
+class EjemplarQuerySet(models.QuerySet):
+    def con_estado_de_prestamo(self):
+        """Agrega `con_prestamo_activo` a cada ejemplar en la misma consulta (S6-11).
+
+        Así un listado sabe qué ejemplares están prestados sin hacer una consulta por fila;
+        la propiedad `prestado` usa ese dato cuando está.
+        """
+        prestamo_activo = Prestamo.objects.filter(ejemplar=models.OuterRef('pk'), fecha_devolucion__isnull=True)
+        return self.annotate(con_prestamo_activo=models.Exists(prestamo_activo))
+
+
 class Ejemplar(models.Model):
     id_ejemplar = models.BigAutoField(primary_key=True)
     id_inventario = models.PositiveIntegerField(
@@ -155,8 +166,13 @@ class Ejemplar(models.Model):
         self.codigo_inventario = self.normalizar_codigo(self.codigo_inventario)
         super().save(*args, **kwargs)
 
+    objects = EjemplarQuerySet.as_manager()
+
     @property
     def prestado(self):
+        """Tiene un préstamo sin devolver. Si el ejemplar vino de `con_estado_de_prestamo()`, no consulta de nuevo."""
+        if hasattr(self, 'con_prestamo_activo'):
+            return self.con_prestamo_activo
         return self.prestamos.filter(fecha_devolucion__isnull=True).exists()
 
     @property
