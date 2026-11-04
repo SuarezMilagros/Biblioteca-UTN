@@ -145,14 +145,19 @@ def nombre_y_apellido(nombre_completo):
 
 
 _CANDIDATO_ISBN = re.compile(r'[0-9][0-9\- ]{8,20}[0-9Xx]')
+# Rótulos que preceden al número: "ISBN", "ISBN-13:", "ISBN 13" (sin quitarlos, el "13" se pegaría al ISBN).
+_ROTULO_ISBN = re.compile(r'isbn[\s\-]*(?:1[03]\b)?\s*:?', re.IGNORECASE)
 
 
 def extraer_isbn(valor):
     """Devuelve el ISBN de la celda (prefiere el de 13 dígitos) o '' si no reconoce ninguno."""
     encontrados = {}
-    for candidato in _CANDIDATO_ISBN.findall(texto(valor).replace('\xa0', ' ')):
+    # Cada rótulo (y cada salto de línea) separa un número del siguiente.
+    contenido = _ROTULO_ISBN.sub(' | ', ' | '.join(lineas(valor)).replace('\xa0', ' '))
+    for candidato in _CANDIDATO_ISBN.findall(contenido):
         digitos = re.sub(r'[^0-9Xx]', '', candidato).upper()
-        if len(digitos) in (10, 13):
+        # Un ISBN de todos ceros es un relleno, no un dato.
+        if len(digitos) in (10, 13) and digitos.strip('0'):
             formateado = candidato.replace(' ', '').strip('-')
             encontrados.setdefault(len(digitos), formateado if len(formateado) <= 20 else digitos)
     return encontrados.get(13) or encontrados.get(10) or ''
