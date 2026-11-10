@@ -16,14 +16,14 @@ restricciones de integridad y la búsqueda sin tildes (`unaccent`).
 
 ## 2. Resultado de referencia
 
-Ejecución de verificación al preparar la documentación (04/11/2026), con Python 3.13, Django 5.2.18 y PostgreSQL 16:
+Ejecución de verificación al preparar la documentación (10/11/2026), con Python 3.13, Django 5.2.18 y PostgreSQL 16:
 
 ```
-Found 336 test(s).
+Found 352 test(s).
 Creating test database for alias 'default'...
 System check identified no issues (0 silenced).
 ----------------------------------------------------------------------
-Ran 336 tests
+Ran 352 tests
 
 OK
 Destroying test database for alias 'default'...
@@ -51,7 +51,7 @@ Destroying test database for alias 'default'...
 | `test_importacion.py` | 27 | Importación del inventario en Excel: modo prueba sin cambios, carga repetible, código provisorio, varios autores, sin editorial, filas rechazadas, prestados, archivo inválido y limpieza de datos. |
 | `test_rediseno.py` | 17 | Interfaz: indicadores reales del panel, aviso de vencidos, página de Informes, disponibilidad por libro, permisos y estructura accesible. |
 
-### 3.2. Aplicación `cuentas` (87 pruebas)
+### 3.2. Aplicación `cuentas` (103 pruebas)
 
 | Archivo | Pruebas | Qué verifica |
 |---|---|---|
@@ -64,6 +64,7 @@ Destroying test database for alias 'default'...
 | `test_ajustes.py` | 9 | Altas simultáneas sin error 500 (CA-A9), falla del correo (CA-A8, CA-R5), sesión de 8 horas, botón Salir, enlace de recuperación. |
 | `test_correo.py` | 10 | Configuración SMTP desde el entorno y comando `probar_correo` sin mostrar la contraseña. |
 | `test_contexto.py` | 2 | Rol que muestra la cabecera según los grupos de la cuenta. |
+| `test_intentos.py` | 16 | Límite de intentos: bloqueo por correo y por IP, vencimiento a los 15 minutos, correos inexistentes, límite de la recuperación de contraseña, intentos en el Admin. |
 
 ### 3.3. Aplicación `interfaz` (4 pruebas)
 
@@ -73,7 +74,7 @@ Destroying test database for alias 'default'...
 
 ## 4. Verificación de que las pruebas detectan errores
 
-Para las funcionalidades nuevas de Release 1 se hizo una verificación adicional: se introdujo a propósito un
+Para las funcionalidades nuevas se hizo una verificación adicional: se introdujo a propósito un
 error en el código y se comprobó que las pruebas fallaran. Luego se restauró el código.
 
 | Error introducido | Pruebas que lo detectaron |
@@ -98,6 +99,12 @@ error en el código y se comprobó que las pruebas fallaran. Luego se restauró 
 | Importación: sin código provisorio | `test_sin_numeracion_recibe_codigo_provisorio` |
 | Listar todo el catálogo al entrar, sin búsqueda | 3 pruebas de `BuscarAntesDeListarTests` |
 | Listado de ejemplares sin el estado de préstamo en la misma consulta | `test_el_listado_de_ejemplares_no_hace_una_consulta_por_fila` (y las pruebas del CSV de ejemplares) |
+| Límite de intentos: no bloquear el ingreso | 5 pruebas de `test_intentos` |
+| Límite de intentos: recuperación sin límite de pedidos | 2 pruebas de `test_intentos` |
+| Límite de intentos: no borrar los fallos tras un ingreso correcto | `test_un_ingreso_correcto_borra_los_fallos_de_ese_correo` |
+| Límite de intentos: no normalizar el correo | 2 pruebas de `test_intentos` |
+| Límite de intentos: sin límite por IP | 2 pruebas de `test_intentos` |
+| Límite de intentos: permitir crear intentos desde el Admin | `test_el_superusuario_los_ve_pero_no_los_puede_crear_ni_editar` |
 
 ## 5. Pruebas manuales en el navegador
 
@@ -117,7 +124,7 @@ Después el equipo lo abrió con doble clic en Microsoft Excel (sección 6).
 |---|---|---|
 | Ejecutar `python manage.py test` en cada equipo | Cada integrante | **336 pruebas OK**; informado por el equipo el 04/11/2026 |
 | Abrir un CSV exportado con doble clic en **Microsoft Excel** | Equipo | Hecha; informada por el equipo el 04/11/2026 |
-| Rotar la `SECRET_KEY` en el `.env` de cada integrante (decisión D7, sin registrar el valor) | Cada integrante | Milagros: hecha. Emmanuel: _pendiente_ |
+| Rotar la `SECRET_KEY` en el `.env` de cada integrante (decisión D7, sin registrar el valor) | Cada integrante | Milagros: hecha. Emmanuel: hecha (05/11/2026) |
 | Prueba real de correo: `python manage.py probar_correo` y alta de una cuenta recibiendo el correo | Milagros (titular de la cuenta de correo del proyecto) | Hecha; informada por el equipo el 04/11/2026 |
 | Subir una imagen de portada real desde el navegador | Equipo | Hecha; informada por el equipo el 04/11/2026 |
-| Instalación desde cero siguiendo el README | _completar_ | _completar_ |
+| Instalación desde cero siguiendo el README | Equipo | Hecha; informada por el equipo el 05/11/2026 |

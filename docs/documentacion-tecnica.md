@@ -226,6 +226,16 @@ persona con préstamos): así se mantiene la integridad referencial.
   Los enlaces de definición y recuperación **vencen en una hora** y son de un solo uso (D-C4).
 - El mismo mensaje para correo inexistente, contraseña incorrecta o cuenta inactiva (no revela qué cuentas existen).
 - La sesión dura **8 horas**.
+- **Límite de intentos** (`cuentas/intentos.py`, sin dependencias nuevas):
+    - con 5 ingresos fallidos en 15 minutos para un mismo correo, ese correo queda bloqueado hasta que el
+      primero de esos fallos tenga más de 15 minutos; con 20 fallos desde una misma IP, se bloquea esa IP;
+    - mientras dura el bloqueo no se puede entrar, ni siquiera con la contraseña correcta;
+    - los correos inexistentes se bloquean igual, así el bloqueo no revela qué cuentas existen;
+    - un ingreso correcto borra los fallos de ese correo;
+    - la recuperación de contraseña envía como máximo 3 correos por hora a una misma dirección y atiende
+      10 pedidos por hora desde una IP; pasado el límite la pantalla es la misma, pero no se envía el correo;
+    - los intentos se guardan en la tabla `cuentas_intentodeacceso` y el superusuario los consulta en el Admin
+      (solo lectura). Borrar los fallos de un correo lo desbloquea antes de tiempo.
 
 ### 6.2. Autorización (decisión D-C5)
 
@@ -253,7 +263,8 @@ Las cuentas no se borran: se desactivan. Nadie puede cambiar su propio rol ni de
 
 ### 6.4. Limitaciones conocidas
 
-- No hay límite de intentos de ingreso. Se decidió no sumar dependencias en Release 1.
+- El límite de intentos toma la IP de `REMOTE_ADDR`. Si en el despliegue el sistema queda detrás de un
+  proxy, hay que revisar de dónde se toma la IP; si no, todos los pedidos parecen venir de la misma.
 - HTTPS y los parámetros de producción dependen del servidor donde se despliegue; el sistema está preparado
   para leerlos del entorno (`DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS`, `STATIC_ROOT`).
 
@@ -284,6 +295,8 @@ Si el envío falla al crear una cuenta, la cuenta se crea igual, se avisa y se p
 | Baja | Baja lógica de personas y ejemplares; las cuentas se desactivan | Confirmada |
 | Sesión | 8 horas | Confirmada |
 | I1–I8 | Reglas para importar el inventario en Excel (sección 11) | Confirmadas por el equipo (Sprint 6) |
+| Inventario | Las 7 filas inconsistentes del Excel no se cargan; se registran a mano si se identifican los ejemplares | Decidida por el equipo (Sprint 6) |
+| Evaluación económica | Se calcula al final, junto con la Release 2 | Decidida por el equipo (Sprint 6) |
 | Despliegue | La instalación en producción (servidor, base única, carga definitiva del inventario) se hace al terminar la Release 2 | Decidida por el equipo (Sprint 6) |
 
 ### 8.1. Desviaciones técnicas
@@ -307,12 +320,13 @@ Si el envío falla al crear una cuenta, la cuenta se crea igual, se avisa y se p
 | `biblioteca.0008` | Restricción D8 (devolución no anterior al préstamo) |
 | `biblioteca.0009` | Baja lógica de ejemplares con motivo y fecha |
 | `cuentas.0001` | Índice único de correo (desviación A) |
+| `cuentas.0002` | Tabla de intentos de acceso (límite de intentos) |
 
 Todas tienen operación inversa. Las migraciones `biblioteca.0007` a `0009` se probaron hacia adelante y hacia atrás sobre una base con los datos de prueba.
 
 ## 10. Pruebas
 
-La suite automática tiene **336 pruebas** (Django `TestCase` sobre PostgreSQL). El detalle por módulo y
+La suite automática tiene **352 pruebas** (Django `TestCase` sobre PostgreSQL). El detalle por módulo y
 el resultado están en [Evidencias de pruebas](evidencias-de-pruebas.md).
 
 ## 11. Importación del inventario en Excel (Sprint 6)
@@ -349,6 +363,10 @@ dígitos, el libro queda sin ISBN y se avisa. Un autor sin dato queda como "Sin 
 **Resultado con el Excel real** (`BibliotecaAnexo.xlsx`, 318 filas), en una base de prueba: 311 ejemplares y
 261 libros cargados, 206 con código provisorio, 7 filas rechazadas (una numeración repetida, tres celdas con
 dos numeraciones y el ID 227 repetido) y 7 ejemplares que figuraban prestados. Una segunda corrida no agregó nada.
+
+**Decisión del equipo (05/11/2026):** las 7 filas rechazadas **se quitan del Excel** y no se cargan. Si más
+adelante se identifican esos ejemplares en la biblioteca, se registran a mano desde **Ejemplares → Nuevo ejemplar**.
+La revisión de nombre y apellido de los autores se corrige, cuando haga falta, desde la pantalla **Autores**.
 
 ## 12. Catálogo grande (Sprint 6, S6-11)
 

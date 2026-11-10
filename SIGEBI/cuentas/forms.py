@@ -1,8 +1,10 @@
-"""Formularios de cuentas del Release 1: inicio de sesión y alta o edición de cuentas del sistema."""
+"""Formularios de cuentas: inicio de sesión, recuperación de contraseña y alta o edición de cuentas."""
 from django import forms
 from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm
 
+from . import intentos
+from .models import IntentoDeAcceso
 from .roles import ADMINISTRATIVO, BIBLIOTECARIO
 
 
@@ -16,7 +18,40 @@ class CorreoAuthenticationForm(AuthenticationForm):
     error_messages = {
         **AuthenticationForm.error_messages,
         'invalid_login': 'El correo o la contraseña no son correctos.',
+        'bloqueado': 'Hubo demasiados intentos fallidos. Esperá 15 minutos y volvé a intentar.',
     }
+
+    def clean(self):
+        correo = self.cleaned_data.get('username')
+        ip = intentos.ip_de(self.request)
+        # Mientras está bloqueado no se prueba la contraseña, aunque sea la correcta.
+        if correo and intentos.ingreso_bloqueado(correo, ip):
+            raise forms.ValidationError(self.error_messages['bloqueado'], code='bloqueado')
+        try:
+            datos = super().clean()
+        except forms.ValidationError:
+            if correo:
+                intentos.registrar(IntentoDeAcceso.Tipo.INGRESO_FALLIDO, correo, ip)
+            raise
+        if self.user_cache is not None:
+            intentos.borrar_fallos_de_ingreso(correo)
+        return datos
+
+
+class LimitadoPasswordResetForm(PasswordResetForm):
+    """Recuperación de contraseña con límite de pedidos.
+
+    Si se supera el límite no se envía el correo, pero la pantalla es la misma:
+    así no se revela nada sobre el correo ni sobre el límite.
+    """
+
+    def save(self, *args, request=None, **kwargs):
+        correo = self.cleaned_data['email']
+        ip = intentos.ip_de(request)
+        if intentos.recuperacion_bloqueada(correo, ip):
+            return
+        intentos.registrar(IntentoDeAcceso.Tipo.RECUPERACION, correo, ip)
+        super().save(*args, request=request, **kwargs)
 
 
 class UsuarioForm(forms.ModelForm):

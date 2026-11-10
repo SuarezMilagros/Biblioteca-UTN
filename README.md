@@ -128,7 +128,7 @@ El superusuario crea las cuentas del personal desde **Cuentas** (ver el manual d
 python manage.py test
 ```
 
-Resultado esperado: **336 pruebas, OK**. El detalle está en [Evidencias de pruebas](docs/evidencias-de-pruebas.md).
+Resultado esperado: **352 pruebas, OK**. El detalle está en [Evidencias de pruebas](docs/evidencias-de-pruebas.md).
 
 ## 4. Roles
 
@@ -226,8 +226,6 @@ Biblioteca-UTN/
 
 ## 9. Limitaciones conocidas
 
-- **Intentos de ingreso:** no hay límite de intentos fallidos de login. Se decidió no agregar dependencias
-  nuevas en Release 1; queda como mejora para un despliegue en producción.
 - **HTTPS y despliegue:** la configuración está preparada para desarrollo. Para producción hay que servir el
   sistema con HTTPS, `DJANGO_DEBUG=False`, `DJANGO_ALLOWED_HOSTS` con el dominio real y `collectstatic`.
 - **Sesión:** dura 8 horas; después hay que volver a ingresar.

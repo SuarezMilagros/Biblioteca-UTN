@@ -4,7 +4,7 @@ from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
 
-from cuentas.forms import CorreoAuthenticationForm
+from cuentas.forms import CorreoAuthenticationForm, LimitadoPasswordResetForm
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -23,6 +23,7 @@ urlpatterns = [
         'accounts/password_reset/',
         auth_views.PasswordResetView.as_view(
             email_template_name='registration/password_reset_email.txt',
+            form_class=LimitadoPasswordResetForm,
         ),
         name='password_reset',
     ),
