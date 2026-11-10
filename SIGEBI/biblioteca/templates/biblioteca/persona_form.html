@@ -28,6 +28,7 @@
         {% include 'componentes/campo.html' with campo=form.documento %}
         {% include 'componentes/campo.html' with campo=form.tipo %}
         {% include 'componentes/campo.html' with campo=form.legajo %}
+        {% include 'componentes/campo.html' with campo=form.carreras clase='ancho-completo' %}
     </div>
     <div class="acciones-formulario">
         <button type="submit" class="boton">{% icono 'exito' %}Guardar</button>

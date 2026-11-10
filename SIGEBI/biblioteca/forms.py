@@ -1,17 +1,51 @@
 from django import forms
 from django.utils import timezone
 
-from .models import Autor, Categoria, Editorial, Ejemplar, Libro, Persona, Prestamo
+from .models import Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, Persona, Prestamo
 
 MENSAJE_CODIGO_REPETIDO = 'Ya existe un ejemplar con ese código de inventario.'
 MENSAJE_DOCUMENTO_REPETIDO = 'Ya existe una persona con ese documento.'
 MENSAJE_EJEMPLAR_DADO_DE_BAJA = 'Este ejemplar está dado de baja: no se puede prestar.'
+MENSAJE_CARRERA_REPETIDA = 'Ya existe una carrera con ese nombre.'
+
+
+def campo_de_carreras(etiqueta, ayuda):
+    """Casillas para elegir varias carreras (S7-02). Ninguna es obligatoria."""
+    return forms.ModelMultipleChoiceField(
+        label=etiqueta,
+        help_text=ayuda,
+        queryset=Carrera.objects.all(),
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+    )
+
+
+class CarreraForm(forms.ModelForm):
+    class Meta:
+        model = Carrera
+        fields = ['nombre', 'nivel']
+
+    def clean_nombre(self):
+        # Se compara sin distinguir mayúsculas, igual que la restricción de la base.
+        nombre = ' '.join(self.cleaned_data['nombre'].split())
+        otras = Carrera.objects.filter(nombre__iexact=nombre)
+        if self.instance.pk is not None:
+            otras = otras.exclude(pk=self.instance.pk)
+        if otras.exists():
+            raise forms.ValidationError(MENSAJE_CARRERA_REPETIDA)
+        return nombre
 
 
 class CategoriaForm(forms.ModelForm):
+    carreras = campo_de_carreras(
+        'Carreras',
+        'Los alumnos y profesores de estas carreras van a ver los libros de esta categoría. '
+        'Para una categoría general (por ejemplo, Diccionario), marcá todas.',
+    )
+
     class Meta:
         model = Categoria
-        fields = ['nombre', 'descripcion']
+        fields = ['nombre', 'descripcion', 'carreras']
         labels = {'descripcion': 'Descripción'}
 
 
@@ -86,7 +120,7 @@ class PersonaForm(forms.ModelForm):
 
     class Meta:
         model = Persona
-        fields = ['nombre', 'apellido', 'documento', 'tipo', 'legajo']
+        fields = ['nombre', 'apellido', 'documento', 'tipo', 'legajo', 'carreras']
         labels = {
             'documento': 'Documento',
             'tipo': 'Tipo',
@@ -98,6 +132,11 @@ class PersonaForm(forms.ModelForm):
         error_messages = {
             'documento': {'unique': MENSAJE_DOCUMENTO_REPETIDO},
         }
+
+    carreras = campo_de_carreras(
+        'Carreras',
+        'Las que cursa, si es alumno, o las que dicta, si es profesor. Puede tener varias.',
+    )
 
     def clean_documento(self):
         documento = Persona.normalizar_documento(self.cleaned_data['documento'])

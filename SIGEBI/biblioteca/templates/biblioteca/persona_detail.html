@@ -42,6 +42,12 @@
             <dt>Legajo</dt>
             <dd>{{ object.legajo|default:"No registrado" }}</dd>
 
+            <dt>{% if object.tipo == 'PROFESOR' %}Carreras que dicta{% else %}Carreras que cursa{% endif %}</dt>
+            <dd>
+                {% for carrera in carreras %}{{ carrera.nombre }}{% if not forloop.last %}<br>{% endif %}
+                {% empty %}<span class="texto-suave">Sin carrera asignada</span>{% endfor %}
+            </dd>
+
             <dt>Estado</dt>
             <dd>
                 {% if object.activo %}

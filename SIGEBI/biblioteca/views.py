@@ -12,11 +12,11 @@ from django.views import View
 from django.views.generic import CreateView, DetailView, FormView, ListView, TemplateView, UpdateView
 
 from .forms import (
-    MENSAJE_EJEMPLAR_DADO_DE_BAJA, AutorForm, CategoriaForm, DevolucionForm, EditorialForm,
+    MENSAJE_EJEMPLAR_DADO_DE_BAJA, AutorForm, CarreraForm, CategoriaForm, DevolucionForm, EditorialForm,
     EjemplarBajaForm, EjemplarForm, LibroForm, PersonaForm, PrestamoForm,
 )
 from .informes import ExportarCSVMixin, nombre_de_archivo
-from .models import Autor, Categoria, Editorial, Ejemplar, Libro, Persona, Prestamo
+from .models import Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, Persona, Prestamo
 
 ELEMENTOS_POR_PAGINA = 20
 MENSAJE_DATO_REPETIDO = 'Ya existe un registro con esos datos. Revisá los valores e intentá de nuevo.'
@@ -150,12 +150,32 @@ class GuardarRegistroMixin:
 
 # ---------- Categorías, autores y editoriales ----------
 
+def categorias_sin_carrera():
+    """Categorías que todavía no tienen carrera: sus libros no se verían en el portal (D-R2-11)."""
+    return Categoria.objects.filter(carreras__isnull=True).order_by('nombre')
+
+
 class CategoriaListView(PermissionRequiredMixin, ListView):
     permission_required = 'biblioteca.view_categoria'
     model = Categoria
     template_name = 'biblioteca/categoria_list.html'
     ordering = ['nombre']
     paginate_by = ELEMENTOS_POR_PAGINA
+
+    def sin_carrera(self):
+        return self.request.GET.get('sin_carrera') == '1'
+
+    def get_queryset(self):
+        queryset = super().get_queryset().prefetch_related('carreras')
+        if self.sin_carrera():
+            queryset = queryset.filter(carreras__isnull=True)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        contexto['sin_carrera'] = self.sin_carrera()
+        contexto['cantidad_sin_carrera'] = categorias_sin_carrera().count()
+        return contexto
 
 
 class CategoriaCreateView(PermissionRequiredMixin, GuardarRegistroMixin, CreateView):
@@ -467,6 +487,65 @@ class EjemplarUpdateView(PermissionRequiredMixin, GuardarRegistroMixin, UpdateVi
         return reverse('biblioteca:ejemplar_detail', args=[self.object.pk])
 
 
+# ---------- Carreras (Release 2, S7-02) ----------
+
+class CarreraListView(PermissionRequiredMixin, ListView):
+    permission_required = 'biblioteca.view_carrera'
+    model = Carrera
+    template_name = 'biblioteca/carrera_list.html'
+    # Hay que indicarlo acá: Django no aplica el orden del modelo a una consulta que cuenta (annotate).
+    ordering = ['-nivel', 'nombre']
+
+    def get_queryset(self):
+        # distinct=True: cada cantidad se cuenta sin repetir aunque se crucen las dos relaciones.
+        return super().get_queryset().annotate(
+            cantidad_personas=Count('personas', distinct=True),
+            cantidad_categorias=Count('categorias', distinct=True),
+        )
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        contexto['categorias_sin_carrera'] = list(categorias_sin_carrera())
+        return contexto
+
+
+class CarreraDetailView(PermissionRequiredMixin, DetailView):
+    permission_required = 'biblioteca.view_carrera'
+    model = Carrera
+    template_name = 'biblioteca/carrera_detail.html'
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        contexto['categorias'] = self.object.categorias.order_by('nombre')
+        contexto['cantidad_alumnos'] = self.object.personas.filter(tipo=Persona.Tipo.ALUMNO, activo=True).count()
+        contexto['cantidad_profesores'] = self.object.personas.filter(
+            tipo=Persona.Tipo.PROFESOR, activo=True
+        ).count()
+        return contexto
+
+
+class CarreraCreateView(PermissionRequiredMixin, GuardarRegistroMixin, CreateView):
+    permission_required = 'biblioteca.add_carrera'
+    model = Carrera
+    form_class = CarreraForm
+    template_name = 'biblioteca/carrera_form.html'
+    mensaje_exito = 'Carrera "{obj}" registrada.'
+
+    def get_success_url(self):
+        return reverse('biblioteca:carrera_detail', args=[self.object.pk])
+
+
+class CarreraUpdateView(PermissionRequiredMixin, GuardarRegistroMixin, UpdateView):
+    permission_required = 'biblioteca.change_carrera'
+    model = Carrera
+    form_class = CarreraForm
+    template_name = 'biblioteca/carrera_form.html'
+    mensaje_exito = 'Carrera "{obj}" actualizada.'
+
+    def get_success_url(self):
+        return reverse('biblioteca:carrera_detail', args=[self.object.pk])
+
+
 # ---------- Personas ----------
 
 # Filtro del listado de personas: valor del parámetro `estado` -> filtro sobre `activo`.
@@ -537,6 +616,7 @@ class PersonaDetailView(PermissionRequiredMixin, DetailView):
             self.object.prestamos.select_related('ejemplar__libro').order_by('-fecha_prestamo', '-pk')
         )
         contexto['prestamos'] = prestamos
+        contexto['carreras'] = self.object.carreras.all()
         # Resumen para la ficha de la persona (se calcula sobre la lista ya cargada, sin consultas extra).
         contexto['prestamos_sin_devolver'] = sum(1 for prestamo in prestamos if prestamo.activo)
         contexto['prestamos_vencidos'] = sum(1 for prestamo in prestamos if prestamo.vencido)

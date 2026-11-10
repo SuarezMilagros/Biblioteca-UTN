@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% load interfaz %}
+
+{% block titulo %}{{ object.nombre }} · SIGEBI{% endblock %}
+{% block seccion %}Catálogo / Carreras / <strong>{{ object.nombre }}</strong>{% endblock %}
+
+{% block contenido %}
+<a class="volver" href="{% url 'biblioteca:carrera_list' %}">{% icono 'volver' %}Volver a carreras</a>
+
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">{{ object.get_nivel_display }}</p>
+        <h1>{{ object.nombre }}</h1>
+        <p class="bajada">{{ cantidad_alumnos }} alumno{{ cantidad_alumnos|pluralize }} y {{ cantidad_profesores }} profesor{{ cantidad_profesores|pluralize:"es" }} activos con esta carrera.</p>
+    </div>
+    {% if perms.biblioteca.change_carrera %}
+    <div class="botones-encabezado">
+        <a class="boton-secundario" href="{% url 'biblioteca:carrera_update' object.pk %}">{% icono 'editar' %}Editar carrera</a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="subencabezado">
+    <h2>Categorías de libros</h2>
+</div>
+{% if categorias %}
+<div class="etiquetas">
+    {% for categoria in categorias %}<span class="badge badge-neutro">{{ categoria.nombre }}</span>{% endfor %}
+</div>
+<p class="ayuda">Las categorías se asignan a las carreras desde la pantalla Categorías.</p>
+{% else %}
+<p class="texto-suave">Ninguna categoría está asignada a esta carrera. Se asignan desde la pantalla <a href="{% url 'biblioteca:categoria_list' %}">Categorías</a>.</p>
+{% endif %}
+{% endblock %}

@@ -13,7 +13,11 @@ ADMINISTRATIVO = 'Administrativo'
 BIBLIOTECARIO = 'Bibliotecario'
 
 # Personas y préstamos todavía no tienen pantallas: se protegen desde ya para cuando existan.
-MODELOS_OPERATIVOS = ['categoria', 'autor', 'editorial', 'libro', 'ejemplar', 'persona', 'prestamo']
+MODELOS_OPERATIVOS = [
+    'categoria', 'autor', 'editorial', 'libro', 'ejemplar', 'persona', 'prestamo',
+    # Release 2 (S7-02)
+    'carrera',
+]
 ACCIONES_OPERATIVAS = ['view', 'add', 'change']
 
 
