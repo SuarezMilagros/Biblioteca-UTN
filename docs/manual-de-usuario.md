@@ -39,6 +39,11 @@ datos de prueba (`cargar_datos_prueba`).
 Si el correo o la contraseña no son correctos, el sistema muestra un único mensaje ("El correo o la
 contraseña no son correctos") sin indicar cuál de los dos falló. Así nadie puede averiguar qué cuentas existen.
 
+Después de **5 intentos fallidos en 15 minutos**, el sistema muestra "Hubo demasiados intentos fallidos.
+Esperá 15 minutos y volvé a intentar." Durante ese tiempo no se puede entrar, ni siquiera con la contraseña
+correcta. Si hace falta desbloquear la cuenta antes, el superusuario borra esos intentos desde el panel de
+administración (**Intentos de acceso**).
+
 La sesión dura **8 horas**. Para salir, usá **Salir (tu nombre)**, al pie del menú lateral.
 
 ### 1.1. Primera vez: definir la contraseña
@@ -55,7 +60,8 @@ venció, pedile al Administrativo que te lo reenvíe. Nadie más conoce tu contr
 2. Escribí tu correo y tocá **Enviar enlace**.
 3. Revisá tu correo y abrí el enlace (vence en una hora). Elegí la contraseña nueva.
 
-Por seguridad, la pantalla muestra el mismo mensaje exista o no una cuenta con ese correo.
+Por seguridad, la pantalla muestra el mismo mensaje exista o no una cuenta con ese correo. Se envían como
+máximo **3 correos por hora** a una misma dirección: si no llega, esperá una hora antes de volver a pedirlo.
 
 ---
 
