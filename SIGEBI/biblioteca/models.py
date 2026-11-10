@@ -9,10 +9,45 @@ from django.utils import timezone
 PLAZO_PRESTAMO_DIAS = 14
 
 
+class Carrera(models.Model):
+    """Carrera de la Extensión Áulica (Release 2, S7-02)."""
+
+    class Nivel(models.TextChoices):
+        PREGRADO = 'PREGRADO', 'Pregrado'
+        GRADO = 'GRADO', 'Grado'
+
+    id_carrera = models.BigAutoField(primary_key=True)
+    nombre = models.CharField(max_length=150)
+    nivel = models.CharField(max_length=20, choices=Nivel.choices)
+
+    class Meta:
+        verbose_name = 'carrera'
+        verbose_name_plural = 'carreras'
+        # Primero las de pregrado y después las de grado ("PREGRADO" > "GRADO" alfabéticamente).
+        ordering = ['-nivel', 'nombre']
+        constraints = [
+            models.UniqueConstraint(
+                Upper('nombre'),
+                name='carrera_nombre_unico',
+                violation_error_message='Ya existe una carrera con ese nombre.',
+            ),
+        ]
+
+    def __str__(self):
+        return self.nombre
+
+
 class Categoria(models.Model):
     id_categoria = models.BigAutoField(primary_key=True)
     nombre = models.CharField(max_length=100)
     descripcion = models.TextField(blank=True)
+    # Un libro pertenece a las carreras de su categoría (D-R2-6): no se guardan aparte.
+    carreras = models.ManyToManyField(
+        Carrera,
+        through='CategoriaCarrera',
+        related_name='categorias',
+        blank=True,
+    )
 
     class Meta:
         verbose_name = 'categoría'
@@ -192,6 +227,13 @@ class Persona(models.Model):
     documento = models.CharField(max_length=20, unique=True)
     tipo = models.CharField(max_length=20, choices=Tipo.choices)
     legajo = models.CharField(max_length=20, blank=True)
+    # Carreras que cursa (alumno) o dicta (profesor). Puede tener varias (D-R2-5).
+    carreras = models.ManyToManyField(
+        Carrera,
+        through='PersonaCarrera',
+        related_name='personas',
+        blank=True,
+    )
     # Baja lógica: la persona no se borra porque tiene historial de préstamos.
     activo = models.BooleanField(
         default=True,
@@ -284,3 +326,37 @@ class Prestamo(models.Model):
     @staticmethod
     def calcular_vencimiento(fecha_prestamo):
         return fecha_prestamo + timedelta(days=PLAZO_PRESTAMO_DIAS)
+
+
+class PersonaCarrera(models.Model):
+    """Una carrera que cursa o dicta una persona (tabla intermedia, D-R2-17)."""
+
+    persona = models.ForeignKey(Persona, on_delete=models.CASCADE, db_column='id_persona')
+    carrera = models.ForeignKey(Carrera, on_delete=models.PROTECT, db_column='id_carrera')
+
+    class Meta:
+        verbose_name = 'carrera de una persona'
+        verbose_name_plural = 'carreras de las personas'
+        constraints = [
+            models.UniqueConstraint(fields=['persona', 'carrera'], name='persona_carrera_unica'),
+        ]
+
+    def __str__(self):
+        return f'{self.persona} → {self.carrera}'
+
+
+class CategoriaCarrera(models.Model):
+    """Una carrera a la que corresponde una categoría (tabla intermedia, D-R2-17)."""
+
+    categoria = models.ForeignKey(Categoria, on_delete=models.CASCADE, db_column='id_categoria')
+    carrera = models.ForeignKey(Carrera, on_delete=models.PROTECT, db_column='id_carrera')
+
+    class Meta:
+        verbose_name = 'carrera de una categoría'
+        verbose_name_plural = 'carreras de las categorías'
+        constraints = [
+            models.UniqueConstraint(fields=['categoria', 'carrera'], name='categoria_carrera_unica'),
+        ]
+
+    def __str__(self):
+        return f'{self.categoria} → {self.carrera}'

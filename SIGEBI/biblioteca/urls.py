@@ -12,6 +12,11 @@ urlpatterns = [
     path('categorias/nueva/', views.CategoriaCreateView.as_view(), name='categoria_create'),
     path('categorias/<int:pk>/editar/', views.CategoriaUpdateView.as_view(), name='categoria_update'),
 
+    path('carreras/', views.CarreraListView.as_view(), name='carrera_list'),
+    path('carreras/nueva/', views.CarreraCreateView.as_view(), name='carrera_create'),
+    path('carreras/<int:pk>/', views.CarreraDetailView.as_view(), name='carrera_detail'),
+    path('carreras/<int:pk>/editar/', views.CarreraUpdateView.as_view(), name='carrera_update'),
+
     path('autores/', views.AutorListView.as_view(), name='autor_list'),
     path('autores/nuevo/', views.AutorCreateView.as_view(), name='autor_create'),
     path('autores/<int:pk>/editar/', views.AutorUpdateView.as_view(), name='autor_update'),

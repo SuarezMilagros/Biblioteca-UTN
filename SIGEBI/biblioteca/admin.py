@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Autor, Categoria, Editorial, Ejemplar, Libro, Persona, Prestamo
+from .models import Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, Persona, Prestamo
 
 
 @admin.register(Categoria)
@@ -65,3 +65,11 @@ class PrestamoAdmin(admin.ModelAdmin):
         if obj.usuario_sistema_id is None:
             obj.usuario_sistema = request.user
         super().save_model(request, obj, form, change)
+
+
+@admin.register(Carrera)
+class CarreraAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'nivel')
+    list_filter = ('nivel',)
+    search_fields = ('nombre',)
+

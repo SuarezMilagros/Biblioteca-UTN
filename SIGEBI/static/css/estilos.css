@@ -473,6 +473,14 @@ a.indicador:hover { border-color: var(--naranja-borde); box-shadow: var(--sombra
     margin-bottom: 1rem; font-weight: 500;
 }
 .alerta-aviso p { margin: 0; }
+.alerta-exito {
+    display: flex; gap: 0.6rem; align-items: flex-start;
+    background: var(--verde-claro); color: var(--verde);
+    border: 1px solid #B9E1CB; border-left-width: 4px;
+    padding: 0.75rem 0.9rem; border-radius: var(--radio-chico);
+    margin-bottom: 1rem; font-weight: 500;
+}
+.alerta-exito p { margin: 0; }
 
 /* =====================================================================
    Tablas
@@ -616,6 +624,18 @@ a.indicador:hover { border-color: var(--naranja-borde); box-shadow: var(--sombra
 
 .formulario input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--naranja-accion); margin: 0; }
 .campo-casilla label { display: inline-flex; align-items: center; gap: 0.6rem; margin: 0; font-weight: 600; cursor: pointer; }
+
+/* Varias casillas (por ejemplo, las carreras de una persona o de una categoría). S7-02 */
+.campo-casillas { border: 0; padding: 0; margin: 0 0 1.1rem; min-width: 0; }
+.campo-casillas legend { font-weight: 600; font-size: 0.9rem; color: var(--texto-fuerte); padding: 0; }
+.campo-casillas > .ayuda { margin: 0.2rem 0 0.5rem; }
+.casillas { display: grid; gap: 0.4rem; }
+@media (min-width: 720px) { .ancho-completo .casillas { grid-template-columns: 1fr 1fr; column-gap: 1.5rem; } }
+.formulario .casillas label {
+    display: flex; align-items: flex-start; gap: 0.6rem; margin: 0;
+    font-weight: 500; cursor: pointer; line-height: 1.35;
+}
+.casillas input[type="checkbox"] { flex: none; margin-top: 1px; }
 
 .campo-error input, .campo-error select, .campo-error textarea { border-color: var(--rojo); background: #FFFBFA; }
 .error, .campo-error > p.campo-error, p.campo-error {

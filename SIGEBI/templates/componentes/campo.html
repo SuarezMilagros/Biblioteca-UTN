@@ -1,8 +1,21 @@
 {% comment %}
     Un campo de formulario con su etiqueta, ayuda y errores. Requiere `campo`.
     Opcional: `clase` (por ejemplo "ancho-completo") para ubicarlo en la grilla.
+    Si el campo es de varias casillas (por ejemplo, las carreras), se muestra como un grupo con su leyenda.
 {% endcomment %}
 {% load interfaz %}
+{% if campo.field.widget.allow_multiple_selected and campo.field.widget.input_type == 'checkbox' %}
+<fieldset class="campo campo-casillas{% if campo.errors %} campo-error{% endif %}{% if clase %} {{ clase }}{% endif %}">
+    <legend>{{ campo.label }}{% if campo.field.required %} <span class="obligatorio" aria-hidden="true">*</span>{% endif %}</legend>
+    {% if campo.help_text %}<small class="ayuda">{{ campo.help_text }}</small>{% endif %}
+    <div class="casillas">
+        {% for opcion in campo %}<label for="{{ opcion.id_for_label }}">{{ opcion.tag }} {{ opcion.choice_label }}</label>{% endfor %}
+    </div>
+    {% for error in campo.errors %}
+    <small class="error">{% icono 'error' %}{{ error }}</small>
+    {% endfor %}
+</fieldset>
+{% else %}
 <div class="campo{% if campo.field.widget.input_type == 'checkbox' %} campo-casilla{% endif %}{% if campo.errors %} campo-error{% endif %}{% if clase %} {{ clase }}{% endif %}">
     {% if campo.field.widget.input_type == 'checkbox' %}
     <label for="{{ campo.id_for_label }}">{{ campo }} {{ campo.label }}</label>
@@ -17,3 +30,4 @@
     <small class="error">{% icono 'error' %}{{ error }}</small>
     {% endfor %}
 </div>
+{% endif %}
