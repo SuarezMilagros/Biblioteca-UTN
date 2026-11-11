@@ -54,5 +54,6 @@ urlpatterns = [
         name='password_change_done',
     ),
     path('cuentas/', include('cuentas.urls')),
+    path('portal/', include('portal.urls')),
     path('', include('biblioteca.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

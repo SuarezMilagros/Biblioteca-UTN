@@ -9,9 +9,13 @@
     <span class="vacio-icono icono-alerta">{% icono 'candado' %}</span>
     <h1>Acceso no permitido</h1>
     <p class="bajada">Tu cuenta no tiene permiso para ver esta página.</p>
+    {% if es_lector %}
+    <p class="texto-suave">Esta página es para el personal de la biblioteca.</p>
+    {% else %}
     <p class="texto-suave">Si necesitás este acceso, pedíselo a un administrativo de la biblioteca.</p>
+    {% endif %}
     <div class="botones-encabezado">
-        <a class="boton" href="{% url 'biblioteca:inicio' %}">{% icono 'inicio' %}Volver al inicio</a>
+        <a class="boton" href="{% url url_inicio|default:'biblioteca:inicio' %}">{% icono 'inicio' %}Volver al inicio</a>
     </div>
 </section>
 {% endblock %}

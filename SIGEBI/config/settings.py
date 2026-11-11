@@ -58,6 +58,8 @@ INSTALLED_APPS = [
     'interfaz',
     'biblioteca',
     'cuentas',
+    # Release 2: portal de estudiantes y docentes (S7-04).
+    'portal',
 ]
 
 MIDDLEWARE = [
@@ -83,7 +85,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 # Variables de la cabecera común (ver la lista al inicio de templates/base.html).
-                'cuentas.contexto.interfaz',      # rol_usuario
+                'cuentas.contexto.interfaz',      # rol_usuario, es_lector, url_inicio
                 'biblioteca.contexto.interfaz',   # prestamos_vencidos_total
             ],
         },

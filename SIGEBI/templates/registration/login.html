@@ -7,7 +7,7 @@
 <section class="tarjeta-acceso">
     {% include 'registration/_acceso_marca.html' %}
     <h1>Ingresar</h1>
-    <p class="bajada">Accedé con tu cuenta del personal de la biblioteca.</p>
+    <p class="bajada">Accedé con tu correo y tu contraseña.</p>
 
     {% if form.non_field_errors %}
     <div class="alerta-error" role="alert">
@@ -34,6 +34,7 @@
     </form>
     <p class="acceso-enlaces"><a href="{% url 'password_reset' %}">¿Olvidaste tu contraseña?</a></p>
     <hr class="acceso-separador">
-    <p class="acceso-nota">Acceso exclusivo para el personal de la biblioteca.</p>
+    <p class="acceso-nota">Para el personal de la biblioteca y para estudiantes y docentes con cuenta.
+        Si sos estudiante o docente y no tenés cuenta, pedila en la biblioteca.</p>
 </section>
 {% endblock %}
