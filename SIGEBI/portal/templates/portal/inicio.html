@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% load interfaz %}
+
+{% block titulo %}Inicio · SIGEBI{% endblock %}
+{% block seccion %}<strong>Inicio</strong>{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">{{ persona.get_tipo_display }}</p>
+        <h1>Hola, {{ persona.nombre }}</h1>
+        <p class="bajada">Este es tu espacio en la biblioteca de la UTN FRT, Extensión Áulica Concepción.</p>
+    </div>
+</div>
+
+<div class="dos-columnas">
+    <section class="tarjeta" aria-labelledby="titulo-carreras">
+        <div class="tarjeta-titulo"><h2 id="titulo-carreras">{% if persona.tipo == 'PROFESOR' %}Carreras que dictás{% else %}Tus carreras{% endif %}</h2></div>
+        <ul class="lista-carreras">
+            {% for carrera in carreras %}<li>{% icono 'carrera' %}{{ carrera.nombre }}</li>{% endfor %}
+        </ul>
+        <p class="ayuda">Si falta una carrera o hay un dato mal, avisá en la biblioteca.</p>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="titulo-catalogo">
+        <div class="tarjeta-titulo"><h2 id="titulo-catalogo">Libros de tus carreras</h2></div>
+        <div class="cifras cifras-una">
+            <div class="cifra"><strong>{{ cantidad_libros }}</strong><span>título{{ cantidad_libros|pluralize }}</span></div>
+        </div>
+    </section>
+</div>
+{% endblock %}

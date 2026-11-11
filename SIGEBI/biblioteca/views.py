@@ -18,6 +18,7 @@ from .forms import (
 from cuentas.correo import enviar_correo_definicion
 from cuentas.forms import CuentaLectorForm
 from cuentas.lectores import crear_cuenta_de_lector, requisitos_para_cuenta
+from cuentas.roles import es_lector
 from cuentas.views import ERRORES_DE_ENVIO
 
 from .informes import ExportarCSVMixin, nombre_de_archivo
@@ -65,6 +66,9 @@ class BuscarAntesDeListarMixin:
 def inicio(request):
     """Panel principal: indicadores y próximos vencimientos (solo lectura, según los permisos)."""
     usuario = request.user
+    if es_lector(usuario):
+        # Estudiantes y docentes tienen su propio inicio (S7-04).
+        return redirect('portal:inicio')
     hoy = timezone.localdate()
     contexto = {'hoy': hoy}
     if usuario.has_perm('biblioteca.view_prestamo'):
@@ -857,6 +861,9 @@ class PrestamoCreateView(PermissionRequiredMixin, FormView):
     template_name = 'biblioteca/prestamo_form.html'
 
     def dispatch(self, request, *args, **kwargs):
+        # Primero los permisos y después la búsqueda: quien no tiene acceso no averigua qué ejemplares existen.
+        if not request.user.is_authenticated or not self.has_permission():
+            return self.handle_no_permission()
         self.ejemplar = get_object_or_404(Ejemplar.objects.select_related('libro'), pk=kwargs['pk'])
         return super().dispatch(request, *args, **kwargs)
 
@@ -908,6 +915,9 @@ class DevolucionView(PermissionRequiredMixin, FormView):
     template_name = 'biblioteca/devolucion_form.html'
 
     def dispatch(self, request, *args, **kwargs):
+        # Primero los permisos y después la búsqueda: quien no tiene acceso no averigua qué préstamos existen.
+        if not request.user.is_authenticated or not self.has_permission():
+            return self.handle_no_permission()
         self.prestamo = get_object_or_404(
             Prestamo.objects.select_related('persona', 'ejemplar__libro'), pk=kwargs['pk']
         )
