@@ -363,6 +363,7 @@ class Resultado:
     prestados: list = field(default_factory=list)     # (fila, código)
     nuevos: Counter = field(default_factory=Counter)  # modelo -> cantidad creada
     autores_nuevos: list = field(default_factory=list)
+    categorias_clasificadas: list = field(default_factory=list)  # nombres de categorías con carreras asignadas
 
 
 class _Catalogo:
@@ -479,6 +480,11 @@ def importar(filas, guardar=False):
                 resultado.prestados.append((fila.numero, fila.codigo))
             for aviso in fila.avisos:
                 resultado.avisos.append((fila.numero, fila.codigo, aviso))
+
+        # Las categorías nuevas reciben sus carreras según la asignación del equipo (S7-08).
+        from .clasificacion import asignar_carreras_a_categorias
+
+        resultado.categorias_clasificadas = [c.nombre for c in asignar_carreras_a_categorias()]
 
         if not guardar:
             transaction.set_rollback(True)
