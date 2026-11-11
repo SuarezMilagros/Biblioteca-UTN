@@ -50,6 +50,8 @@ class Command(BaseCommand):
             f'Nuevos en el catálogo: {nuevos["libro"]} libros, {nuevos["autor"]} autores, '
             f'{nuevos["editorial"]} editoriales, {nuevos["categoria"]} categorías'
         )
+        if resultado.categorias_clasificadas:
+            escribir('Categorías con carreras asignadas: ' + ', '.join(resultado.categorias_clasificadas))
 
         if resultado.rechazadas:
             escribir('')
