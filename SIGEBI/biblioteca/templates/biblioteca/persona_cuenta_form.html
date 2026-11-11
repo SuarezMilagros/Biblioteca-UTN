@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% load interfaz %}
+
+{% block titulo %}Crear cuenta · {{ persona }} · SIGEBI{% endblock %}
+{% block seccion %}Operación / Personas / {{ persona }} / <strong>Crear cuenta</strong>{% endblock %}
+
+{% block contenido %}
+<a class="volver" href="{% url 'biblioteca:persona_detail' persona.pk %}">{% icono 'volver' %}Volver a la persona</a>
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">{{ persona.get_tipo_display }}</p>
+        <h1>Crear cuenta para el portal</h1>
+        <p class="bajada">{{ persona.apellido }}, {{ persona.nombre }} va a poder ingresar con su correo y ver los libros
+            de sus carreras. La contraseña la define la persona con el enlace que le llega por correo.</p>
+    </div>
+</div>
+
+<form method="post" class="formulario tarjeta formulario-angosto">
+    {% csrf_token %}
+    <dl class="detalle">
+        <dt>Documento</dt>
+        <dd>{{ persona.documento }}</dd>
+        <dt>{% if persona.tipo == 'PROFESOR' %}Carreras que dicta{% else %}Carreras que cursa{% endif %}</dt>
+        <dd>{% for carrera in carreras %}{{ carrera.nombre }}{% if not forloop.last %}<br>{% endif %}{% empty %}<span class="texto-suave">Sin carrera asignada</span>{% endfor %}</dd>
+    </dl>
+    {% include 'componentes/formulario.html' %}
+    <div class="acciones-formulario">
+        <button type="submit" class="boton">{% icono 'correo' %}Crear cuenta y enviar correo</button>
+        <a class="boton-secundario" href="{% url 'biblioteca:persona_detail' persona.pk %}">Cancelar</a>
+    </div>
+</form>
+{% endblock %}

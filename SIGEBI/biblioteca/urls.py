@@ -42,6 +42,8 @@ urlpatterns = [
     path('personas/nueva/', views.PersonaCreateView.as_view(), name='persona_create'),
     path('personas/<int:pk>/', views.PersonaDetailView.as_view(), name='persona_detail'),
     path('personas/<int:pk>/editar/', views.PersonaUpdateView.as_view(), name='persona_update'),
+    path('personas/<int:pk>/cuenta/nueva/', views.PersonaCuentaCreateView.as_view(), name='persona_cuenta_create'),
+    path('personas/<int:pk>/cuenta/reenviar/', views.PersonaCuentaReenviarView.as_view(), name='persona_cuenta_reenviar'),
     path('personas/<int:pk>/baja/', views.PersonaBajaView.as_view(), name='persona_baja'),
     path('personas/<int:pk>/reactivar/', views.PersonaReactivarView.as_view(), name='persona_reactivar'),
 

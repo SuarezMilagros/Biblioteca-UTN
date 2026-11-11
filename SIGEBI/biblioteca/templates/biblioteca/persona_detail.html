@@ -69,11 +69,41 @@
             </div>
         </section>
 
+        <section class="tarjeta" aria-labelledby="titulo-cuenta-persona">
+            <div class="tarjeta-titulo"><h2 id="titulo-cuenta-persona">Cuenta para el portal</h2></div>
+            {% if object.cuenta %}
+            <dl class="detalle">
+                <dt>Correo</dt>
+                <dd>{{ object.cuenta.email }}</dd>
+                <dt>Estado</dt>
+                <dd>
+                    {% if not object.cuenta.is_active %}<span class="badge badge-baja">Desactivada</span>
+                    {% elif object.cuenta.has_usable_password %}<span class="badge badge-disponible">Activa</span>
+                    {% else %}<span class="badge badge-vencido">Falta definir la contraseña</span>{% endif %}
+                </dd>
+            </dl>
+            {% if perms.biblioteca.change_persona and object.cuenta.is_active and not object.cuenta.has_usable_password %}
+            <form method="post" action="{% url 'biblioteca:persona_cuenta_reenviar' object.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="boton-secundario">{% icono 'correo' %}Reenviar correo</button>
+            </form>
+            {% endif %}
+            {% elif falta_para_cuenta %}
+            <p class="ayuda">Todavía no tiene cuenta. Para crearla:</p>
+            <ul class="ayuda">{% for motivo in falta_para_cuenta %}<li>{{ motivo }}</li>{% endfor %}</ul>
+            {% else %}
+            <p class="ayuda">Todavía no tiene cuenta. Con una cuenta puede ingresar al portal y ver los libros de sus carreras.</p>
+            {% if perms.biblioteca.change_persona %}
+            <a class="boton" href="{% url 'biblioteca:persona_cuenta_create' object.pk %}">{% icono 'mas' %}Crear cuenta</a>
+            {% endif %}
+            {% endif %}
+        </section>
+
         {% if perms.biblioteca.change_persona %}
         {% if object.activo %}
         <section class="tarjeta zona-baja" aria-labelledby="titulo-baja-persona">
             <div class="tarjeta-titulo"><h2 id="titulo-baja-persona">Dar de baja</h2></div>
-            <p class="ayuda">Una persona dada de baja no puede recibir préstamos nuevos. No se puede dar de baja si tiene préstamos sin devolver.</p>
+            <p class="ayuda">Una persona dada de baja no puede recibir préstamos nuevos. No se puede dar de baja si tiene préstamos sin devolver.{% if object.cuenta %} Su cuenta del portal también se desactiva.{% endif %}</p>
             <form method="post" action="{% url 'biblioteca:persona_baja' object.pk %}" class="formulario-baja"
                   data-confirmar="{{ object }} no podrá recibir préstamos nuevos hasta que se la reactive. Se conserva su historial."
                   data-confirmar-titulo="¿Dar de baja a esta persona?" data-confirmar-boton="Dar de baja">

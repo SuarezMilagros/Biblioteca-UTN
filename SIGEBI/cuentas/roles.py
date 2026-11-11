@@ -11,6 +11,8 @@ from django.db.models import Q
 
 ADMINISTRATIVO = 'Administrativo'
 BIBLIOTECARIO = 'Bibliotecario'
+# Release 2 (S7-03): estudiantes y docentes. No tiene permisos sobre el sistema del personal (D-R2-9).
+LECTOR = 'Lector'
 
 # Personas y préstamos todavía no tienen pantallas: se protegen desde ya para cuando existan.
 MODELOS_OPERATIVOS = [
@@ -28,6 +30,7 @@ def _permisos_operativos():
 PERMISOS_POR_ROL = {
     BIBLIOTECARIO: _permisos_operativos(),
     ADMINISTRATIVO: _permisos_operativos(),
+    LECTOR: [],
 }
 
 # Permisos sobre cuentas del sistema (app auth). El Administrativo ve, da de alta y edita
@@ -35,7 +38,13 @@ PERMISOS_POR_ROL = {
 PERMISOS_DE_CUENTAS_POR_ROL = {
     BIBLIOTECARIO: [],
     ADMINISTRATIVO: ['view_user', 'add_user', 'change_user'],
+    LECTOR: [],
 }
+
+
+def es_lector(usuario):
+    """La cuenta es de un estudiante o docente (se gestiona desde la ficha de su persona)."""
+    return usuario.groups.filter(name=LECTOR).exists()
 
 
 def configurar_roles(sender=None, **kwargs):

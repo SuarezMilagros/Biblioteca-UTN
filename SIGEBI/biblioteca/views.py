@@ -15,6 +15,11 @@ from .forms import (
     MENSAJE_EJEMPLAR_DADO_DE_BAJA, AutorForm, CarreraForm, CategoriaForm, DevolucionForm, EditorialForm,
     EjemplarBajaForm, EjemplarForm, LibroForm, PersonaForm, PrestamoForm,
 )
+from cuentas.correo import enviar_correo_definicion
+from cuentas.forms import CuentaLectorForm
+from cuentas.lectores import crear_cuenta_de_lector, requisitos_para_cuenta
+from cuentas.views import ERRORES_DE_ENVIO
+
 from .informes import ExportarCSVMixin, nombre_de_archivo
 from .models import Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, Persona, Prestamo
 
@@ -610,6 +615,9 @@ class PersonaDetailView(PermissionRequiredMixin, DetailView):
     model = Persona
     template_name = 'biblioteca/persona_detail.html'
 
+    def get_queryset(self):
+        return super().get_queryset().select_related('cuenta')
+
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
         prestamos = list(
@@ -617,6 +625,8 @@ class PersonaDetailView(PermissionRequiredMixin, DetailView):
         )
         contexto['prestamos'] = prestamos
         contexto['carreras'] = self.object.carreras.all()
+        if not self.object.cuenta_id:
+            contexto['falta_para_cuenta'] = requisitos_para_cuenta(self.object)
         # Resumen para la ficha de la persona (se calcula sobre la lista ya cargada, sin consultas extra).
         contexto['prestamos_sin_devolver'] = sum(1 for prestamo in prestamos if prestamo.activo)
         contexto['prestamos_vencidos'] = sum(1 for prestamo in prestamos if prestamo.vencido)
@@ -643,6 +653,84 @@ class PersonaUpdateView(PermissionRequiredMixin, GuardarRegistroMixin, UpdateVie
 
     def get_success_url(self):
         return reverse('biblioteca:persona_detail', args=[self.object.pk])
+
+
+class PersonaCuentaCreateView(PermissionRequiredMixin, FormView):
+    """Crea la cuenta de un estudiante o docente para el portal (S7-03, D-R2-1).
+
+    La pueden crear el Bibliotecario y el Administrativo: los dos gestionan personas.
+    """
+
+    permission_required = 'biblioteca.change_persona'
+    form_class = CuentaLectorForm
+    template_name = 'biblioteca/persona_cuenta_form.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not self.has_permission():
+            return self.handle_no_permission()
+        self.persona = get_object_or_404(Persona, pk=kwargs['pk'])
+        if self.persona.cuenta_id:
+            messages.info(request, f'"{self.persona}" ya tiene una cuenta.')
+            return redirect('biblioteca:persona_detail', pk=self.persona.pk)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['persona'] = self.persona
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        contexto['persona'] = self.persona
+        contexto['carreras'] = self.persona.carreras.all()
+        return contexto
+
+    def form_valid(self, form):
+        try:
+            cuenta = crear_cuenta_de_lector(self.persona, form.cleaned_data['correo'])
+        except IntegrityError:
+            # Otra persona del personal la creó al mismo tiempo, o el correo se usó recién.
+            form.add_error(None, 'No se pudo crear la cuenta: el correo o el documento ya se usan en otra cuenta.')
+            return self.form_invalid(form)
+        try:
+            enviar_correo_definicion(self.request, cuenta)
+        except ERRORES_DE_ENVIO:
+            messages.warning(
+                self.request,
+                'La cuenta se creó, pero no se pudo enviar el correo para definir la contraseña. '
+                'Podés reenviarlo desde esta ficha.',
+            )
+        else:
+            messages.success(
+                self.request,
+                f'Cuenta creada. Se envió a {cuenta.email} un correo para definir la contraseña.',
+            )
+        return redirect('biblioteca:persona_detail', pk=self.persona.pk)
+
+
+class PersonaCuentaReenviarView(PermissionRequiredMixin, View):
+    """Vuelve a enviar el correo para definir la contraseña, mientras la persona no la haya definido."""
+
+    permission_required = 'biblioteca.change_persona'
+    http_method_names = ['post']
+
+    def post(self, request, pk):
+        persona = get_object_or_404(Persona.objects.select_related('cuenta'), pk=pk)
+        cuenta = persona.cuenta
+        if cuenta is None:
+            messages.error(request, f'"{persona}" no tiene cuenta.')
+        elif cuenta.has_usable_password():
+            messages.error(request, 'Ya definió su contraseña. Si la olvidó, puede usar "¿Olvidaste tu contraseña?".')
+        elif not cuenta.is_active:
+            messages.error(request, 'La cuenta está desactivada porque la persona está dada de baja.')
+        else:
+            try:
+                enviar_correo_definicion(request, cuenta)
+            except ERRORES_DE_ENVIO:
+                messages.error(request, 'No se pudo enviar el correo. Intentá de nuevo más tarde.')
+            else:
+                messages.success(request, f'Se reenvió el correo a {cuenta.email}.')
+        return redirect('biblioteca:persona_detail', pk=persona.pk)
 
 
 class PersonaBajaView(PermissionRequiredMixin, View):

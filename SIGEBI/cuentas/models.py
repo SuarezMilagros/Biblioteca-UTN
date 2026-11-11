@@ -28,5 +28,5 @@ class IntentoDeAcceso(models.Model):
         verbose_name_plural = 'intentos de acceso'
         ordering = ['-fecha']
 
-    def str(self):
+    def __str__(self):
         return f'{self.get_tipo_display()}: {self.correo}'
