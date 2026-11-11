@@ -4,7 +4,7 @@ Para entrar, primero definí tu contraseña en este enlace:
 {{ enlace }}
 
 El enlace vence en una hora y deja de funcionar después de definir la contraseña.
-Si venció, pedile a un administrador que te reenvíe este correo.
+Si venció, pedí en la biblioteca que te lo reenvíen.
 
 Si no esperabas este correo, no hace falta hacer nada.
 

@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from .models import Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, Persona, Prestamo
@@ -147,6 +148,11 @@ class PersonaForm(forms.ModelForm):
             otras = otras.exclude(pk=self.instance.pk)
         if otras.exists():
             raise forms.ValidationError(MENSAJE_DOCUMENTO_REPETIDO)
+        if self.instance.cuenta_id:
+            # El documento es también el usuario de su cuenta: no puede coincidir con el de otra cuenta.
+            otras_cuentas = get_user_model().objects.filter(username=documento).exclude(pk=self.instance.cuenta_id)
+            if otras_cuentas.exists():
+                raise forms.ValidationError('Ya existe una cuenta del sistema con ese documento.')
         return documento
 
     def clean_legajo(self):

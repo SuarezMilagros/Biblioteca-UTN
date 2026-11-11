@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models.functions import Upper
 from django.utils import timezone
@@ -240,6 +241,15 @@ class Persona(models.Model):
         verbose_name='activa',
         help_text='Una persona dada de baja no puede recibir préstamos nuevos.',
     )
+    # Cuenta para ingresar al portal (Release 2, S7-03). Una persona tiene como máximo una (D-R2-10).
+    cuenta = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        db_column='id_usuario_sistema',
+        related_name='persona',
+    )
 
     class Meta:
         verbose_name = 'persona'
@@ -256,6 +266,20 @@ class Persona(models.Model):
     def save(self, *args, **kwargs):
         self.documento = self.normalizar_documento(self.documento)
         super().save(*args, **kwargs)
+        if self.cuenta_id:
+            self.sincronizar_cuenta()
+
+    def sincronizar_cuenta(self):
+        """La cuenta refleja los datos de la persona: documento (usuario), nombre, apellido y si está activa.
+
+        Así, dar de baja a la persona desactiva su cuenta y reactivarla la reactiva (D-R2-10).
+        """
+        get_user_model().objects.filter(pk=self.cuenta_id).update(
+            username=self.documento,
+            first_name=self.nombre,
+            last_name=self.apellido,
+            is_active=self.activo,
+        )
 
     @property
     def tiene_prestamos_activos(self):

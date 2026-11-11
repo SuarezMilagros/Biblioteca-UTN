@@ -109,3 +109,38 @@ class UsuarioForm(forms.ModelForm):
         if cuentas.exists():
             raise forms.ValidationError('Ya existe una cuenta con ese correo.')
         return correo
+
+
+class CuentaLectorForm(forms.Form):
+    """Alta de la cuenta de un estudiante o docente desde la ficha de su persona (S7-03)."""
+
+    correo = forms.EmailField(
+        label='Correo electrónico',
+        help_text='Le va a llegar un enlace para definir su contraseña. Con este correo va a ingresar al portal.',
+        widget=forms.EmailInput(attrs={'autocomplete': 'off'}),
+    )
+
+    def __init__(self, *args, persona, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.persona = persona
+
+    def clean_correo(self):
+        correo = self.cleaned_data['correo'].strip()
+        if get_user_model().objects.filter(email__iexact=correo).exists():
+            raise forms.ValidationError('Ya existe una cuenta con ese correo.')
+        return correo
+
+    def clean(self):
+        datos = super().clean()
+        from .lectores import requisitos_para_cuenta
+
+        for motivo in requisitos_para_cuenta(self.persona):
+            self.add_error(None, motivo)
+        if get_user_model().objects.filter(username=self.persona.documento).exists():
+            # Por ejemplo, alguien del personal que también es alumno: ya tiene una cuenta con su documento.
+            self.add_error(
+                None,
+                f'Ya existe una cuenta del sistema con el documento {self.persona.documento}. '
+                'Una persona no puede tener dos cuentas.',
+            )
+        return datos

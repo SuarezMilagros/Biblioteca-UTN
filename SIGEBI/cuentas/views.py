@@ -18,7 +18,7 @@ from django.views.generic import CreateView, ListView, UpdateView
 
 from .correo import enviar_correo_definicion
 from .forms import UsuarioForm
-from .roles import ADMINISTRATIVO, BIBLIOTECARIO
+from .roles import ADMINISTRATIVO, BIBLIOTECARIO, es_lector
 
 ROLES_DEL_SISTEMA = [ADMINISTRATIVO, BIBLIOTECARIO]
 ERRORES_DE_ENVIO = (smtplib.SMTPException, OSError)
@@ -30,7 +30,10 @@ def puede_gestionar(solicitante, usuario):
     - Cada persona puede editar sus propios datos. Rol y estado quedan bloqueados en el formulario.
     - El superusuario gestiona cualquier cuenta.
     - El Administrativo solo gestiona bibliotecarios: nunca administrativos ni superusuarios.
+    - Las cuentas de estudiantes y docentes no se gestionan acá, sino desde la ficha de su persona (S7-03).
     """
+    if es_lector(usuario):
+        return False
     if usuario.pk == solicitante.pk or solicitante.is_superuser:
         return True
     return not usuario.is_superuser and usuario.groups.filter(name=BIBLIOTECARIO).exists()
