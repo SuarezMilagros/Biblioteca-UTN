@@ -17,8 +17,8 @@ LECTOR = 'Lector'
 # Personas y préstamos todavía no tienen pantallas: se protegen desde ya para cuando existan.
 MODELOS_OPERATIVOS = [
     'categoria', 'autor', 'editorial', 'libro', 'ejemplar', 'persona', 'prestamo',
-    # Release 2 (S7-02)
-    'carrera',
+    # Release 2 (S7-02 y S7-07)
+    'carrera', 'materialdigital',
 ]
 ACCIONES_OPERATIVAS = ['view', 'add', 'change']
 

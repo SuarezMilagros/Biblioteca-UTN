@@ -4,9 +4,12 @@ Todo lo que se muestra acá se filtra en el servidor por la persona de la cuenta
 """
 from django.db.models import Q
 from django.utils import timezone
+from django.shortcuts import get_object_or_404
+from django.views import View
 from django.views.generic import DetailView, ListView, TemplateView
 
-from biblioteca.models import Categoria, Libro
+from biblioteca.models import Categoria, Libro, MaterialDigital
+from biblioteca.views import abrir_pdf
 
 from .acceso import LectorRequeridoMixin
 
@@ -131,3 +134,55 @@ class LibroView(LibrosDeSusCarrerasMixin, DetailView):
     def get_queryset(self):
         # Un libro de otra carrera responde 404, aunque se escriba la dirección a mano.
         return self.libros_visibles()
+
+
+class MaterialDeSusCarrerasMixin(LectorRequeridoMixin):
+    """Material que puede ver el lector: aprobado, activo y de sus carreras (D-R2-12)."""
+
+    def material_visible(self):
+        return MaterialDigital.objects.filter(
+            carrera__in=self.persona.carreras.all(),
+            estado=MaterialDigital.Estado.APROBADO,
+            activo=True,
+        )
+
+
+class MaterialView(MaterialDeSusCarrerasMixin, ListView):
+    template_name = 'portal/material.html'
+    context_object_name = 'materiales'
+    paginate_by = LIBROS_POR_PAGINA
+
+    def get_queryset(self):
+        materiales = self.material_visible().select_related('carrera')
+        carrera = self.persona.carreras.filter(pk=entero(self.request.GET.get('carrera'))).first()
+        if carrera:
+            materiales = materiales.filter(carrera=carrera)
+        tipo = self.request.GET.get('tipo', '')
+        if tipo in MaterialDigital.Tipo.values:
+            materiales = materiales.filter(tipo=tipo)
+        q = self.request.GET.get('q', '').strip()
+        if q:
+            materiales = materiales.filter(Q(titulo__unaccent__icontains=q) | Q(autores__unaccent__icontains=q))
+        return materiales.order_by('titulo', 'pk')
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        carreras = self.persona.carreras.all()
+        carrera = carreras.filter(pk=entero(self.request.GET.get('carrera'))).first()
+        tipo = self.request.GET.get('tipo', '')
+        contexto.update({
+            'carreras': carreras,
+            'carrera_elegida': carrera,
+            'tipos': MaterialDigital.Tipo.choices,
+            'tipo_elegido': tipo if tipo in MaterialDigital.Tipo.values else '',
+            'q': self.request.GET.get('q', '').strip(),
+        })
+        contexto['hay_filtros'] = bool(contexto['q'] or carrera or contexto['tipo_elegido'])
+        return contexto
+
+
+class MaterialArchivoView(MaterialDeSusCarrerasMixin, View):
+    """Abre el PDF. Material de otra carrera, pendiente o dado de baja: 404, aunque se escriba la dirección."""
+
+    def get(self, request, pk):
+        return abrir_pdf(get_object_or_404(self.material_visible(), pk=pk))

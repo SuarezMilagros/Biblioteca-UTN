@@ -159,6 +159,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Material digital (Release 2, S7-07): carpeta que el servidor NO publica (ver biblioteca/almacenamiento.py).
+# En producción conviene que esté fuera de la carpeta del proyecto y que se incluya en las copias de seguridad.
+MATERIAL_DIGITAL_ROOT = os.environ.get('MATERIAL_DIGITAL_ROOT') or str(BASE_DIR / 'material_privado')
+MATERIAL_DIGITAL_MAXIMO_MB = 20
+
 # Autenticación (Django Auth)
 # Las pantallas de gestión exigen usuario autenticado.
 

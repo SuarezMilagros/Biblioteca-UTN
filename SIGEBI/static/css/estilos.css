@@ -334,6 +334,9 @@ a:hover { color: var(--naranja-hover); }
 .acciones a + a { margin-left: 0.15rem; }
 .acciones a:hover, .accion:hover { background: var(--naranja-suave); color: var(--naranja-hover); }
 .acciones .icono { width: 16px; height: 16px; }
+/* Botón de un formulario POST con aspecto de acción de la tabla (por ejemplo, dar de baja material). S7-07 */
+.acciones form.en-linea { display: inline; margin: 0; }
+.acciones .enlace-boton { border: 0; background: none; font: inherit; cursor: pointer; }
 
 /* =====================================================================
    Tarjetas

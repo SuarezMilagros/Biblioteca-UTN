@@ -17,6 +17,13 @@ urlpatterns = [
     path('carreras/<int:pk>/', views.CarreraDetailView.as_view(), name='carrera_detail'),
     path('carreras/<int:pk>/editar/', views.CarreraUpdateView.as_view(), name='carrera_update'),
 
+    path('material/', views.MaterialDigitalListView.as_view(), name='material_list'),
+    path('material/nuevo/', views.MaterialDigitalCreateView.as_view(), name='material_create'),
+    path('material/<int:pk>/editar/', views.MaterialDigitalUpdateView.as_view(), name='material_update'),
+    path('material/<int:pk>/archivo/', views.MaterialDigitalArchivoView.as_view(), name='material_archivo'),
+    path('material/<int:pk>/baja/', views.MaterialDigitalBajaView.as_view(), name='material_baja'),
+    path('material/<int:pk>/reactivar/', views.MaterialDigitalReactivarView.as_view(), name='material_reactivar'),
+
     path('autores/', views.AutorListView.as_view(), name='autor_list'),
     path('autores/nuevo/', views.AutorCreateView.as_view(), name='autor_create'),
     path('autores/<int:pk>/editar/', views.AutorUpdateView.as_view(), name='autor_update'),

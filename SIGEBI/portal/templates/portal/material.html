@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% load interfaz %}
+
+{% block titulo %}Material digital · SIGEBI{% endblock %}
+{% block seccion %}<strong>Material digital</strong>{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Biblioteca</p>
+        <h1>Material digital</h1>
+        <p class="bajada">Libros, tesis y apuntes en PDF de tus carreras.</p>
+    </div>
+</div>
+
+<div class="barra-filtros">
+    <form method="get" class="busqueda" role="search" action="{% url 'portal:material' %}">
+        <div class="campo-busqueda">
+            {% icono 'buscar' %}
+            <label for="q" class="sr-only">Buscar por título o autores</label>
+            <input type="search" id="q" name="q" value="{{ q }}" placeholder="Título o autores">
+        </div>
+        {% if carreras|length > 1 %}
+        <label for="carrera" class="sr-only">Carrera</label>
+        <select id="carrera" name="carrera">
+            <option value="">Todas tus carreras</option>
+            {% for carrera in carreras %}<option value="{{ carrera.pk }}"{% if carrera == carrera_elegida %} selected{% endif %}>{{ carrera.nombre }}</option>{% endfor %}
+        </select>
+        {% endif %}
+        <label for="tipo" class="sr-only">Tipo</label>
+        <select id="tipo" name="tipo">
+            <option value="">Todos los tipos</option>
+            {% for valor, nombre in tipos %}<option value="{{ valor }}"{% if tipo_elegido == valor %} selected{% endif %}>{{ nombre }}</option>{% endfor %}
+        </select>
+        <button type="submit" class="boton">Buscar</button>
+        {% if hay_filtros %}<a class="quitar-filtros" href="{% url 'portal:material' %}">Quitar filtros</a>{% endif %}
+    </form>
+</div>
+
+{% if materiales %}
+<p class="resumen-listado">{{ paginator.count }} material{{ paginator.count|pluralize:"es" }}</p>
+<div class="tabla-contenedor">
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Título</th>
+                <th scope="col">Tipo</th>
+                <th scope="col"><span class="sr-only">Abrir</span></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for material in materiales %}
+            <tr>
+                <td data-etiqueta="Título">
+                    <strong>{{ material.titulo }}</strong>
+                    <span class="secundario">{{ material.autores|default:"Sin autores" }}{% if material.anio %} · {{ material.anio }}{% endif %}{% if carreras|length > 1 %} · {{ material.carrera.nombre }}{% endif %}</span>
+                    {% if material.descripcion %}<span class="secundario">{{ material.descripcion|truncatechars:140 }}</span>{% endif %}
+                </td>
+                <td data-etiqueta="Tipo"><span class="badge badge-etiqueta">{{ material.get_tipo_display }}</span></td>
+                <td class="acciones"><a href="{% url 'portal:material_archivo' material.pk %}" target="_blank" rel="noopener">{% icono 'documento' %}Abrir PDF</a></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include 'componentes/paginacion.html' %}
+{% elif hay_filtros %}
+<div class="vacio">
+    <span class="vacio-icono">{% icono 'buscar' %}</span>
+    <h2>No hay material que coincida</h2>
+    <p>Probá con otras palabras o quitá los filtros.</p>
+    <a class="boton-secundario" href="{% url 'portal:material' %}">Quitar filtros</a>
+</div>
+{% else %}
+<div class="vacio">
+    <span class="vacio-icono">{% icono 'documento' %}</span>
+    <h2>Todavía no hay material para tus carreras</h2>
+    <p>Cuando la biblioteca lo publique, va a aparecer acá.</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -4,6 +4,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMix
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Exists, OuterRef, Q
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -12,7 +13,7 @@ from django.views.generic import CreateView, DetailView, FormView, ListView, Tem
 
 from .forms import (
     MENSAJE_EJEMPLAR_DADO_DE_BAJA, AutorForm, CarreraForm, CategoriaForm, DevolucionForm, EditorialForm,
-    EjemplarBajaForm, EjemplarForm, LibroForm, PersonaForm, PrestamoForm,
+    EjemplarBajaForm, EjemplarForm, LibroForm, MaterialDigitalForm, PersonaForm, PrestamoForm,
 )
 from cuentas.correo import enviar_correo_definicion
 from cuentas.forms import CuentaLectorForm
@@ -21,7 +22,7 @@ from cuentas.roles import es_lector
 from cuentas.views import ERRORES_DE_ENVIO
 
 from .informes import ExportarCSVMixin, nombre_de_archivo
-from .models import Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, Persona, Prestamo
+from .models import Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, MaterialDigital, Persona, Prestamo
 
 ELEMENTOS_POR_PAGINA = 20
 MENSAJE_DATO_REPETIDO = 'Ya existe un registro con esos datos. Revisá los valores e intentá de nuevo.'
@@ -541,6 +542,122 @@ class CarreraUpdateView(PermissionRequiredMixin, GuardarRegistroMixin, UpdateVie
 
     def get_success_url(self):
         return reverse('biblioteca:carrera_detail', args=[self.object.pk])
+
+
+# ---------- Material digital (Release 2, S7-07) ----------
+
+ESTADOS_DE_MATERIAL = {
+    'activos': {'activo': True},
+    'baja': {'activo': False},
+    'todos': {},
+}
+
+
+def abrir_pdf(material):
+    """Respuesta con el PDF para verlo en el navegador. El archivo no tiene dirección pública."""
+    try:
+        archivo = material.archivo.open('rb')
+    except FileNotFoundError:
+        raise Http404('No se encontró el archivo de este material.')
+    return FileResponse(archivo, content_type='application/pdf', filename=material.nombre_para_descargar)
+
+
+class MaterialDigitalListView(PermissionRequiredMixin, ListView):
+    permission_required = 'biblioteca.view_materialdigital'
+    model = MaterialDigital
+    template_name = 'biblioteca/material_list.html'
+    context_object_name = 'materiales'
+    paginate_by = ELEMENTOS_POR_PAGINA
+
+    def estado(self):
+        estado = self.request.GET.get('estado', 'activos')
+        return estado if estado in ESTADOS_DE_MATERIAL else 'activos'
+
+    def get_queryset(self):
+        materiales = (
+            MaterialDigital.objects.filter(**ESTADOS_DE_MATERIAL[self.estado()])
+            .select_related('carrera', 'usuario_carga')
+            .order_by('-fecha_carga', '-pk')
+        )
+        q = self.request.GET.get('q', '').strip()
+        if q:
+            materiales = materiales.filter(Q(titulo__unaccent__icontains=q) | Q(autores__unaccent__icontains=q))
+        carrera = self.request.GET.get('carrera', '')
+        if carrera.isdigit():
+            materiales = materiales.filter(carrera_id=int(carrera))
+        tipo = self.request.GET.get('tipo', '')
+        if tipo in MaterialDigital.Tipo.values:
+            materiales = materiales.filter(tipo=tipo)
+        return materiales
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        contexto.update({
+            'q': self.request.GET.get('q', '').strip(),
+            'estado': self.estado(),
+            'carrera_elegida': self.request.GET.get('carrera', ''),
+            'tipo_elegido': self.request.GET.get('tipo', ''),
+            'carreras': Carrera.objects.all(),
+            'tipos': MaterialDigital.Tipo.choices,
+        })
+        return contexto
+
+
+class MaterialDigitalCreateView(PermissionRequiredMixin, GuardarRegistroMixin, CreateView):
+    permission_required = 'biblioteca.add_materialdigital'
+    model = MaterialDigital
+    form_class = MaterialDigitalForm
+    template_name = 'biblioteca/material_form.html'
+    success_url = reverse_lazy('biblioteca:material_list')
+    mensaje_exito = 'Material "{obj}" publicado.'
+
+    def form_valid(self, form):
+        # Lo que sube el personal se publica directamente: queda aprobado por quien lo cargó (D-R2-7).
+        ahora = timezone.now()
+        form.instance.usuario_carga = self.request.user
+        form.instance.estado = MaterialDigital.Estado.APROBADO
+        form.instance.usuario_revision = self.request.user
+        form.instance.fecha_revision = ahora
+        form.instance.fecha_carga = ahora
+        return super().form_valid(form)
+
+
+class MaterialDigitalUpdateView(PermissionRequiredMixin, GuardarRegistroMixin, UpdateView):
+    permission_required = 'biblioteca.change_materialdigital'
+    model = MaterialDigital
+    form_class = MaterialDigitalForm
+    template_name = 'biblioteca/material_form.html'
+    success_url = reverse_lazy('biblioteca:material_list')
+    mensaje_exito = 'Material "{obj}" actualizado.'
+
+
+class MaterialDigitalArchivoView(PermissionRequiredMixin, View):
+    """El personal abre el PDF de cualquier material, aunque esté dado de baja."""
+
+    permission_required = 'biblioteca.view_materialdigital'
+
+    def get(self, request, pk):
+        return abrir_pdf(get_object_or_404(MaterialDigital, pk=pk))
+
+
+class MaterialDigitalBajaView(PermissionRequiredMixin, View):
+    permission_required = 'biblioteca.change_materialdigital'
+    http_method_names = ['post']
+    activo = False
+
+    def post(self, request, pk):
+        material = get_object_or_404(MaterialDigital, pk=pk)
+        material.activo = self.activo
+        material.save(update_fields=['activo'])
+        if self.activo:
+            messages.success(request, f'"{material}" volvió a estar publicado.')
+        else:
+            messages.success(request, f'"{material}" quedó dado de baja: ya no se ve en el portal.')
+        return redirect('biblioteca:material_list')
+
+
+class MaterialDigitalReactivarView(MaterialDigitalBajaView):
+    activo = True
 
 
 # ---------- Personas ----------
