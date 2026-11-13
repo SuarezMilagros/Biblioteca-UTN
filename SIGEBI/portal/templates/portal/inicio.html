@@ -27,6 +27,7 @@
         <div class="cifras cifras-una">
             <div class="cifra"><strong>{{ cantidad_libros }}</strong><span>título{{ cantidad_libros|pluralize }}</span></div>
         </div>
+        <a class="boton" href="{% url 'portal:catalogo' %}">{% icono 'buscar' %}Ver el catálogo</a>
     </section>
 </div>
 {% endblock %}

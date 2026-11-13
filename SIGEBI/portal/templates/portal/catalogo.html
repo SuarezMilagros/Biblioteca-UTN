@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% load interfaz %}
+
+{% block titulo %}Catálogo · SIGEBI{% endblock %}
+{% block seccion %}<strong>Catálogo</strong>{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Biblioteca</p>
+        <h1>Catálogo</h1>
+        <p class="bajada">Libros de tus carreras y cuántos ejemplares hay disponibles en la biblioteca.</p>
+    </div>
+</div>
+
+<div class="barra-filtros">
+    <form method="get" class="busqueda" role="search" action="{% url 'portal:catalogo' %}">
+        <div class="campo-busqueda">
+            {% icono 'buscar' %}
+            <label for="q" class="sr-only">Buscar por título, autor o ISBN</label>
+            <input type="search" id="q" name="q" value="{{ q }}" placeholder="Título, autor o ISBN">
+        </div>
+        {% if carreras|length > 1 %}
+        <label for="carrera" class="sr-only">Carrera</label>
+        <select id="carrera" name="carrera">
+            <option value="">Todas tus carreras</option>
+            {% for carrera in carreras %}<option value="{{ carrera.pk }}"{% if carrera == carrera_elegida %} selected{% endif %}>{{ carrera.nombre }}</option>{% endfor %}
+        </select>
+        {% endif %}
+        <label for="categoria" class="sr-only">Categoría</label>
+        <select id="categoria" name="categoria">
+            <option value="">Todas las categorías</option>
+            {% for categoria in categorias %}<option value="{{ categoria.pk }}"{% if categoria == categoria_elegida %} selected{% endif %}>{{ categoria.nombre }}</option>{% endfor %}
+        </select>
+        <button type="submit" class="boton">Buscar</button>
+        {% if hay_filtros %}<a class="quitar-filtros" href="{% url 'portal:catalogo' %}">Quitar filtros</a>{% endif %}
+    </form>
+</div>
+
+{% if libros %}
+<p class="resumen-listado">{{ paginator.count }} título{{ paginator.count|pluralize }}{% if q %} para «{{ q }}»{% endif %}</p>
+<div class="tabla-contenedor">
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Título</th>
+                <th scope="col">Categoría</th>
+                <th scope="col">Disponibilidad</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for libro in libros %}
+            <tr>
+                <td data-etiqueta="Título">
+                    <div class="celda-libro">
+                        <span class="miniatura" aria-hidden="true">{% if libro.imagen %}<img src="{{ libro.imagen.url }}" alt="">{% else %}{{ libro.titulo|slice:":1"|upper }}{% endif %}</span>
+                        <span><a href="{% url 'portal:libro' libro.pk %}">{{ libro.titulo }}</a><span class="secundario">{{ libro.autor }} · {{ libro.editorial }}</span></span>
+                    </div>
+                </td>
+                <td data-etiqueta="Categoría"><span class="badge badge-etiqueta">{{ libro.categoria }}</span></td>
+                <td data-etiqueta="Disponibilidad" class="disponibilidad">{% include 'portal/_disponibilidad.html' %}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include 'componentes/paginacion.html' %}
+{% elif hay_filtros %}
+<div class="vacio">
+    <span class="vacio-icono">{% icono 'buscar' %}</span>
+    <h2>No hay libros que coincidan</h2>
+    <p>Probá con otras palabras o quitá los filtros.</p>
+    <a class="boton-secundario" href="{% url 'portal:catalogo' %}">Quitar filtros</a>
+</div>
+{% else %}
+<div class="vacio">
+    <span class="vacio-icono">{% icono 'libro' %}</span>
+    <h2>Todavía no hay libros para tus carreras</h2>
+    <p>Cuando la biblioteca los cargue, van a aparecer acá.</p>
+</div>
+{% endif %}
+{% endblock %}
