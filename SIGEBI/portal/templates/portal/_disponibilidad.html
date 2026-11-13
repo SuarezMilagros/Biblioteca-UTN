@@ -1,0 +1,7 @@
+{% comment %}Disponibilidad de un libro para el lector. Requiere `libro` con ejemplares_activos y ejemplares_disponibles.{% endcomment %}
+{% if libro.ejemplares_activos %}
+    {% if libro.ejemplares_disponibles %}<span class="badge badge-disponible">{{ libro.ejemplares_disponibles }} disponible{{ libro.ejemplares_disponibles|pluralize }}</span>{% else %}<span class="badge badge-prestado">Todos prestados</span>{% endif %}
+    <span class="secundario">de {{ libro.ejemplares_activos }} ejemplar{{ libro.ejemplares_activos|pluralize:"es" }}</span>
+{% else %}
+    <span class="badge badge-baja">Sin ejemplares</span>
+{% endif %}

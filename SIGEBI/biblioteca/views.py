@@ -3,8 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
-from django.db.models import Count, Exists, IntegerField, OuterRef, Q, Subquery
-from django.db.models.functions import Coalesce
+from django.db.models import Count, Exists, OuterRef, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -267,19 +266,8 @@ class LibroListView(PermissionRequiredMixin, BuscarAntesDeListarMixin, ListView)
     paginate_by = ELEMENTOS_POR_PAGINA
 
     def get_queryset(self):
-        # Para mostrar en el listado cuántos ejemplares activos tiene cada libro y cuántos están disponibles.
-        disponibles = (
-            Ejemplar.objects.filter(libro=OuterRef('pk'), activo=True)
-            .filter(~prestamo_activo_de(OuterRef('pk')))
-            .order_by()
-            .values('libro')
-            .annotate(cantidad=Count('pk'))
-            .values('cantidad')
-        )
-        queryset = super().get_queryset().select_related('autor', 'editorial', 'categoria').annotate(
-            ejemplares_activos=Count('ejemplares', filter=Q(ejemplares__activo=True), distinct=True),
-            ejemplares_disponibles=Coalesce(Subquery(disponibles, output_field=IntegerField()), 0),
-        )
+        # Cuántos ejemplares activos tiene cada libro y cuántos están disponibles (ver LibroQuerySet).
+        queryset = super().get_queryset().select_related('autor', 'editorial', 'categoria').con_disponibilidad()
         q = self.request.GET.get('q', '').strip()
         if q:
             # unaccent (PostgreSQL): "calculo" también encuentra "Cálculo I".

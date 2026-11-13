@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models
-from django.db.models.functions import Upper
+from django.db.models.functions import Coalesce, Upper
 from django.utils import timezone
 
 # Plazo del préstamo en días corridos (decisión D2). Es el único lugar donde se define.
@@ -84,6 +84,34 @@ class Editorial(models.Model):
         return self.nombre
 
 
+class LibroQuerySet(models.QuerySet):
+    def con_disponibilidad(self):
+        """Agrega a cada libro `ejemplares_activos` y `ejemplares_disponibles`, en la misma consulta.
+
+        Disponible = activo y sin un préstamo sin devolver. Lo usan el listado del personal y el
+        catálogo del portal (S7-05), así los dos muestran siempre lo mismo.
+        """
+        prestamo_activo = Prestamo.objects.filter(ejemplar=models.OuterRef('pk'), fecha_devolucion__isnull=True)
+        disponibles = (
+            Ejemplar.objects.filter(libro=models.OuterRef('pk'), activo=True)
+            .filter(~models.Exists(prestamo_activo))
+            .order_by()
+            .values('libro')
+            .annotate(cantidad=models.Count('pk'))
+            .values('cantidad')
+        )
+        return self.annotate(
+            ejemplares_activos=models.Count('ejemplares', filter=models.Q(ejemplares__activo=True), distinct=True),
+            ejemplares_disponibles=Coalesce(
+                models.Subquery(disponibles, output_field=models.IntegerField()), 0
+            ),
+        )
+
+    def de_las_carreras(self, carreras):
+        """Libros cuya categoría corresponde a alguna de esas carreras (D-R2-6), sin repetir."""
+        return self.filter(categoria__in=Categoria.objects.filter(carreras__in=carreras))
+
+
 class Libro(models.Model):
     id_libro = models.BigAutoField(primary_key=True)
     titulo = models.CharField(max_length=255)
@@ -107,6 +135,8 @@ class Libro(models.Model):
         db_column='id_editorial',
         related_name='libros',
     )
+
+    objects = LibroQuerySet.as_manager()
 
     class Meta:
         verbose_name = 'libro'
