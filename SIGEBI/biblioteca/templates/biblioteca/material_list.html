@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% load interfaz %}
+
+{% block titulo %}Material digital · SIGEBI{% endblock %}
+{% block seccion %}Catálogo / <strong>Material digital</strong>{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Catálogo</p>
+        <h1>Material digital</h1>
+        <p class="bajada">Libros, tesis y apuntes en PDF. Cada alumno y profesor ve el material de sus carreras.</p>
+    </div>
+    {% if perms.biblioteca.add_materialdigital %}
+    <div class="botones-encabezado">
+        <a class="boton" href="{% url 'biblioteca:material_create' %}">{% icono 'mas' %}Subir material</a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="barra-filtros">
+    <form method="get" class="busqueda" role="search" action="{% url 'biblioteca:material_list' %}">
+        <div class="campo-busqueda">
+            {% icono 'buscar' %}
+            <label for="q" class="sr-only">Buscar por título o autores</label>
+            <input type="search" id="q" name="q" value="{{ q }}" placeholder="Título o autores">
+        </div>
+        <label for="carrera" class="sr-only">Carrera</label>
+        <select id="carrera" name="carrera">
+            <option value="">Todas las carreras</option>
+            {% for carrera in carreras %}<option value="{{ carrera.pk }}"{% if carrera_elegida == carrera.pk|stringformat:"s" %} selected{% endif %}>{{ carrera.nombre }}</option>{% endfor %}
+        </select>
+        <label for="tipo" class="sr-only">Tipo</label>
+        <select id="tipo" name="tipo">
+            <option value="">Todos los tipos</option>
+            {% for valor, nombre in tipos %}<option value="{{ valor }}"{% if tipo_elegido == valor %} selected{% endif %}>{{ nombre }}</option>{% endfor %}
+        </select>
+        <label for="estado" class="sr-only">Estado</label>
+        <select id="estado" name="estado">
+            <option value="activos"{% if estado == 'activos' %} selected{% endif %}>Publicados</option>
+            <option value="baja"{% if estado == 'baja' %} selected{% endif %}>Dados de baja</option>
+            <option value="todos"{% if estado == 'todos' %} selected{% endif %}>Todos</option>
+        </select>
+        <button type="submit" class="boton">Buscar</button>
+    </form>
+</div>
+
+{% if materiales %}
+<p class="resumen-listado">{{ paginator.count }} material{{ paginator.count|pluralize:"es" }}</p>
+<div class="tabla-contenedor">
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Título</th>
+                <th scope="col">Tipo</th>
+                <th scope="col">Carrera</th>
+                <th scope="col">Estado</th>
+                <th scope="col"><span class="sr-only">Acciones</span></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for material in materiales %}
+            <tr>
+                <td data-etiqueta="Título"><strong>{{ material.titulo }}</strong><span class="secundario">{{ material.autores|default:"Sin autores" }}{% if material.anio %} · {{ material.anio }}{% endif %}</span></td>
+                <td data-etiqueta="Tipo"><span class="badge badge-etiqueta">{{ material.get_tipo_display }}</span></td>
+                <td data-etiqueta="Carrera">{{ material.carrera.nombre }}</td>
+                <td data-etiqueta="Estado">{% if material.activo %}<span class="badge badge-disponible">Publicado</span>{% else %}<span class="badge badge-baja">Dado de baja</span>{% endif %}</td>
+                <td class="acciones">
+                    <a href="{% url 'biblioteca:material_archivo' material.pk %}" target="_blank" rel="noopener">{% icono 'documento' %}Abrir PDF</a>
+                    {% if perms.biblioteca.change_materialdigital %}
+                    <a href="{% url 'biblioteca:material_update' material.pk %}">{% icono 'editar' %}Editar</a>
+                    {% if material.activo %}
+                    <form method="post" action="{% url 'biblioteca:material_baja' material.pk %}" class="en-linea"
+                          data-confirmar="Deja de verse en el portal. Se puede volver a publicar." data-confirmar-titulo="¿Dar de baja este material?" data-confirmar-boton="Dar de baja">
+                        {% csrf_token %}<button type="submit" class="enlace-boton accion">{% icono 'baja' %}Dar de baja</button>
+                    </form>
+                    {% else %}
+                    <form method="post" action="{% url 'biblioteca:material_reactivar' material.pk %}" class="en-linea">
+                        {% csrf_token %}<button type="submit" class="enlace-boton accion">{% icono 'reactivar' %}Volver a publicar</button>
+                    </form>
+                    {% endif %}
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include 'componentes/paginacion.html' %}
+{% else %}
+{% url 'biblioteca:material_create' as url_nuevo %}
+{% include 'componentes/vacio.html' with icono='documento' titulo='No hay material para mostrar.' texto='Cuando subas un PDF, aparecerá en esta lista.' accion_url=url_nuevo accion_texto='Subir material' %}
+{% endif %}
+{% endblock %}

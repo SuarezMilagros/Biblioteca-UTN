@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% load interfaz %}
+
+{% block titulo %}{% if object %}Editar material{% else %}Subir material{% endif %} · SIGEBI{% endblock %}
+{% block seccion %}Catálogo / Material digital / <strong>{% if object %}Editar{% else %}Subir material{% endif %}</strong>{% endblock %}
+
+{% block contenido %}
+<a class="volver" href="{% url 'biblioteca:material_list' %}">{% icono 'volver' %}Volver al material digital</a>
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Material digital</p>
+        <h1>{% if object %}Editar material{% else %}Subir material{% endif %}</h1>
+        <p class="bajada">Lo ven los alumnos y profesores de la carrera elegida.
+            <span class="leyenda-obligatorios">Los campos con <span class="obligatorio">*</span> son obligatorios.</span></p>
+    </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="formulario tarjeta formulario-angosto">
+    {% csrf_token %}
+    {% include 'componentes/formulario.html' %}
+    <p class="ayuda">Subí solo material que la biblioteca puede compartir: propio de la institución o con permiso de sus autores.</p>
+    <div class="acciones-formulario">
+        <button type="submit" class="boton">{% icono 'exito' %}{% if object %}Guardar{% else %}Publicar{% endif %}</button>
+        <a class="boton-secundario" href="{% url 'biblioteca:material_list' %}">Cancelar</a>
+    </div>
+</form>
+{% endblock %}

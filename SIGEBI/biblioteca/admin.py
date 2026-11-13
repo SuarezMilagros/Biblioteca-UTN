@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, Persona, Prestamo
+from .models import Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, MaterialDigital, Persona, Prestamo
 
 
 @admin.register(Categoria)
@@ -73,3 +73,9 @@ class CarreraAdmin(admin.ModelAdmin):
     list_filter = ('nivel',)
     search_fields = ('nombre',)
 
+
+@admin.register(MaterialDigital)
+class MaterialDigitalAdmin(admin.ModelAdmin):
+    list_display = ('titulo', 'tipo', 'carrera', 'estado', 'activo', 'fecha_carga')
+    list_filter = ('tipo', 'estado', 'activo', 'carrera')
+    search_fields = ('titulo', 'autores')

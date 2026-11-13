@@ -1,8 +1,9 @@
 from django import forms
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from .models import Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, Persona, Prestamo
+from .models import Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, MaterialDigital, Persona, Prestamo
 
 MENSAJE_CODIGO_REPETIDO = 'Ya existe un ejemplar con ese código de inventario.'
 MENSAJE_DOCUMENTO_REPETIDO = 'Ya existe una persona con ese documento.'
@@ -257,3 +258,54 @@ class EjemplarBajaForm(forms.Form):
     """Baja lógica de un ejemplar: se guarda el motivo y la fecha (hoy)."""
 
     motivo_baja = forms.ChoiceField(label='Motivo de la baja', choices=Ejemplar.MotivoBaja.choices)
+
+
+def validar_pdf(archivo):
+    """El archivo tiene que ser un PDF de verdad (no alcanza con la extensión) y de hasta 20 MB (D-R2-13)."""
+    maximo = settings.MATERIAL_DIGITAL_MAXIMO_MB
+    if archivo.size > maximo * 1024 * 1024:
+        raise forms.ValidationError(f'El archivo pesa más de {maximo} MB.')
+    if not archivo.name.lower().endswith('.pdf'):
+        raise forms.ValidationError('Solo se aceptan archivos PDF.')
+    archivo.seek(0)
+    inicio = archivo.read(5)
+    archivo.seek(0)
+    # Todo PDF empieza con "%PDF-": así se rechaza, por ejemplo, un .exe renombrado como .pdf.
+    if inicio != b'%PDF-':
+        raise forms.ValidationError('El archivo no es un PDF válido.')
+    return archivo
+
+
+class MaterialDigitalForm(forms.ModelForm):
+    """Carga y edición de material digital por el personal (S7-07). Al editar, el PDF es opcional."""
+
+    class Meta:
+        model = MaterialDigital
+        fields = ['titulo', 'tipo', 'carrera', 'autores', 'anio', 'descripcion', 'archivo']
+        labels = {
+            'autores': 'Autores (opcional)',
+            'anio': 'Año (opcional)',
+            'descripcion': 'Descripción (opcional)',
+            'archivo': f'Archivo PDF (hasta {settings.MATERIAL_DIGITAL_MAXIMO_MB} MB)',
+        }
+        widgets = {'archivo': forms.FileInput(attrs={'accept': 'application/pdf,.pdf'})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['carrera'].queryset = Carrera.objects.all()
+        if self.instance.pk:
+            self.fields['archivo'].required = False
+            self.fields['archivo'].help_text = 'Dejalo vacío para conservar el archivo actual.'
+
+    def clean_archivo(self):
+        archivo = self.cleaned_data.get('archivo')
+        # Si no se eligió un archivo nuevo, Django devuelve el que ya estaba guardado: no se vuelve a revisar.
+        if archivo and not getattr(archivo, '_committed', False):
+            validar_pdf(archivo)
+        return archivo
+
+    def clean_anio(self):
+        anio = self.cleaned_data.get('anio')
+        if anio is not None and not 1900 <= anio <= timezone.localdate().year:
+            raise forms.ValidationError(f'Poné un año entre 1900 y {timezone.localdate().year}.')
+        return anio

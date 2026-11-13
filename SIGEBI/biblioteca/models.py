@@ -5,6 +5,9 @@ from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models.functions import Coalesce, Upper
 from django.utils import timezone
+from django.utils.text import slugify
+
+from .almacenamiento import AlmacenPrivado, nombre_de_archivo
 
 # Plazo del préstamo en días corridos (decisión D2). Es el único lugar donde se define.
 PLAZO_PRESTAMO_DIAS = 14
@@ -414,3 +417,81 @@ class CategoriaCarrera(models.Model):
 
     def __str__(self):
         return f'{self.categoria} → {self.carrera}'
+
+
+class MaterialDigital(models.Model):
+    """Libro, tesis, apunte u otro PDF de una carrera (Release 2, S7-07, D-R2-7 y D-R2-13).
+
+    Lo que sube el personal queda APROBADO. Lo que suben alumnos y profesores queda PENDIENTE
+    hasta que un bibliotecario lo revisa (S8-01).
+    """
+
+    class Tipo(models.TextChoices):
+        LIBRO = 'LIBRO', 'Libro'
+        TESIS = 'TESIS', 'Tesis'
+        APUNTE = 'APUNTE', 'Apunte'
+        OTRO = 'OTRO', 'Otro'
+
+    class Estado(models.TextChoices):
+        PENDIENTE = 'PENDIENTE', 'Pendiente'
+        APROBADO = 'APROBADO', 'Aprobado'
+        RECHAZADO = 'RECHAZADO', 'Rechazado'
+
+    id_material = models.BigAutoField(primary_key=True)
+    carrera = models.ForeignKey(
+        Carrera, on_delete=models.PROTECT, db_column='id_carrera', related_name='materiales'
+    )
+    titulo = models.CharField(max_length=255, verbose_name='título')
+    tipo = models.CharField(max_length=10, choices=Tipo.choices)
+    autores = models.CharField(
+        max_length=255, blank=True, help_text='Por ejemplo: Pérez, Ana; Gómez, Luis. Quien lo sube no siempre es el autor.'
+    )
+    anio = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='año')
+    descripcion = models.TextField(blank=True, verbose_name='descripción')
+    archivo = models.FileField(upload_to=nombre_de_archivo, storage=AlmacenPrivado())
+    estado = models.CharField(max_length=10, choices=Estado.choices, default=Estado.PENDIENTE)
+    motivo_rechazo = models.TextField(blank=True, verbose_name='motivo del rechazo')
+    usuario_carga = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, db_column='id_usuario_carga',
+        related_name='materiales_subidos',
+    )
+    fecha_carga = models.DateTimeField(default=timezone.now)
+    usuario_revision = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        db_column='id_usuario_revision', related_name='materiales_revisados',
+    )
+    fecha_revision = models.DateTimeField(null=True, blank=True)
+    # Baja lógica: el material dado de baja deja de verse en el portal, pero no se borra.
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'material digital'
+        verbose_name_plural = 'material digital'
+        constraints = [
+            # Pendiente: sin revisión. Aprobado: con revisión y sin motivo. Rechazado: con revisión y motivo.
+            models.CheckConstraint(
+                condition=(
+                    models.Q(estado='PENDIENTE', usuario_revision__isnull=True, fecha_revision__isnull=True,
+                             motivo_rechazo='')
+                    | models.Q(estado='APROBADO', usuario_revision__isnull=False, fecha_revision__isnull=False,
+                               motivo_rechazo='')
+                    | (models.Q(estado='RECHAZADO', usuario_revision__isnull=False, fecha_revision__isnull=False)
+                       & ~models.Q(motivo_rechazo=''))
+                ),
+                name='material_revision_coherente',
+                violation_error_message='El estado del material no coincide con los datos de su revisión.',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(anio__isnull=True) | models.Q(anio__gte=1900, anio__lte=2100),
+                name='material_anio_valido',
+                violation_error_message='El año no es válido.',
+            ),
+        ]
+
+    def __str__(self):
+        return self.titulo
+
+    @property
+    def nombre_para_descargar(self):
+        """Nombre legible del archivo al abrirlo o guardarlo, a partir del título."""
+        return f'{slugify(self.titulo)[:80] or "material"}.pdf'
