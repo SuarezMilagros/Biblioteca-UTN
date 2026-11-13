@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load interfaz %}
+
+{% block titulo %}Mi perfil · SIGEBI{% endblock %}
+{% block seccion %}<strong>Mi perfil</strong>{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-seccion">
+    <div class="ficha">
+        <span class="avatar avatar-grande" aria-hidden="true">{{ persona.nombre|slice:":1"|upper }}{{ persona.apellido|slice:":1"|upper }}</span>
+        <div>
+            <h1>{{ persona.apellido }}, {{ persona.nombre }}</h1>
+            <div class="etiquetas"><span class="badge badge-rol {% if persona.tipo == 'PROFESOR' %}badge-info{% else %}badge-neutro{% endif %}">{{ persona.get_tipo_display }}</span></div>
+        </div>
+    </div>
+    <div class="botones-encabezado">
+        <a class="boton-secundario" href="{% url 'password_change' %}">{% icono 'clave' %}Cambiar contraseña</a>
+    </div>
+</div>
+
+<div class="dos-columnas">
+    <section class="tarjeta" aria-labelledby="titulo-datos">
+        <div class="tarjeta-titulo"><h2 id="titulo-datos">Mis datos</h2></div>
+        <dl class="detalle">
+            <dt>Documento</dt>
+            <dd>{{ persona.documento }}</dd>
+            <dt>Legajo</dt>
+            <dd>{{ persona.legajo|default:"No registrado" }}</dd>
+            <dt>Correo</dt>
+            <dd>{{ user.email }}</dd>
+            <dt>{% if persona.tipo == 'PROFESOR' %}Carreras que dictás{% else %}Carreras que cursás{% endif %}</dt>
+            <dd>{% for carrera in carreras %}{{ carrera.nombre }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</dd>
+        </dl>
+        <p class="ayuda">Si algún dato está mal, avisá en la biblioteca para que lo corrijan.</p>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="titulo-resumen">
+        <div class="tarjeta-titulo"><h2 id="titulo-resumen">Mis préstamos</h2></div>
+        <div class="cifras cifras-dos">
+            <div class="cifra"><strong>{{ activos|length }}</strong><span>Sin devolver</span></div>
+            <div class="cifra"><strong>{{ devueltos|length }}</strong><span>Devueltos</span></div>
+        </div>
+    </section>
+</div>
+
+<div class="subencabezado"><h2>Sin devolver</h2></div>
+{% if activos %}
+{% if activos.0.vencido %}
+<div class="alerta-error" role="alert">{% icono 'alerta' %}<p>Tenés libros vencidos. Devolvelos en la biblioteca lo antes posible.</p></div>
+{% endif %}
+<div class="tabla-contenedor">
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Libro</th>
+                <th scope="col">Préstamo</th>
+                <th scope="col">Vencimiento</th>
+                <th scope="col">Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for prestamo in activos %}
+            <tr>
+                <td data-etiqueta="Libro"><strong>{{ prestamo.ejemplar.libro.titulo }}</strong><span class="secundario codigo">{{ prestamo.ejemplar.codigo_inventario }}</span></td>
+                <td data-etiqueta="Préstamo">{{ prestamo.fecha_prestamo|date:"d/m/Y" }}</td>
+                <td data-etiqueta="Vencimiento">
+                    {{ prestamo.fecha_vencimiento|date:"d/m/Y" }}
+                    <span class="secundario">{% if prestamo.dias_restantes > 1 %}Faltan {{ prestamo.dias_restantes }} días{% elif prestamo.dias_restantes == 1 %}Vence mañana{% elif prestamo.dias_restantes == 0 %}Vence hoy{% else %}{{ prestamo.dias_de_atraso }} día{{ prestamo.dias_de_atraso|pluralize }} de atraso{% endif %}</span>
+                </td>
+                <td data-etiqueta="Estado">{% include 'biblioteca/_estado_prestamo.html' %}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="texto-suave">No tenés libros sin devolver.</p>
+{% endif %}
+
+<div class="subencabezado"><h2>Historial</h2></div>
+{% if devueltos %}
+<div class="tabla-contenedor">
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Libro</th>
+                <th scope="col">Préstamo</th>
+                <th scope="col">Devolución</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for prestamo in devueltos %}
+            <tr>
+                <td data-etiqueta="Libro">{{ prestamo.ejemplar.libro.titulo }}</td>
+                <td data-etiqueta="Préstamo">{{ prestamo.fecha_prestamo|date:"d/m/Y" }}</td>
+                <td data-etiqueta="Devolución">{{ prestamo.fecha_devolucion|date:"d/m/Y" }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="texto-suave">Todavía no devolviste ningún préstamo.</p>
+{% endif %}
+{% endblock %}

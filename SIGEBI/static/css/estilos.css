@@ -710,6 +710,7 @@ a.indicador:hover { border-color: var(--naranja-borde); box-shadow: var(--sombra
 .lista-carreras li { display: flex; align-items: flex-start; gap: 0.55rem; font-weight: 500; color: var(--texto-fuerte); }
 .lista-carreras .icono { flex: none; color: var(--naranja-texto); margin-top: 1px; }
 .cifras.cifras-una { grid-template-columns: 1fr; }
+.cifras.cifras-dos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .cifra { background: var(--fondo); border-radius: var(--radio-chico); padding: 0.75rem 0.9rem; }
 .cifra strong { display: block; font-size: 1.4rem; color: var(--texto-fuerte); line-height: 1.2; }
 .cifra span { font-size: 0.8rem; color: var(--texto-suave); }

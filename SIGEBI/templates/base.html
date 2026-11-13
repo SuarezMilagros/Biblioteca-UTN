@@ -37,6 +37,7 @@
                 <p class="nav-grupo">Portal</p>
                 <a class="nav-enlace" href="{% url 'portal:inicio' %}"{% if request.resolver_match.view_name == "portal:inicio" %} aria-current="page"{% endif %}>{% icono 'inicio' %}Inicio</a>
                 <a class="nav-enlace" href="{% url 'portal:catalogo' %}"{% if request.resolver_match.view_name == "portal:catalogo" or request.resolver_match.view_name == "portal:libro" %} aria-current="page"{% endif %}>{% icono 'libro' %}Catálogo</a>
+                <a class="nav-enlace" href="{% url 'portal:perfil' %}"{% if request.resolver_match.view_name == "portal:perfil" %} aria-current="page"{% endif %}>{% icono 'persona' %}Mi perfil</a>
                 {% else %}
                 <p class="nav-grupo">Operación</p>
                 <a class="nav-enlace" href="{% url 'biblioteca:inicio' %}"{% if seccion == "inicio" %} aria-current="page"{% endif %}>{% icono 'inicio' %}Inicio</a>
