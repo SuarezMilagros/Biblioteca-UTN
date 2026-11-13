@@ -3,6 +3,7 @@
 Todo lo que se muestra acá se filtra en el servidor por la persona de la cuenta y sus carreras (D-R2-12).
 """
 from django.db.models import Q
+from django.utils import timezone
 from django.views.generic import DetailView, ListView, TemplateView
 
 from biblioteca.models import Categoria, Libro
@@ -22,6 +23,35 @@ class InicioView(LectorRequeridoMixin, TemplateView):
         contexto['carreras'] = carreras
         # Un libro pertenece a las carreras de su categoría (D-R2-6).
         contexto['cantidad_libros'] = Libro.objects.de_las_carreras(carreras).count()
+        sin_devolver = self.persona.prestamos.filter(fecha_devolucion__isnull=True)
+        contexto['prestamos_sin_devolver'] = sin_devolver.count()
+        contexto['prestamos_vencidos'] = sin_devolver.filter(fecha_vencimiento__lt=timezone.localdate()).count()
+        return contexto
+
+
+class PerfilView(LectorRequeridoMixin, TemplateView):
+    """Mi perfil (S7-06): sus datos (solo lectura), sus carreras y sus préstamos. Nunca los de otra persona."""
+
+    template_name = 'portal/perfil.html'
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        hoy = timezone.localdate()
+        prestamos = list(
+            self.persona.prestamos.select_related('ejemplar__libro').order_by('-fecha_prestamo', '-pk')
+        )
+        activos = [prestamo for prestamo in prestamos if prestamo.activo]
+        for prestamo in activos:
+            # Positivo: faltan días. Cero: vence hoy. Negativo: días de atraso.
+            prestamo.dias_restantes = (prestamo.fecha_vencimiento - hoy).days
+            prestamo.dias_de_atraso = -prestamo.dias_restantes
+        activos.sort(key=lambda prestamo: prestamo.fecha_vencimiento)
+        contexto.update({
+            'persona': self.persona,
+            'carreras': self.persona.carreras.all(),
+            'activos': activos,
+            'devueltos': [prestamo for prestamo in prestamos if not prestamo.activo],
+        })
         return contexto
 
 
