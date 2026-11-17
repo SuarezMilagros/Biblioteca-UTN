@@ -119,7 +119,7 @@ class DisponibilidadTests(CatalogoTestCase):
         respuesta = self.client.get(reverse('portal:libro', args=[self.python.pk]))
         self.assertContains(respuesta, '1 disponible')
         self.assertContains(respuesta, 'de 2 ejemplares')
-        self.assertContains(respuesta, 'Podés pedirlo prestado en la biblioteca.')
+        self.assertContains(respuesta, 'Podés pedirlo prestado en la biblioteca o reservarlo.')
 
     def test_sin_ejemplares(self):
         respuesta = self.client.get(reverse('portal:libro', args=[self.logistica_libro.pk]))

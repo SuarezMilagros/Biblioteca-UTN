@@ -1,0 +1,14 @@
+{% comment %}Estado de una reserva, para el lector. Requiere `reserva`.{% endcomment %}
+{% if reserva.estado == 'PENDIENTE' %}
+    <span class="badge badge-prestado">Pendiente</span> <span class="secundario">La biblioteca todavía no la confirmó.</span>
+{% elif reserva.estado == 'CONFIRMADA' %}
+    <span class="badge badge-disponible">Lista para retirar</span> <span class="secundario">Retirala antes del {{ reserva.vence_retiro|date:"d/m/Y H:i" }}.</span>
+{% elif reserva.estado == 'RETIRADA' %}
+    <span class="badge badge-neutro">Retirada</span>
+{% elif reserva.estado == 'RECHAZADA' %}
+    <span class="badge badge-vencido">Rechazada</span> <span class="secundario">{{ reserva.motivo_rechazo }}</span>
+{% elif reserva.estado == 'VENCIDA' %}
+    <span class="badge badge-baja">Vencida</span> <span class="secundario">No se retiró a tiempo.</span>
+{% else %}
+    <span class="badge badge-baja">Cancelada</span>
+{% endif %}
