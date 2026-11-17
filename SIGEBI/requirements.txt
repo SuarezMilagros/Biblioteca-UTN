@@ -6,4 +6,6 @@ pillow==12.3.0
 psycopg==3.3.6
 psycopg-binary==3.3.6
 python-dotenv==1.2.4
+# S8-05: genera el codigo QR de cada ejemplar (SVG). Puro Python, sin otras dependencias.
+segno==1.6.6
 sqlparse==0.6.0

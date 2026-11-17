@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load interfaz %}
+
+{% block titulo %}Etiquetas con QR · SIGEBI{% endblock %}
+{% block seccion %}Operación / Ejemplares / <strong>Etiquetas</strong>{% endblock %}
+
+{% block contenido %}
+<div class="no-imprimir">
+    {% if libro %}
+    <a class="volver" href="{% url 'biblioteca:libro_detail' libro.pk %}">{% icono 'volver' %}Volver al libro</a>
+    {% else %}
+    <a class="volver" href="{% url 'biblioteca:ejemplar_list' %}">{% icono 'volver' %}Volver a ejemplares</a>
+    {% endif %}
+    <div class="encabezado-seccion">
+        <div>
+            <p class="sobretitulo">Ejemplares</p>
+            <h1>Etiquetas con QR</h1>
+            <p class="bajada">{% if libro %}Ejemplares de «{{ libro.titulo }}». {% endif %}Recortalas y pegalas en cada ejemplar. Al escanear el QR con el celular se abre la ficha del ejemplar.</p>
+        </div>
+        {% if etiquetas %}
+        <div class="botones-encabezado">
+            <button type="button" class="boton" data-imprimir hidden>{% icono 'imprimir' %}Imprimir</button>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if direccion_local and etiquetas %}
+    <div class="alerta-aviso" role="note">
+        {% icono 'alerta' %}
+        <p>Estás usando SIGEBI desde esta misma computadora ({{ request.get_host }}): un celular no puede abrir esa dirección.
+            Para imprimir etiquetas que funcionen, entrá al sistema con la dirección del servidor (la del sitio publicado, o la IP de la computadora en la red de la biblioteca).</p>
+    </div>
+    {% endif %}
+    {% if cantidad_fuera %}
+    <div class="alerta-aviso" role="note">{% icono 'alerta' %}<p>Se muestran las primeras {{ maximo }} etiquetas. Faltan {{ cantidad_fuera }}: imprimilas por libro o eligiendo menos ejemplares.</p></div>
+    {% endif %}
+    {% if cantidad_de_baja %}
+    <p class="ayuda">No se incluye{{ cantidad_de_baja|pluralize:"n" }} {{ cantidad_de_baja }} ejemplar{{ cantidad_de_baja|pluralize:"es" }} dado{{ cantidad_de_baja|pluralize }} de baja.</p>
+    {% endif %}
+    {% if etiquetas %}
+    <p class="ayuda">{{ etiquetas|length }} etiqueta{{ etiquetas|length|pluralize }}. Al imprimir, elegí papel A4 y escala 100 % (tamaño real).</p>
+    {% endif %}
+</div>
+
+{% if etiquetas %}
+<div class="etiquetas">
+    {% for ejemplar, qr in etiquetas %}
+    <div class="etiqueta">
+        <span class="qr-imagen" role="img" aria-label="Código QR del ejemplar {{ ejemplar.codigo_inventario }}">{{ qr }}</span>
+        <div class="etiqueta-texto">
+            <strong class="etiqueta-codigo">{{ ejemplar.codigo_inventario }}</strong>
+            <span class="etiqueta-titulo">{{ ejemplar.libro.titulo|truncatechars:70 }}</span>
+            <span class="etiqueta-pie">Biblioteca UTN FRT · Concepción</span>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="vacio">
+    <span class="vacio-icono">{% icono 'qr' %}</span>
+    <p class="vacio-titulo">No hay ejemplares activos elegidos.</p>
+    <p>Elegí ejemplares en la lista de ejemplares, o imprimí las etiquetas de todos los ejemplares de un libro desde su ficha.</p>
+    <a class="boton-secundario" href="{% url 'biblioteca:ejemplar_list' %}">{% icono 'ejemplar' %}Ir a ejemplares</a>
+</div>
+{% endif %}
+{% endblock %}

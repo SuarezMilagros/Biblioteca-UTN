@@ -92,6 +92,17 @@
             {% endif %}
         </section>
 
+        <section class="tarjeta" aria-labelledby="titulo-qr">
+            <div class="tarjeta-titulo"><h2 id="titulo-qr">Código QR</h2></div>
+            <div class="qr-ficha">
+                <span class="qr-imagen" role="img" aria-label="Código QR de la ficha del ejemplar {{ object.codigo_inventario }}">{{ qr }}</span>
+                <p class="texto-suave">Escanealo con el celular para abrir esta ficha. Solo lo puede abrir el personal de la biblioteca.</p>
+            </div>
+            {% if object.activo %}
+            <a class="boton-secundario" href="{% url 'biblioteca:ejemplar_etiquetas' %}?ejemplar={{ object.pk }}">{% icono 'imprimir' %}Imprimir etiqueta</a>
+            {% endif %}
+        </section>
+
         {% if perms.biblioteca.change_ejemplar %}
         {% if object.activo and not prestamo_activo and not reserva_vigente %}
         <section class="tarjeta zona-baja" aria-labelledby="titulo-baja">

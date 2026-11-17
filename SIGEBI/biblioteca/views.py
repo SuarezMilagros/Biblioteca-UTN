@@ -23,7 +23,12 @@ from cuentas.roles import es_lector
 from cuentas.views import ERRORES_DE_ENVIO
 
 from .informes import ExportarCSVMixin, nombre_de_archivo
-from .models import Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, MaterialDigital, Persona, Prestamo, Reserva
+from .models import (
+    Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, MaterialDigital, Opinion, Persona, Prestamo, Reserva,
+)
+from .opiniones import OpinionNoPermitida
+from .opiniones import revisar as revisar_opinion
+from . import qr
 from . import reservas as reglas_de_reservas
 from . import revision_de_material
 
@@ -424,6 +429,48 @@ class EjemplarDetailView(PermissionRequiredMixin, DetailView):
         contexto['prestamo_activo'] = next((p for p in prestamos if p.activo), None)
         contexto['reserva_vigente'] = reglas_de_reservas.reserva_vigente_de(self.object)
         contexto['form_baja'] = EjemplarBajaForm()
+        # S8-05: QR con la dirección de esta ficha, para pegar en el ejemplar.
+        contexto['qr'] = qr.svg(qr.direccion_de_la_ficha(self.request, self.object))
+        return contexto
+
+
+class EjemplarEtiquetasView(PermissionRequiredMixin, TemplateView):
+    """Hoja de etiquetas para imprimir (S8-05): código de inventario, título y QR de cada ejemplar.
+
+    Se eligen con ?libro=<id> (todos los ejemplares activos del libro) o con ?ejemplar=<id>&ejemplar=<id>...
+    Los dados de baja no se incluyen: no se prestan, no necesitan etiqueta.
+    """
+
+    permission_required = 'biblioteca.view_ejemplar'
+    template_name = 'biblioteca/ejemplar_etiquetas.html'
+    MAXIMO = 120
+
+    def elegidos(self):
+        ids = [int(valor) for valor in self.request.GET.getlist('ejemplar') if valor.isdigit()]
+        libro = self.request.GET.get('libro', '')
+        if libro.isdigit():
+            self.libro = get_object_or_404(Libro, pk=int(libro))
+            return Ejemplar.objects.filter(libro=self.libro)
+        self.libro = None
+        return Ejemplar.objects.filter(pk__in=ids)
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        elegidos = self.elegidos()
+        activos = elegidos.filter(activo=True).select_related('libro').order_by('codigo_inventario')
+        cantidad = activos.count()
+        etiquetas = [
+            (ejemplar, qr.svg(qr.direccion_de_la_ficha(self.request, ejemplar)))
+            for ejemplar in activos[:self.MAXIMO]
+        ]
+        contexto.update({
+            'libro': self.libro,
+            'etiquetas': etiquetas,
+            'cantidad_de_baja': elegidos.filter(activo=False).count(),
+            'cantidad_fuera': max(cantidad - self.MAXIMO, 0),
+            'maximo': self.MAXIMO,
+            'direccion_local': qr.es_direccion_local(self.request),
+        })
         return contexto
 
 
@@ -871,6 +918,68 @@ class ReservaLiberarView(AccionDeReservaView):
 
     def destino(self, reserva):
         return reverse('biblioteca:reserva_list') + '?estado=para_retirar'
+
+
+# ---------- Opiniones (Release 2, S8-04) ----------
+
+ESTADOS_DE_OPINION = {
+    'pendientes': ('Pendientes', Opinion.Estado.PENDIENTE, ['fecha_opinion', 'pk']),
+    'aprobadas': ('Aprobadas', Opinion.Estado.APROBADA, ['-fecha_revision', '-pk']),
+    'rechazadas': ('Rechazadas', Opinion.Estado.RECHAZADA, ['-fecha_revision', '-pk']),
+}
+
+
+class OpinionListView(PermissionRequiredMixin, ListView):
+    """Opiniones de alumnos y profesores. Las pendientes se aprueban o rechazan desde acá."""
+
+    permission_required = 'biblioteca.view_opinion'
+    template_name = 'biblioteca/opinion_list.html'
+    context_object_name = 'opiniones'
+    paginate_by = ELEMENTOS_POR_PAGINA
+
+    def estado(self):
+        estado = self.request.GET.get('estado', 'pendientes')
+        return estado if estado in ESTADOS_DE_OPINION else 'pendientes'
+
+    def get_queryset(self):
+        _, estado, orden = ESTADOS_DE_OPINION[self.estado()]
+        return Opinion.objects.filter(estado=estado).select_related('libro', 'persona', 'usuario_revision').order_by(*orden)
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        contexto['estado'] = self.estado()
+        contexto['estados'] = [(clave, datos[0]) for clave, datos in ESTADOS_DE_OPINION.items()]
+        contexto['cantidad_pendientes'] = Opinion.objects.filter(estado=Opinion.Estado.PENDIENTE).count()
+        return contexto
+
+
+class OpinionRevisarView(PermissionRequiredMixin, View):
+    """Aprueba (se publica) o rechaza una opinión pendiente."""
+
+    permission_required = 'biblioteca.change_opinion'
+    http_method_names = ['post']
+    estado = None
+    mensaje = ''
+
+    def post(self, request, pk):
+        opinion = get_object_or_404(Opinion, pk=pk)
+        try:
+            revisar_opinion(opinion, self.estado, request.user)
+        except OpinionNoPermitida as error:
+            messages.error(request, error.motivo)
+        else:
+            messages.success(request, self.mensaje.format(libro=opinion.libro, persona=opinion.persona))
+        return redirect(reverse('biblioteca:opinion_list') + '?estado=pendientes')
+
+
+class OpinionAprobarView(OpinionRevisarView):
+    estado = Opinion.Estado.APROBADA
+    mensaje = 'Opinión de "{persona}" sobre "{libro}" aprobada: ya se ve en el portal.'
+
+
+class OpinionRechazarView(OpinionRevisarView):
+    estado = Opinion.Estado.RECHAZADA
+    mensaje = 'Opinión de "{persona}" sobre "{libro}" rechazada.'
 
 
 # ---------- Personas ----------

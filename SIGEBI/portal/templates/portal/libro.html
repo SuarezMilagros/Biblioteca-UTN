@@ -29,6 +29,8 @@
                 <dd>{{ libro.isbn|default:"Sin ISBN" }}</dd>
                 <dt>Disponibilidad</dt>
                 <dd class="disponibilidad">{% include 'portal/_disponibilidad.html' %}</dd>
+                <dt>Opiniones</dt>
+                <dd>{% if libro.cantidad_opiniones %}<span class="valoracion">{% estrellas libro.promedio_estrellas libro.cantidad_opiniones %} <a href="#opiniones">{{ libro.cantidad_opiniones }} {% if libro.cantidad_opiniones == 1 %}opinión{% else %}opiniones{% endif %}</a></span>{% else %}<span class="texto-suave">Todavía no hay opiniones</span>{% endif %}</dd>
             </dl>
             <p class="ayuda">{% if libro.ejemplares_disponibles %}Podés pedirlo prestado en la biblioteca o reservarlo.{% elif libro.ejemplares_activos %}Ahora están todos prestados. Podés reservarlo y la biblioteca te avisa cuando haya uno.{% else %}La biblioteca no tiene ejemplares de este libro para prestar.{% endif %}</p>
         </div>
@@ -50,5 +52,51 @@
             <button type="submit" class="boton">{% icono 'calendario' %}Reservar este libro</button>
         </form>
     {% endif %}
+</section>
+
+<section class="tarjeta" id="opiniones" aria-labelledby="titulo-opiniones">
+    <div class="tarjeta-titulo"><h2 id="titulo-opiniones">Opiniones</h2>{% if libro.cantidad_opiniones %}<span class="valoracion">{% estrellas libro.promedio_estrellas libro.cantidad_opiniones %} {{ libro.promedio_estrellas|floatformat:1 }}</span>{% endif %}</div>
+    {% if opiniones %}
+    <ul class="opiniones">
+        {% for opinion in opiniones %}
+        <li class="opinion">
+            <div class="opinion-cabeza">{% estrellas opinion.estrellas %} <strong>{{ opinion.autor_publico }}</strong>
+                <span class="badge badge-disponible" title="Tuvo este libro prestado en la biblioteca">Lectura verificada</span>
+                <span class="secundario">{{ opinion.fecha_opinion|date:"d/m/Y" }}</span></div>
+            {% if opinion.comentario %}<p>{{ opinion.comentario|linebreaksbr }}</p>{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="texto-suave">Todavía no hay opiniones publicadas sobre este libro.</p>
+    {% endif %}
+
+    <div class="mi-opinion">
+        <h3>Tu opinión</h3>
+        {% if mi_opinion %}
+        <p>{% if mi_opinion.estado == 'PENDIENTE' %}<span class="badge badge-prestado">En revisión</span> La biblioteca la revisa antes de publicarla.{% elif mi_opinion.estado == 'APROBADA' %}<span class="badge badge-disponible">Publicada</span>{% else %}<span class="badge badge-vencido">No se publicó</span> La biblioteca no la aprobó. Podés editarla y enviarla otra vez.{% endif %}</p>
+        {% endif %}
+        {% if puede_opinar %}
+        <form method="post" action="{% url 'portal:opinar' libro.pk %}" class="formulario">
+            {% csrf_token %}
+            <fieldset class="campo elegir-estrellas">
+                <legend>Estrellas <span class="obligatorio" aria-hidden="true">*</span></legend>
+                <div class="opciones-estrellas">
+                    {% for valor in "12345" %}
+                    <label><input type="radio" name="estrellas" value="{{ valor }}" required{% if mi_opinion and mi_opinion.estrellas|stringformat:"s" == valor %} checked{% endif %}> {{ valor }} ★</label>
+                    {% endfor %}
+                </div>
+            </fieldset>
+            <div class="campo">
+                <label for="id_comentario">Comentario (opcional)</label>
+                <textarea id="id_comentario" name="comentario" rows="3" maxlength="{{ maximo_comentario }}">{{ mi_opinion.comentario|default:"" }}</textarea>
+                <small class="ayuda">Contá si te sirvió y para qué materia. Se publica con tu nombre y la inicial de tu apellido.{% if mi_opinion %} Si la editás, vuelve a revisión.{% endif %}</small>
+            </div>
+            <button type="submit" class="boton">{% icono 'exito' %}{% if mi_opinion %}Guardar cambios{% else %}Enviar opinión{% endif %}</button>
+        </form>
+        {% else %}
+        <p class="texto-suave">Vas a poder opinar sobre este libro cuando lo hayas tenido prestado.</p>
+        {% endif %}
+    </div>
 </section>
 {% endblock %}

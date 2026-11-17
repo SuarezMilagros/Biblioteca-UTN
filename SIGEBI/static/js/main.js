@@ -34,6 +34,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ---------- Etiquetas con QR (S8-05) ----------
+    // Casilla "elegir todos": sin JavaScript queda oculta y se eligen de a uno.
+    document.querySelectorAll('[data-seleccionar-todos]').forEach((todos) => {
+        const formulario = todos.getAttribute('form');
+        const casillas = document.querySelectorAll(`input[name="ejemplar"][form="${formulario}"]`);
+        if (!casillas.length) return;
+        todos.hidden = false;
+        todos.addEventListener('change', () => casillas.forEach((casilla) => { casilla.checked = todos.checked; }));
+    });
+    document.querySelectorAll('[data-imprimir]').forEach((boton) => {
+        boton.hidden = false;
+        boton.addEventListener('click', () => window.print());
+    });
+
     // ---------- Avisos que se pueden cerrar ----------
     document.querySelectorAll('[data-cerrar-mensaje]').forEach((boton) => {
         boton.hidden = false;

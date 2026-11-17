@@ -38,11 +38,15 @@
 </div>
 
 {% if object_list %}
-<p class="resumen-listado">{{ paginator.count }} ejemplar{{ paginator.count|pluralize:"es" }}{% if q %} para «{{ q }}»{% endif %}</p>
+<form id="form-etiquetas" method="get" action="{% url 'biblioteca:ejemplar_etiquetas' %}" class="barra-seleccion">
+    <p class="resumen-listado">{{ paginator.count }} ejemplar{{ paginator.count|pluralize:"es" }}{% if q %} para «{{ q }}»{% endif %}</p>
+    <button type="submit" class="boton-secundario">{% icono 'imprimir' %}Imprimir etiquetas de los elegidos</button>
+</form>
 <div class="tabla-contenedor">
     <table class="tabla">
         <thead>
             <tr>
+                <th scope="col" class="columna-eleccion"><input type="checkbox" form="form-etiquetas" data-seleccionar-todos aria-label="Elegir todos los ejemplares activos de esta página" hidden></th>
                 <th scope="col">Código de inventario</th>
                 <th scope="col">ID de inventario</th>
                 <th scope="col">Libro</th>
@@ -53,6 +57,7 @@
         <tbody>
         {% for ejemplar in object_list %}
             <tr>
+                <td class="columna-eleccion" data-etiqueta="Etiqueta">{% if ejemplar.activo %}<input type="checkbox" name="ejemplar" value="{{ ejemplar.pk }}" form="form-etiquetas" aria-label="Elegir {{ ejemplar.codigo_inventario }} para imprimir su etiqueta">{% endif %}</td>
                 <td data-etiqueta="Código"><a class="codigo" href="{% url 'biblioteca:ejemplar_detail' ejemplar.pk %}">{{ ejemplar.codigo_inventario }}</a></td>
                 <td data-etiqueta="ID">{{ ejemplar.id_inventario|default:"—" }}</td>
                 <td data-etiqueta="Libro"><a href="{% url 'biblioteca:libro_detail' ejemplar.libro_id %}">{{ ejemplar.libro.titulo }}</a></td>

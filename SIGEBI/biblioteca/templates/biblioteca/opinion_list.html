@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load interfaz %}
+
+{% block titulo %}Opiniones · SIGEBI{% endblock %}
+{% block seccion %}Operación / <strong>Opiniones</strong>{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Operación</p>
+        <h1>Opiniones</h1>
+        <p class="bajada">Estrellas y comentarios de alumnos y profesores sobre libros que tuvieron prestados. Se publican en el portal cuando se aprueban.</p>
+    </div>
+</div>
+
+<nav class="pestanas" aria-label="Estado de las opiniones">
+    {% for clave, titulo in estados %}
+    <a href="?estado={{ clave }}"{% if estado == clave %} aria-current="page" class="activa"{% endif %}>{{ titulo }}{% if clave == 'pendientes' and cantidad_pendientes %} <span class="nav-contador">{{ cantidad_pendientes }}</span>{% endif %}</a>
+    {% endfor %}
+</nav>
+
+{% if opiniones %}
+<p class="resumen-listado">{{ paginator.count }} {% if paginator.count == 1 %}opinión{% else %}opiniones{% endif %}</p>
+<div class="tabla-contenedor">
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Libro</th>
+                <th scope="col">Persona</th>
+                <th scope="col">Opinión</th>
+                <th scope="col">{% if estado == 'pendientes' %}Enviada{% else %}Revisada{% endif %}</th>
+                <th scope="col"><span class="sr-only">Acciones</span></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for opinion in opiniones %}
+            <tr>
+                <td data-etiqueta="Libro"><a href="{% url 'biblioteca:libro_detail' opinion.libro_id %}">{{ opinion.libro.titulo }}</a></td>
+                <td data-etiqueta="Persona"><a href="{% url 'biblioteca:persona_detail' opinion.persona_id %}">{{ opinion.persona }}</a><span class="secundario">{{ opinion.persona.get_tipo_display }}</span></td>
+                <td data-etiqueta="Opinión" class="celda-opinion">{% estrellas opinion.estrellas %}{% if opinion.comentario %}<span class="secundario">{{ opinion.comentario|linebreaksbr }}</span>{% else %}<span class="secundario">Sin comentario</span>{% endif %}</td>
+                <td data-etiqueta="{% if estado == 'pendientes' %}Enviada{% else %}Revisada{% endif %}">{% if estado == 'pendientes' %}{{ opinion.fecha_opinion|date:"d/m/Y H:i" }}{% else %}{{ opinion.fecha_revision|date:"d/m/Y H:i" }}{% if opinion.usuario_revision %}<span class="secundario">{{ opinion.usuario_revision.get_full_name|default:opinion.usuario_revision.username }}</span>{% endif %}{% endif %}</td>
+                <td class="acciones">
+                    {% if estado == 'pendientes' and perms.biblioteca.change_opinion %}
+                    <form method="post" action="{% url 'biblioteca:opinion_aprobar' opinion.pk %}" class="en-linea">
+                        {% csrf_token %}<button type="submit" class="enlace-boton accion" aria-label="Aprobar la opinión de {{ opinion.persona }}">{% icono 'exito' %}Aprobar</button>
+                    </form>
+                    <form method="post" action="{% url 'biblioteca:opinion_rechazar' opinion.pk %}" class="en-linea"
+                          data-confirmar="La opinión no se publica. Quien la escribió puede editarla y enviarla otra vez." data-confirmar-titulo="¿Rechazar esta opinión?" data-confirmar-boton="Rechazar">
+                        {% csrf_token %}<button type="submit" class="enlace-boton accion" aria-label="Rechazar la opinión de {{ opinion.persona }}">{% icono 'cerrar' %}Rechazar</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include 'componentes/paginacion.html' %}
+{% elif estado == 'pendientes' %}
+{% include 'componentes/vacio.html' with icono='exito' titulo='No hay opiniones para revisar.' texto='Todas las opiniones de alumnos y profesores ya tienen respuesta.' %}
+{% else %}
+{% include 'componentes/vacio.html' with icono='estrella' titulo='No hay opiniones para mostrar.' %}
+{% endif %}
+{% endblock %}

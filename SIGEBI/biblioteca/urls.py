@@ -42,6 +42,7 @@ urlpatterns = [
 
     path('ejemplares/', views.EjemplarListView.as_view(), name='ejemplar_list'),
     path('ejemplares/nuevo/', views.EjemplarCreateView.as_view(), name='ejemplar_create'),
+    path('ejemplares/etiquetas/', views.EjemplarEtiquetasView.as_view(), name='ejemplar_etiquetas'),
     path('ejemplares/<int:pk>/', views.EjemplarDetailView.as_view(), name='ejemplar_detail'),
     path('ejemplares/<int:pk>/editar/', views.EjemplarUpdateView.as_view(), name='ejemplar_update'),
     path('ejemplares/<int:pk>/prestar/', views.PrestamoCreateView.as_view(), name='prestamo_create'),
@@ -58,6 +59,10 @@ urlpatterns = [
     path('personas/<int:pk>/reactivar/', views.PersonaReactivarView.as_view(), name='persona_reactivar'),
 
     path('prestamos/', views.PrestamoListView.as_view(), name='prestamo_list'),
+
+    path('opiniones/', views.OpinionListView.as_view(), name='opinion_list'),
+    path('opiniones/<int:pk>/aprobar/', views.OpinionAprobarView.as_view(), name='opinion_aprobar'),
+    path('opiniones/<int:pk>/rechazar/', views.OpinionRechazarView.as_view(), name='opinion_rechazar'),
 
     path('reservas/', views.ReservaListView.as_view(), name='reserva_list'),
     path('reservas/<int:pk>/', views.ReservaDetailView.as_view(), name='reserva_detail'),

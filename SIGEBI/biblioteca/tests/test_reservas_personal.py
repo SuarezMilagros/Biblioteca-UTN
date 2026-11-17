@@ -421,6 +421,17 @@ class PantallasTests(ReservasPersonalTestCase):
         respuesta = self.client.get(reverse('biblioteca:reserva_detail', args=[reserva.pk]))
         self.assertContains(respuesta, 'La persona tiene 1 préstamo vencido sin devolver.')
 
+    def test_un_prestamo_al_dia_no_se_cuenta_como_vencido(self):
+        hoy = timezone.localdate()
+        Prestamo.objects.create(
+            persona=self.ana, ejemplar=self.jv1, usuario_sistema=self.bibliotecario,
+            fecha_prestamo=hoy, fecha_vencimiento=hoy + timedelta(days=14),
+        )
+        reserva = self.pendiente()
+        respuesta = self.client.get(reverse('biblioteca:reserva_detail', args=[reserva.pk]))
+        self.assertEqual(respuesta.context['prestamos_vencidos'], 0)
+        self.assertNotContains(respuesta, 'vencido sin devolver')
+
     def test_el_detalle_de_una_confirmada_ofrece_retirar_y_liberar(self):
         reserva = self.confirmada()
         respuesta = self.client.get(reverse('biblioteca:reserva_detail', args=[reserva.pk]))

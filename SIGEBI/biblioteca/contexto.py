@@ -1,6 +1,7 @@
 """Variables de `biblioteca` para la cabecera común (registradas en config/settings.py).
 
 - reservas_pendientes_total: reservas que esperan respuesta del personal (S8-03).
+- opiniones_pendientes_total: opiniones de lectores que esperan revisión (S8-04).
 - material_para_revisar_total: material que subieron alumnos y profesores y espera revisión (S8-01).
 - prestamos_vencidos_total: préstamos sin devolver con el vencimiento pasado. Se muestra como
   aviso en la cabecera (visibilidad del estado del sistema). Vale 0 si la persona no puede ver préstamos.
@@ -31,7 +32,13 @@ def interfaz(request):
         # S8-01: material que subieron alumnos y profesores y espera revisión, junto a "Material digital".
         from .models import MaterialDigital
         material_para_revisar = MaterialDigital.objects.filter(estado=MaterialDigital.Estado.PENDIENTE).count()
+    opiniones_pendientes = 0
+    if usuario.has_perm('biblioteca.view_opinion'):
+        # S8-04: opiniones que esperan revisión, junto a "Opiniones" en el menú.
+        from .models import Opinion
+        opiniones_pendientes = Opinion.objects.filter(estado=Opinion.Estado.PENDIENTE).count()
     return {
+        'opiniones_pendientes_total': opiniones_pendientes,
         'prestamos_vencidos_total': vencidos,
         'reservas_pendientes_total': pendientes,
         'material_para_revisar_total': material_para_revisar,

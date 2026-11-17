@@ -12,7 +12,8 @@ from django.urls import reverse
 from django.views.generic import CreateView, DetailView, ListView, TemplateView
 
 from biblioteca.forms import MaterialCompartidoForm
-from biblioteca.models import Categoria, Libro, MaterialDigital, Persona, Reserva
+from biblioteca.models import Categoria, Libro, MaterialDigital, Opinion, Persona, Reserva
+from biblioteca.opiniones import MAXIMO_COMENTARIO, OpinionNoPermitida, opinar, tuvo_prestado
 from biblioteca.revision_de_material import MAXIMO_PENDIENTES_POR_PERSONA, puede_subir
 from biblioteca.reservas import (
     HORAS_PARA_RETIRAR, MAXIMO_RESERVAS_ACTIVAS, ReservaNoPermitida, cancelar, motivos_para_no_reservar, reservar,
@@ -92,6 +93,7 @@ class LibrosDeSusCarrerasMixin(LectorRequeridoMixin):
         return (
             Libro.objects.de_las_carreras(self.persona.carreras.all())
             .con_disponibilidad()
+            .con_opiniones()
             .select_related('autor', 'editorial', 'categoria')
         )
 
@@ -160,7 +162,31 @@ class LibroView(LibrosDeSusCarrerasMixin, DetailView):
         ).first()
         contexto['motivos_para_no_reservar'] = motivos_para_no_reservar(self.persona, self.object)
         contexto['horas_para_retirar'] = HORAS_PARA_RETIRAR
+        # S8-04: opiniones aprobadas de todos, y la propia en cualquier estado.
+        contexto['opiniones'] = (
+            self.object.opiniones.filter(estado=Opinion.Estado.APROBADA)
+            .select_related('persona').order_by('-fecha_opinion', '-pk')
+        )
+        contexto['mi_opinion'] = self.object.opiniones.filter(persona=self.persona).first()
+        contexto['puede_opinar'] = tuvo_prestado(self.persona, self.object)
+        contexto['maximo_comentario'] = MAXIMO_COMENTARIO
         return contexto
+
+
+class OpinarView(LibrosDeSusCarrerasMixin, View):
+    """El lector pone estrellas y un comentario a un libro que tuvo prestado (S8-04)."""
+
+    http_method_names = ['post']
+
+    def post(self, request, pk):
+        libro = get_object_or_404(self.libros_visibles(), pk=pk)
+        try:
+            opinar(self.persona, libro, request.POST.get('estrellas'), request.POST.get('comentario'))
+        except OpinionNoPermitida as error:
+            messages.error(request, error.motivo)
+        else:
+            messages.success(request, 'Gracias por tu opinión. Se publica cuando la revise la biblioteca.')
+        return redirect(reverse('portal:libro', args=[libro.pk]) + '#opiniones')
 
 
 class ReservarView(LibrosDeSusCarrerasMixin, View):
