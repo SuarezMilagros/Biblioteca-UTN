@@ -25,6 +25,7 @@ from cuentas.views import ERRORES_DE_ENVIO
 from .informes import ExportarCSVMixin, nombre_de_archivo
 from .models import Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, MaterialDigital, Persona, Prestamo, Reserva
 from . import reservas as reglas_de_reservas
+from . import revision_de_material
 
 ELEMENTOS_POR_PAGINA = 20
 MENSAJE_DATO_REPETIDO = 'Ya existe un registro con esos datos. Revisá los valores e intentá de nuevo.'
@@ -88,6 +89,10 @@ def inicio(request):
         reglas_de_reservas.vencer_reservas()
         contexto['reservas_pendientes'] = Reserva.objects.filter(estado=Reserva.Estado.PENDIENTE).count()
         contexto['reservas_para_retirar'] = Reserva.objects.vigentes().count()
+    if usuario.has_perm('biblioteca.view_materialdigital'):
+        contexto['material_para_revisar'] = MaterialDigital.objects.filter(
+            estado=MaterialDigital.Estado.PENDIENTE
+        ).count()
     if usuario.has_perm('biblioteca.view_persona'):
         contexto['personas_activas'] = Persona.objects.filter(activo=True).count()
     if usuario.has_perm('biblioteca.view_libro'):
@@ -563,10 +568,13 @@ class CarreraUpdateView(PermissionRequiredMixin, GuardarRegistroMixin, UpdateVie
 
 # ---------- Material digital (Release 2, S7-07) ----------
 
+# Clave del filtro: (título, condiciones, orden). Lo que suben alumnos y profesores entra como pendiente (S8-01).
 ESTADOS_DE_MATERIAL = {
-    'activos': {'activo': True},
-    'baja': {'activo': False},
-    'todos': {},
+    'activos': ('Publicados', {'estado': MaterialDigital.Estado.APROBADO, 'activo': True}, ['-fecha_carga', '-pk']),
+    'pendientes': ('Para revisar', {'estado': MaterialDigital.Estado.PENDIENTE}, ['fecha_carga', 'pk']),
+    'rechazados': ('Rechazados', {'estado': MaterialDigital.Estado.RECHAZADO}, ['-fecha_revision', '-pk']),
+    'baja': ('Dados de baja', {'estado': MaterialDigital.Estado.APROBADO, 'activo': False}, ['-fecha_carga', '-pk']),
+    'todos': ('Todos', {}, ['-fecha_carga', '-pk']),
 }
 
 
@@ -591,10 +599,11 @@ class MaterialDigitalListView(PermissionRequiredMixin, ListView):
         return estado if estado in ESTADOS_DE_MATERIAL else 'activos'
 
     def get_queryset(self):
+        _, condiciones, orden = ESTADOS_DE_MATERIAL[self.estado()]
         materiales = (
-            MaterialDigital.objects.filter(**ESTADOS_DE_MATERIAL[self.estado()])
-            .select_related('carrera', 'usuario_carga')
-            .order_by('-fecha_carga', '-pk')
+            MaterialDigital.objects.filter(**condiciones)
+            .select_related('carrera', 'usuario_carga__persona')
+            .order_by(*orden)
         )
         q = self.request.GET.get('q', '').strip()
         if q:
@@ -616,6 +625,8 @@ class MaterialDigitalListView(PermissionRequiredMixin, ListView):
             'tipo_elegido': self.request.GET.get('tipo', ''),
             'carreras': Carrera.objects.all(),
             'tipos': MaterialDigital.Tipo.choices,
+            'estados': [(clave, datos[0]) for clave, datos in ESTADOS_DE_MATERIAL.items()],
+            'cantidad_para_revisar': MaterialDigital.objects.filter(estado=MaterialDigital.Estado.PENDIENTE).count(),
         })
         return contexto
 
@@ -664,6 +675,10 @@ class MaterialDigitalBajaView(PermissionRequiredMixin, View):
 
     def post(self, request, pk):
         material = get_object_or_404(MaterialDigital, pk=pk)
+        if material.estado != MaterialDigital.Estado.APROBADO:
+            # Lo pendiente se aprueba o se rechaza; lo rechazado no se publica (S8-01).
+            messages.error(request, f'"{material}" no está aprobado: primero hay que revisarlo.')
+            return redirect('biblioteca:material_revisar', pk=material.pk)
         material.activo = self.activo
         material.save(update_fields=['activo'])
         if self.activo:
@@ -675,6 +690,53 @@ class MaterialDigitalBajaView(PermissionRequiredMixin, View):
 
 class MaterialDigitalReactivarView(MaterialDigitalBajaView):
     activo = True
+
+
+class MaterialDigitalRevisarView(PermissionRequiredMixin, DetailView):
+    """Ficha de un material para revisarlo (S8-01): sus datos, quién lo subió y el PDF para abrirlo antes de decidir."""
+
+    permission_required = 'biblioteca.view_materialdigital'
+    model = MaterialDigital
+    template_name = 'biblioteca/material_revisar.html'
+    context_object_name = 'material'
+
+    def get_queryset(self):
+        return MaterialDigital.objects.select_related(
+            'carrera', 'usuario_carga__persona', 'usuario_revision'
+        )
+
+
+class AccionDeRevisionView(PermissionRequiredMixin, View):
+    permission_required = 'biblioteca.change_materialdigital'
+    http_method_names = ['post']
+
+    def post(self, request, pk):
+        material = get_object_or_404(MaterialDigital, pk=pk)
+        try:
+            material = self.ejecutar(request, material)
+        except revision_de_material.RevisionNoPermitida as error:
+            messages.error(request, error.motivo)
+            return redirect('biblioteca:material_revisar', pk=material.pk)
+        if revision_de_material.avisar_por_correo(material):
+            aviso = 'Se le avisó por correo a quien lo subió.'
+            messages.success(request, f'{self.mensaje.format(material=material)} {aviso}')
+        else:
+            messages.warning(request, f'{self.mensaje.format(material=material)} No se pudo enviar el correo de aviso.')
+        return redirect(reverse('biblioteca:material_list') + '?estado=pendientes')
+
+
+class MaterialDigitalAprobarView(AccionDeRevisionView):
+    mensaje = '"{material.titulo}" aprobado: ya se ve en el portal.'
+
+    def ejecutar(self, request, material):
+        return revision_de_material.aprobar(material, request.user)
+
+
+class MaterialDigitalRechazarView(AccionDeRevisionView):
+    mensaje = '"{material.titulo}" rechazado.'
+
+    def ejecutar(self, request, material):
+        return revision_de_material.rechazar(material, request.POST.get('motivo'), request.user)
 
 
 # ---------- Reservas (Release 2, S8-03) ----------

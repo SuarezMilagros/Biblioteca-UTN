@@ -57,6 +57,13 @@
         <span class="indicador-detalle">{% if reservas_pendientes %}Esperan una respuesta{% else %}Todas respondidas{% endif %} · {{ reservas_para_retirar }} para retirar</span>
     </a>
     {% endif %}
+    {% if perms.biblioteca.view_materialdigital %}
+    <a class="indicador {% if material_para_revisar %}indicador-alerta{% else %}indicador-ok{% endif %}" href="{% url 'biblioteca:material_list' %}?estado=pendientes">
+        <span class="indicador-cabeza">Material para revisar <span class="indicador-icono">{% icono 'documento' %}</span></span>
+        <span class="indicador-valor">{{ material_para_revisar }}</span>
+        <span class="indicador-detalle">{% if material_para_revisar %}Compartido por alumnos y profesores{% else %}Todo revisado{% endif %}</span>
+    </a>
+    {% endif %}
     {% if perms.biblioteca.view_persona %}
     <a class="indicador" href="{% url 'biblioteca:persona_list' %}">
         <span class="indicador-cabeza">Personas activas <span class="indicador-icono">{% icono 'personas' %}</span></span>

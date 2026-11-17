@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% load interfaz %}
+
+{% block titulo %}Compartir material · SIGEBI{% endblock %}
+{% block seccion %}Material digital / <strong>Compartir material</strong>{% endblock %}
+
+{% block contenido %}
+<a class="volver" href="{% url 'portal:material' %}">{% icono 'volver' %}Volver al material digital</a>
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Material digital</p>
+        <h1>Compartir material</h1>
+        <p class="bajada">Subí apuntes, tesis u otros PDF para tus carreras. La biblioteca lo revisa antes de publicarlo y te avisa por correo.
+            <span class="leyenda-obligatorios">Los campos con <span class="obligatorio">*</span> son obligatorios.</span></p>
+    </div>
+</div>
+
+{% if not tiene_carreras %}
+{% include 'componentes/vacio.html' with icono='carrera' titulo='No tenés carreras asignadas.' texto='Para compartir material, pedile a la biblioteca que te asigne tus carreras.' %}
+{% elif not puede_subir %}
+<div class="vacio">
+    <span class="vacio-icono">{% icono 'reloj' %}</span>
+    <p class="vacio-titulo">Ya tenés {{ maximo_pendientes }} materiales esperando revisión.</p>
+    <p>Cuando la biblioteca los revise, vas a poder subir más.</p>
+    <a class="boton-secundario" href="{% url 'portal:perfil' %}#material-compartido">{% icono 'ver' %}Ver mi material</a>
+</div>
+{% else %}
+<form method="post" enctype="multipart/form-data" class="formulario tarjeta formulario-angosto">
+    {% csrf_token %}
+    {% include 'componentes/errores_formulario.html' %}
+    {% for campo in form %}{% if campo.name != 'derechos' %}{% include 'componentes/campo.html' with campo=campo %}{% endif %}{% endfor %}
+
+    <div class="aviso-derechos{% if form.derechos.errors %} campo-error{% endif %}">
+        <p class="aviso-derechos-titulo">{% icono 'alerta' %}Derechos de autor</p>
+        <p>Compartí solo material propio o que sus autores permitan difundir. No subas libros escaneados ni copias de publicaciones con derechos reservados: la biblioteca las rechaza.</p>
+        <label for="{{ form.derechos.id_for_label }}">{{ form.derechos }} <span>{{ form.derechos.label }}</span></label>
+        {% for error in form.derechos.errors %}<small class="error">{% icono 'error' %}{{ error }}</small>{% endfor %}
+    </div>
+
+    <div class="acciones-formulario">
+        <button type="submit" class="boton">{% icono 'exito' %}Enviar a revisión</button>
+        <a class="boton-secundario" href="{% url 'portal:material' %}">Cancelar</a>
+    </div>
+</form>
+{% endif %}
+{% endblock %}

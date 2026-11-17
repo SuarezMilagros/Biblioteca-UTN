@@ -318,3 +318,25 @@ class MaterialDigitalForm(forms.ModelForm):
         if anio is not None and not 1900 <= anio <= timezone.localdate().year:
             raise forms.ValidationError(f'Poné un año entre 1900 y {timezone.localdate().year}.')
         return anio
+
+
+class MaterialCompartidoForm(MaterialDigitalForm):
+    """Carga de material por un alumno o profesor desde el portal (S8-01).
+
+    Solo puede elegir sus carreras, y tiene que declarar que puede compartirlo (derechos de autor).
+    """
+
+    derechos = forms.BooleanField(
+        label='Declaro que el material es mío o que tengo permiso de sus autores para compartirlo, '
+              'y que no es una copia de un libro o publicación con derechos reservados.',
+        error_messages={'required': 'Para compartir el material tenés que aceptar esta declaración.'},
+    )
+
+    class Meta(MaterialDigitalForm.Meta):
+        labels = {**MaterialDigitalForm.Meta.labels, 'carrera': 'Carrera'}
+        help_texts = {'carrera': 'Solo lo van a ver los alumnos y profesores de esa carrera.'}
+
+    def __init__(self, *args, persona, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['carrera'].queryset = persona.carreras.all()
+        self.fields['carrera'].empty_label = None if persona.carreras.count() == 1 else '---------'

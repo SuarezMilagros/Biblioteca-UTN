@@ -2,14 +2,18 @@
 
 Todo lo que se muestra acá se filtra en el servidor por la persona de la cuenta y sus carreras (D-R2-12).
 """
+from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
-from django.views.generic import DetailView, ListView, TemplateView
+from django.urls import reverse
+from django.views.generic import CreateView, DetailView, ListView, TemplateView
 
-from biblioteca.models import Categoria, Libro, MaterialDigital, Reserva
+from biblioteca.forms import MaterialCompartidoForm
+from biblioteca.models import Categoria, Libro, MaterialDigital, Persona, Reserva
+from biblioteca.revision_de_material import MAXIMO_PENDIENTES_POR_PERSONA, puede_subir
 from biblioteca.reservas import (
     HORAS_PARA_RETIRAR, MAXIMO_RESERVAS_ACTIVAS, ReservaNoPermitida, cancelar, motivos_para_no_reservar, reservar,
     vencer_reservas,
@@ -64,6 +68,9 @@ class PerfilView(LectorRequeridoMixin, TemplateView):
             'maximo_reservas': MAXIMO_RESERVAS_ACTIVAS,
             'activos': activos,
             'devueltos': [prestamo for prestamo in prestamos if not prestamo.activo],
+            # S8-01: lo que compartió, con el estado de la revisión.
+            'materiales_compartidos': self.request.user.materiales_subidos.select_related('carrera')
+            .order_by('-fecha_carga', '-pk'),
         })
         return contexto
 
@@ -239,7 +246,54 @@ class MaterialView(MaterialDeSusCarrerasMixin, ListView):
 
 
 class MaterialArchivoView(MaterialDeSusCarrerasMixin, View):
-    """Abre el PDF. Material de otra carrera, pendiente o dado de baja: 404, aunque se escriba la dirección."""
+    """Abre el PDF. Material de otra carrera, pendiente o dado de baja: 404, aunque se escriba la dirección.
+
+    Excepción (S8-01): quien subió un material siempre puede abrir el suyo, aunque esté pendiente o rechazado.
+    """
 
     def get(self, request, pk):
-        return abrir_pdf(get_object_or_404(self.material_visible(), pk=pk))
+        propios = MaterialDigital.objects.filter(usuario_carga=request.user)
+        return abrir_pdf(get_object_or_404(self.material_visible() | propios, pk=pk))
+
+
+class CompartirMaterialView(LectorRequeridoMixin, CreateView):
+    """Un alumno o profesor sube material para sus carreras (S8-01). Queda pendiente hasta que la
+    biblioteca lo revise; mientras tanto no lo ve nadie más."""
+
+    form_class = MaterialCompartidoForm
+    template_name = 'portal/material_compartir.html'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['persona'] = self.persona
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        contexto['puede_subir'] = puede_subir(self.request.user)
+        contexto['maximo_pendientes'] = MAXIMO_PENDIENTES_POR_PERSONA
+        contexto['tiene_carreras'] = self.persona.carreras.exists()
+        return contexto
+
+    def form_valid(self, form):
+        with transaction.atomic():
+            # Se bloquea la persona para que dos cargas simultáneas no pasen el máximo de pendientes.
+            Persona.objects.select_for_update().get(pk=self.persona.pk)
+            if not puede_subir(self.request.user):
+                messages.error(
+                    self.request,
+                    f'Ya tenés {MAXIMO_PENDIENTES_POR_PERSONA} materiales esperando revisión. '
+                    'Cuando la biblioteca los revise, vas a poder subir más.',
+                )
+                return self.form_invalid(form)
+            material = form.save(commit=False)
+            material.usuario_carga = self.request.user
+            material.estado = MaterialDigital.Estado.PENDIENTE
+            material.fecha_carga = timezone.now()
+            material.save()
+        messages.success(
+            self.request,
+            f'Recibimos "{material.titulo}". La biblioteca lo va a revisar antes de publicarlo; '
+            'te avisamos por correo.',
+        )
+        return redirect(reverse('portal:perfil') + '#material-compartido')

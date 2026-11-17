@@ -1,0 +1,10 @@
+{% autoescape off %}Hola{% if nombre %}, {{ nombre }}{% endif %}:
+
+La biblioteca revisó el material que compartiste, "{{ material.titulo }}", y no pudo publicarlo.
+
+Motivo: {{ material.motivo_rechazo }}
+
+Si podés corregirlo, volvé a subirlo desde el portal. Si tenés dudas, consultá en la biblioteca.
+
+SIGEBI · Biblioteca UTN FRT Concepción
+{% endautoescape %}
