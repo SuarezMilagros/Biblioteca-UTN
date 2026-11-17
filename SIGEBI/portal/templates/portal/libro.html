@@ -30,8 +30,25 @@
                 <dt>Disponibilidad</dt>
                 <dd class="disponibilidad">{% include 'portal/_disponibilidad.html' %}</dd>
             </dl>
-            <p class="ayuda">{% if libro.ejemplares_disponibles %}Podés pedirlo prestado en la biblioteca.{% elif libro.ejemplares_activos %}Ahora están todos prestados. Consultá en la biblioteca cuándo vuelve uno.{% else %}La biblioteca no tiene ejemplares de este libro para prestar.{% endif %}</p>
+            <p class="ayuda">{% if libro.ejemplares_disponibles %}Podés pedirlo prestado en la biblioteca o reservarlo.{% elif libro.ejemplares_activos %}Ahora están todos prestados. Podés reservarlo y la biblioteca te avisa cuando haya uno.{% else %}La biblioteca no tiene ejemplares de este libro para prestar.{% endif %}</p>
         </div>
     </div>
+</section>
+
+<section class="tarjeta" aria-labelledby="titulo-reserva">
+    <div class="tarjeta-titulo"><h2 id="titulo-reserva">Reservar</h2></div>
+    {% if reserva_activa %}
+        {% include 'portal/_estado_reserva.html' with reserva=reserva_activa %}
+        <p class="ayuda">Podés ver y cancelar tus reservas en <a href="{% url 'portal:perfil' %}">Mi perfil</a>.</p>
+    {% elif motivos_para_no_reservar %}
+        <p class="ayuda">Ahora no podés reservar este libro:</p>
+        <ul class="ayuda">{% for motivo in motivos_para_no_reservar %}<li>{{ motivo }}</li>{% endfor %}</ul>
+    {% else %}
+        <p class="ayuda">La biblioteca revisa tu reserva y te aparta un ejemplar. Desde que la confirma, tenés {{ horas_para_retirar }} horas para retirarlo.</p>
+        <form method="post" action="{% url 'portal:reservar' libro.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="boton">{% icono 'calendario' %}Reservar este libro</button>
+        </form>
+    {% endif %}
 </section>
 {% endblock %}

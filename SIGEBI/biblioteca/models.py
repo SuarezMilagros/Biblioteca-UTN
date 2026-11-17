@@ -495,3 +495,85 @@ class MaterialDigital(models.Model):
     def nombre_para_descargar(self):
         """Nombre legible del archivo al abrirlo o guardarlo, a partir del título."""
         return f'{slugify(self.titulo)[:80] or "material"}.pdf'
+
+
+class Reserva(models.Model):
+    """Reserva de un libro físico desde el portal (Release 2, S8-02 y S8-03, D-R2-3).
+
+    El lector reserva un LIBRO. Al confirmar, el personal le aparta un EJEMPLAR por 48 horas.
+    Al retirarlo se registra el préstamo de siempre y la reserva queda RETIRADA.
+    """
+
+    class Estado(models.TextChoices):
+        PENDIENTE = 'PENDIENTE', 'Pendiente'
+        CONFIRMADA = 'CONFIRMADA', 'Confirmada'
+        RETIRADA = 'RETIRADA', 'Retirada'
+        RECHAZADA = 'RECHAZADA', 'Rechazada'
+        CANCELADA = 'CANCELADA', 'Cancelada'
+        VENCIDA = 'VENCIDA', 'Vencida'
+
+    ACTIVAS = [Estado.PENDIENTE, Estado.CONFIRMADA]
+
+    id_reserva = models.BigAutoField(primary_key=True)
+    persona = models.ForeignKey(Persona, on_delete=models.PROTECT, db_column='id_persona', related_name='reservas')
+    libro = models.ForeignKey(Libro, on_delete=models.PROTECT, db_column='id_libro', related_name='reservas')
+    ejemplar = models.ForeignKey(
+        Ejemplar, on_delete=models.PROTECT, null=True, blank=True, db_column='id_ejemplar', related_name='reservas'
+    )
+    prestamo = models.OneToOneField(
+        Prestamo, on_delete=models.PROTECT, null=True, blank=True, db_column='id_prestamo', related_name='reserva'
+    )
+    usuario_respuesta = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        db_column='id_usuario_respuesta', related_name='reservas_respondidas',
+    )
+    estado = models.CharField(max_length=12, choices=Estado.choices, default=Estado.PENDIENTE)
+    fecha_reserva = models.DateTimeField(default=timezone.now)
+    fecha_respuesta = models.DateTimeField(null=True, blank=True)
+    vence_retiro = models.DateTimeField(null=True, blank=True)
+    motivo_rechazo = models.TextField(blank=True, verbose_name='motivo del rechazo')
+
+    class Meta:
+        verbose_name = 'reserva'
+        verbose_name_plural = 'reservas'
+        constraints = [
+            # D-R2-16: un ejemplar no puede estar apartado por dos reservas a la vez.
+            models.UniqueConstraint(
+                fields=['ejemplar'],
+                condition=models.Q(estado='CONFIRMADA'),
+                name='una_reserva_vigente_por_ejemplar',
+                violation_error_message='Ese ejemplar ya está apartado por otra reserva.',
+            ),
+            # D-R2-15: una sola reserva activa por persona y libro.
+            models.UniqueConstraint(
+                fields=['persona', 'libro'],
+                condition=models.Q(estado__in=['PENDIENTE', 'CONFIRMADA']),
+                name='una_reserva_activa_por_libro',
+                violation_error_message='Ya tenés una reserva activa de este libro.',
+            ),
+            # Cada estado tiene exactamente los datos que le corresponden (ver el DER, sección 5.2).
+            models.CheckConstraint(
+                condition=(
+                    models.Q(estado='PENDIENTE', ejemplar__isnull=True, prestamo__isnull=True,
+                             fecha_respuesta__isnull=True, vence_retiro__isnull=True, motivo_rechazo='')
+                    | models.Q(estado='CONFIRMADA', ejemplar__isnull=False, prestamo__isnull=True,
+                               fecha_respuesta__isnull=False, vence_retiro__isnull=False, motivo_rechazo='')
+                    | models.Q(estado='RETIRADA', ejemplar__isnull=False, prestamo__isnull=False,
+                               fecha_respuesta__isnull=False, vence_retiro__isnull=False, motivo_rechazo='')
+                    | (models.Q(estado='RECHAZADA', ejemplar__isnull=True, prestamo__isnull=True,
+                                fecha_respuesta__isnull=False) & ~models.Q(motivo_rechazo=''))
+                    | models.Q(estado='CANCELADA', ejemplar__isnull=True, prestamo__isnull=True, motivo_rechazo='')
+                    | models.Q(estado='VENCIDA', ejemplar__isnull=False, prestamo__isnull=True,
+                               fecha_respuesta__isnull=False, vence_retiro__isnull=False, motivo_rechazo='')
+                ),
+                name='reserva_coherente',
+                violation_error_message='El estado de la reserva no coincide con sus datos.',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.libro} → {self.persona}'
+
+    @property
+    def activa(self):
+        return self.estado in self.ACTIVAS

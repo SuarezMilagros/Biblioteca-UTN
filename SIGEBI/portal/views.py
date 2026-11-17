@@ -4,11 +4,15 @@ Todo lo que se muestra acá se filtra en el servidor por la persona de la cuenta
 """
 from django.db.models import Q
 from django.utils import timezone
-from django.shortcuts import get_object_or_404
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.views.generic import DetailView, ListView, TemplateView
 
-from biblioteca.models import Categoria, Libro, MaterialDigital
+from biblioteca.models import Categoria, Libro, MaterialDigital, Reserva
+from biblioteca.reservas import (
+    HORAS_PARA_RETIRAR, MAXIMO_RESERVAS_ACTIVAS, ReservaNoPermitida, cancelar, motivos_para_no_reservar, reservar,
+)
 from biblioteca.views import abrir_pdf
 
 from .acceso import LectorRequeridoMixin
@@ -49,9 +53,13 @@ class PerfilView(LectorRequeridoMixin, TemplateView):
             prestamo.dias_restantes = (prestamo.fecha_vencimiento - hoy).days
             prestamo.dias_de_atraso = -prestamo.dias_restantes
         activos.sort(key=lambda prestamo: prestamo.fecha_vencimiento)
+        reservas = list(self.persona.reservas.select_related('libro', 'ejemplar').order_by('-fecha_reserva', '-pk'))
         contexto.update({
             'persona': self.persona,
             'carreras': self.persona.carreras.all(),
+            'reservas_activas': [reserva for reserva in reservas if reserva.activa],
+            'reservas_anteriores': [reserva for reserva in reservas if not reserva.activa][:10],
+            'maximo_reservas': MAXIMO_RESERVAS_ACTIVAS,
             'activos': activos,
             'devueltos': [prestamo for prestamo in prestamos if not prestamo.activo],
         })
@@ -134,6 +142,52 @@ class LibroView(LibrosDeSusCarrerasMixin, DetailView):
     def get_queryset(self):
         # Un libro de otra carrera responde 404, aunque se escriba la dirección a mano.
         return self.libros_visibles()
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        contexto['reserva_activa'] = self.persona.reservas.filter(
+            libro=self.object, estado__in=Reserva.ACTIVAS
+        ).first()
+        contexto['motivos_para_no_reservar'] = motivos_para_no_reservar(self.persona, self.object)
+        contexto['horas_para_retirar'] = HORAS_PARA_RETIRAR
+        return contexto
+
+
+class ReservarView(LibrosDeSusCarrerasMixin, View):
+    """El lector reserva un libro de sus carreras (S8-02). Las reglas están en biblioteca/reservas.py."""
+
+    http_method_names = ['post']
+
+    def post(self, request, pk):
+        libro = get_object_or_404(self.libros_visibles(), pk=pk)
+        try:
+            reservar(self.persona, libro)
+        except ReservaNoPermitida as error:
+            for motivo in error.motivos:
+                messages.error(request, motivo)
+        else:
+            messages.success(
+                request,
+                f'Reservaste "{libro}". Cuando la biblioteca la confirme, vas a tener '
+                f'{HORAS_PARA_RETIRAR} horas para retirarlo.',
+            )
+        return redirect('portal:libro', pk=libro.pk)
+
+
+class CancelarReservaView(LectorRequeridoMixin, View):
+    """El lector cancela una de sus reservas, mientras siga pendiente."""
+
+    http_method_names = ['post']
+
+    def post(self, request, pk):
+        reserva = get_object_or_404(self.persona.reservas, pk=pk)
+        try:
+            cancelar(reserva)
+        except ReservaNoPermitida as error:
+            messages.error(request, error.motivos[0])
+        else:
+            messages.success(request, f'Cancelaste la reserva de "{reserva.libro}".')
+        return redirect('portal:perfil')
 
 
 class MaterialDeSusCarrerasMixin(LectorRequeridoMixin):

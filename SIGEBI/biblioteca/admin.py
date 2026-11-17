@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, MaterialDigital, Persona, Prestamo
+from .models import Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, MaterialDigital, Persona, Prestamo, Reserva
 
 
 @admin.register(Categoria)
@@ -79,3 +79,10 @@ class MaterialDigitalAdmin(admin.ModelAdmin):
     list_display = ('titulo', 'tipo', 'carrera', 'estado', 'activo', 'fecha_carga')
     list_filter = ('tipo', 'estado', 'activo', 'carrera')
     search_fields = ('titulo', 'autores')
+
+
+@admin.register(Reserva)
+class ReservaAdmin(admin.ModelAdmin):
+    list_display = ('libro', 'persona', 'estado', 'fecha_reserva', 'ejemplar', 'vence_retiro')
+    list_filter = ('estado',)
+    search_fields = ('libro__titulo', 'persona__apellido', 'persona__documento')
