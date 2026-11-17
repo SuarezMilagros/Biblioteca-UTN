@@ -7,6 +7,7 @@ app_name = 'biblioteca'
 urlpatterns = [
     path('', views.inicio, name='inicio'),
     path('informes/', views.InformesView.as_view(), name='informes'),
+    path('informes/demanda/', views.InformeDemandaView.as_view(), name='informe_demanda'),
 
     path('categorias/', views.CategoriaListView.as_view(), name='categoria_list'),
     path('categorias/nueva/', views.CategoriaCreateView.as_view(), name='categoria_create'),

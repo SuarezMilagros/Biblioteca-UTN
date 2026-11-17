@@ -91,6 +91,16 @@
         </div>
     </section>
     {% endif %}
+
+    {% if perms.biblioteca.view_prestamo and perms.biblioteca.view_reserva %}
+    <section class="tarjeta" aria-labelledby="titulo-informe-demanda">
+        <div class="tarjeta-titulo"><h2 id="titulo-informe-demanda">Demanda de libros</h2></div>
+        <p class="texto-suave">Qué libros se piden más de lo que la biblioteca puede prestar, con préstamos y reservas de un período. Sirve para decidir qué comprar.</p>
+        <div class="botones-encabezado">
+            <a class="boton" href="{% url 'biblioteca:informe_demanda' %}">{% icono 'informe' %}Ver informe de demanda</a>
+        </div>
+    </section>
+    {% endif %}
 </div>
 
 <p class="texto-suave">Para un informe filtrado (por ejemplo, los préstamos de una persona), buscá en el listado correspondiente y usá su botón «Exportar CSV»: el archivo trae exactamente lo que se ve en pantalla.</p>

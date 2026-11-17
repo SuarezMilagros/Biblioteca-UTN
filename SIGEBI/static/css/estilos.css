@@ -942,3 +942,9 @@ a.indicador:hover { border-color: var(--naranja-borde); box-shadow: var(--sombra
 .opciones-estrellas label:has(input:checked) { border-color: var(--naranja); background: var(--naranja-suave); color: var(--naranja-texto); }
 .opciones-estrellas input { accent-color: var(--naranja-accion); margin: 0; }
 .celda-opinion .secundario { max-width: 46ch; white-space: normal; }
+
+/* Informe de demanda (S8-07) */
+.tabla th.numero, .tabla td.numero { text-align: right; font-variant-numeric: tabular-nums; }
+.filtro-casilla { display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 500; cursor: pointer; }
+.filtro-casilla input { width: 18px; height: 18px; accent-color: var(--naranja-accion); margin: 0; }
+.busqueda input[type="date"] { min-height: 42px; }
