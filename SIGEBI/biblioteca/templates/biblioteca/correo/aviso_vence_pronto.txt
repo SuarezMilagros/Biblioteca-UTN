@@ -1,0 +1,10 @@
+{% autoescape off %}Hola, {{ persona.nombre }}:
+
+Te recordamos que {% if dias == 0 %}hoy vence{% elif dias == 1 %}mañana vence{% else %}en {{ dias }} días vence{% endif %} el préstamo de "{{ prestamo.ejemplar.libro.titulo }}" (ejemplar {{ prestamo.ejemplar.codigo_inventario }}).
+
+Fecha de vencimiento: {{ prestamo.fecha_vencimiento|date:"d/m/Y" }}
+
+Devolvelo en la biblioteca a tiempo. Mientras tengas un préstamo vencido no vas a poder reservar libros desde el portal.
+
+SIGEBI · Biblioteca UTN FRT Concepción
+{% endautoescape %}

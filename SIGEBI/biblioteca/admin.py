@@ -1,6 +1,8 @@
 from django.contrib import admin
 
-from .models import Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, MaterialDigital, Persona, Prestamo, Reserva
+from .models import (
+    AvisoPrestamo, Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, MaterialDigital, Persona, Prestamo, Reserva,
+)
 
 
 @admin.register(Categoria)
@@ -86,3 +88,19 @@ class ReservaAdmin(admin.ModelAdmin):
     list_display = ('libro', 'persona', 'estado', 'fecha_reserva', 'ejemplar', 'vence_retiro')
     list_filter = ('estado',)
     search_fields = ('libro__titulo', 'persona__apellido', 'persona__documento')
+
+
+@admin.register(AvisoPrestamo)
+class AvisoPrestamoAdmin(admin.ModelAdmin):
+    """Solo consulta: los avisos los registra el comando enviar_avisos (S8-06)."""
+
+    list_display = ('prestamo', 'tipo', 'fecha_envio')
+    list_filter = ('tipo',)
+    search_fields = ('prestamo__persona__apellido', 'prestamo__persona__documento', 'prestamo__ejemplar__codigo_inventario')
+    list_select_related = ('prestamo__persona', 'prestamo__ejemplar')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

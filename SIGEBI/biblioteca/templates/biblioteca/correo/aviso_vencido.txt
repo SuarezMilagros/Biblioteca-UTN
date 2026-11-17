@@ -1,0 +1,10 @@
+{% autoescape off %}Hola, {{ persona.nombre }}:
+
+El préstamo de "{{ prestamo.ejemplar.libro.titulo }}" (ejemplar {{ prestamo.ejemplar.codigo_inventario }}) venció el {{ prestamo.fecha_vencimiento|date:"d/m/Y" }}{% if dias_de_atraso == 1 %} (hace 1 día){% else %} (hace {{ dias_de_atraso }} días){% endif %}.
+
+Devolvelo en la biblioteca lo antes posible. Mientras tengas un préstamo vencido no vas a poder reservar libros desde el portal.
+
+Si ya lo devolviste, no tenés que hacer nada: avisanos si te sigue apareciendo en Mi perfil.
+
+SIGEBI · Biblioteca UTN FRT Concepción
+{% endautoescape %}
