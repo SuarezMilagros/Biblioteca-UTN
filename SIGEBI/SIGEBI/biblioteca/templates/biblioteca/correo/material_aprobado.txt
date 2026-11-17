@@ -1,9 +1,0 @@
-{% autoescape off %}Hola{% if nombre %}, {{ nombre }}{% endif %}:
-
-La biblioteca revisó y publicó el material que compartiste: "{{ material.titulo }}".
-
-Ya lo pueden ver los alumnos y profesores de {{ material.carrera.nombre }} en la sección Material digital del portal.
-¡Gracias por compartirlo!
-
-SIGEBI · Biblioteca UTN FRT Concepción
-{% endautoescape %}

@@ -1,2 +1,0 @@
-{% comment %}Quién subió un material (S8-01): la persona (alumno o profesor) o, si no tiene, el personal. Requiere `material`.{% endcomment %}
-{% with persona=material.usuario_carga.persona %}{% if persona %}<a href="{% url 'biblioteca:persona_detail' persona.pk %}">{{ persona }}</a> <span class="badge badge-etiqueta">{{ persona.get_tipo_display }}</span>{% else %}{{ material.usuario_carga.get_full_name|default:material.usuario_carga.username }} <span class="badge badge-etiqueta">Biblioteca</span>{% endif %}{% endwith %}
