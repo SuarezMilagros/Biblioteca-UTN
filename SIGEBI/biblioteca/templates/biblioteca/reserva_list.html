@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% load interfaz %}
+
+{% block titulo %}Reservas · SIGEBI{% endblock %}
+{% block seccion %}Operación / <strong>Reservas</strong>{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Operación</p>
+        <h1>Reservas</h1>
+        <p class="bajada">Pedidos de libros físicos hechos desde el portal. Al confirmar uno, se aparta un ejemplar por {{ horas_para_retirar }} horas.</p>
+    </div>
+</div>
+
+<nav class="pestanas" aria-label="Estado de las reservas">
+    {% for clave, titulo in estados %}
+    <a href="?estado={{ clave }}"{% if estado == clave %} aria-current="page" class="activa"{% endif %}>{{ titulo }}{% if clave == 'pendientes' and cantidad_pendientes %} <span class="nav-contador">{{ cantidad_pendientes }}</span>{% elif clave == 'para_retirar' and cantidad_para_retirar %} <span class="nav-contador">{{ cantidad_para_retirar }}</span>{% endif %}</a>
+    {% endfor %}
+</nav>
+
+{% if reservas %}
+<p class="resumen-listado">{{ paginator.count }} reserva{{ paginator.count|pluralize }}</p>
+<div class="tabla-contenedor">
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Libro</th>
+                <th scope="col">Persona</th>
+                <th scope="col">Pedida</th>
+                {% if estado == 'pendientes' %}<th scope="col">Disponibles</th>{% elif estado == 'para_retirar' %}<th scope="col">Ejemplar</th><th scope="col">Retirar hasta</th>{% else %}<th scope="col">Respuesta</th><th scope="col">Estado</th>{% endif %}
+                <th scope="col"><span class="sr-only">Acciones</span></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for reserva in reservas %}
+            <tr>
+                <td data-etiqueta="Libro"><a href="{% url 'biblioteca:libro_detail' reserva.libro_id %}">{{ reserva.libro.titulo }}</a></td>
+                <td data-etiqueta="Persona"><a href="{% url 'biblioteca:persona_detail' reserva.persona_id %}">{{ reserva.persona }}</a><span class="secundario">{{ reserva.persona.documento }}</span></td>
+                <td data-etiqueta="Pedida">{{ reserva.fecha_reserva|date:"d/m/Y H:i" }}</td>
+                {% if estado == 'pendientes' %}
+                <td data-etiqueta="Disponibles">{% if reserva.disponibles %}{{ reserva.disponibles }}{% else %}<span class="badge badge-prestado">Ninguno</span>{% endif %}</td>
+                {% elif estado == 'para_retirar' %}
+                <td data-etiqueta="Ejemplar"><a class="codigo" href="{% url 'biblioteca:ejemplar_detail' reserva.ejemplar_id %}">{{ reserva.ejemplar.codigo_inventario }}</a></td>
+                <td data-etiqueta="Retirar hasta">{{ reserva.vence_retiro|date:"d/m/Y H:i" }}</td>
+                {% else %}
+                <td data-etiqueta="Respuesta">{{ reserva.fecha_respuesta|date:"d/m/Y H:i"|default:"—" }}</td>
+                <td data-etiqueta="Estado">{% include 'biblioteca/_estado_reserva.html' %}</td>
+                {% endif %}
+                <td class="acciones">
+                    {% if estado == 'pendientes' and perms.biblioteca.change_reserva %}
+                    <a href="{% url 'biblioteca:reserva_detail' reserva.pk %}" aria-label="Responder la reserva de {{ reserva.persona }}">{% icono 'editar' %}Responder</a>
+                    {% else %}
+                    <a href="{% url 'biblioteca:reserva_detail' reserva.pk %}" aria-label="Ver la reserva de {{ reserva.persona }}">{% icono 'ver' %}Ver</a>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include 'componentes/paginacion.html' %}
+{% elif estado == 'pendientes' %}
+{% include 'componentes/vacio.html' with icono='exito' titulo='No hay reservas pendientes.' texto='Todos los pedidos del portal ya tienen respuesta.' %}
+{% elif estado == 'para_retirar' %}
+{% include 'componentes/vacio.html' with icono='exito' titulo='No hay ejemplares apartados.' texto='Nadie tiene un libro esperando para retirar.' %}
+{% else %}
+{% include 'componentes/vacio.html' with icono='calendario' titulo='Todavía no hay reservas terminadas.' %}
+{% endif %}
+{% endblock %}

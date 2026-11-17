@@ -66,6 +66,22 @@
                 <a class="boton" href="{% url 'biblioteca:prestamo_devolver' prestamo_activo.pk %}">{% icono 'devolver' %}Registrar devolución</a>
             </div>
             {% endif %}
+            {% elif reserva_vigente %}
+            <div class="resumen-prestamo">
+                <span class="indicador-icono">{% icono 'reloj' %}</span>
+                <dl class="detalle">
+                    <dt>Apartado para</dt>
+                    <dd><a href="{% url 'biblioteca:persona_detail' reserva_vigente.persona_id %}">{{ reserva_vigente.persona }}</a></dd>
+
+                    <dt>Retirar hasta</dt>
+                    <dd>{{ reserva_vigente.vence_retiro|date:"d/m/Y H:i" }}</dd>
+                </dl>
+            </div>
+            {% if perms.biblioteca.view_reserva %}
+            <div class="acciones-formulario">
+                <a class="boton" href="{% url 'biblioteca:reserva_detail' reserva_vigente.pk %}">{% icono 'ver' %}Ver la reserva</a>
+            </div>
+            {% endif %}
             {% elif object.activo %}
             <p class="texto-suave">El ejemplar está en la biblioteca y se puede prestar.</p>
             {% if perms.biblioteca.add_prestamo %}
@@ -77,7 +93,7 @@
         </section>
 
         {% if perms.biblioteca.change_ejemplar %}
-        {% if object.activo and not prestamo_activo %}
+        {% if object.activo and not prestamo_activo and not reserva_vigente %}
         <section class="tarjeta zona-baja" aria-labelledby="titulo-baja">
             <div class="tarjeta-titulo"><h2 id="titulo-baja">Dar de baja</h2></div>
             <form method="post" action="{% url 'biblioteca:ejemplar_baja' object.pk %}" class="formulario formulario-baja"

@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% load interfaz %}
+
+{% block titulo %}Reserva de {{ reserva.persona }} · SIGEBI{% endblock %}
+{% block seccion %}Operación / Reservas / <strong>{{ reserva.libro.titulo }}</strong>{% endblock %}
+
+{% block contenido %}
+<a class="volver" href="{% url 'biblioteca:reserva_list' %}{% if reserva.estado == 'CONFIRMADA' %}?estado=para_retirar{% elif reserva.estado != 'PENDIENTE' %}?estado=anteriores{% endif %}">{% icono 'volver' %}Volver a reservas</a>
+
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Reserva</p>
+        <h1>{{ reserva.libro.titulo }}</h1>
+        <p class="bajada">Pedida por {{ reserva.persona }} el {{ reserva.fecha_reserva|date:"d/m/Y H:i" }}</p>
+    </div>
+</div>
+
+<div class="dos-columnas">
+    <section class="tarjeta" aria-labelledby="titulo-datos-reserva">
+        <div class="tarjeta-titulo"><h2 id="titulo-datos-reserva">Datos</h2>{% include 'biblioteca/_estado_reserva.html' %}</div>
+        <dl class="detalle">
+            <dt>Libro</dt>
+            <dd><a href="{% url 'biblioteca:libro_detail' reserva.libro_id %}">{{ reserva.libro.titulo }}</a></dd>
+
+            <dt>Persona</dt>
+            <dd><a href="{% url 'biblioteca:persona_detail' reserva.persona_id %}">{{ reserva.persona }}</a>
+                <span class="secundario">{{ reserva.persona.get_tipo_display }} · documento {{ reserva.persona.documento }}</span></dd>
+
+            <dt>Pedida</dt>
+            <dd>{{ reserva.fecha_reserva|date:"d/m/Y H:i" }}</dd>
+
+            {% if reserva.fecha_respuesta %}
+            <dt>Respondida</dt>
+            <dd>{{ reserva.fecha_respuesta|date:"d/m/Y H:i" }}{% if reserva.usuario_respuesta %} <span class="secundario">por {{ reserva.usuario_respuesta.get_full_name|default:reserva.usuario_respuesta.email }}</span>{% endif %}</dd>
+            {% endif %}
+
+            {% if reserva.ejemplar %}
+            <dt>Ejemplar apartado</dt>
+            <dd><a class="codigo" href="{% url 'biblioteca:ejemplar_detail' reserva.ejemplar_id %}">{{ reserva.ejemplar.codigo_inventario }}</a></dd>
+            {% endif %}
+
+            {% if reserva.vence_retiro %}
+            <dt>Retirar hasta</dt>
+            <dd>{{ reserva.vence_retiro|date:"d/m/Y H:i" }}</dd>
+            {% endif %}
+
+            {% if reserva.motivo_rechazo %}
+            <dt>Motivo del rechazo</dt>
+            <dd>{{ reserva.motivo_rechazo }}</dd>
+            {% endif %}
+
+            {% if reserva.prestamo %}
+            <dt>Préstamo</dt>
+            <dd>Desde el {{ reserva.prestamo.fecha_prestamo|date:"d/m/Y" }}, vence el {{ reserva.prestamo.fecha_vencimiento|date:"d/m/Y" }}</dd>
+            {% endif %}
+        </dl>
+    </section>
+
+    <div class="columna">
+    {% if reserva.estado == 'PENDIENTE' and perms.biblioteca.change_reserva %}
+        {% if not reserva.persona.activo %}
+        <div class="alerta-aviso" role="note">{% icono 'alerta' %}<p>La persona está dada de baja: no se le puede prestar.</p></div>
+        {% elif prestamos_vencidos %}
+        <div class="alerta-aviso" role="note">{% icono 'alerta' %}<p>La persona tiene {{ prestamos_vencidos }} préstamo{{ prestamos_vencidos|pluralize }} vencido{{ prestamos_vencidos|pluralize }} sin devolver.</p></div>
+        {% endif %}
+
+        <section class="tarjeta" aria-labelledby="titulo-confirmar">
+            <div class="tarjeta-titulo"><h2 id="titulo-confirmar">Confirmar</h2></div>
+            {% if ejemplares_para_apartar %}
+            <form method="post" action="{% url 'biblioteca:reserva_confirmar' reserva.pk %}" class="formulario">
+                {% csrf_token %}
+                <div class="campo">
+                    <label for="id_ejemplar">Ejemplar que se aparta</label>
+                    <select id="id_ejemplar" name="ejemplar" required>
+                        {% for ejemplar in ejemplares_para_apartar %}
+                        <option value="{{ ejemplar.pk }}">{{ ejemplar.codigo_inventario }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="ayuda">Queda apartado {{ horas_para_retirar }} horas. Se le avisa a la persona por correo.</small>
+                </div>
+                <button type="submit" class="boton">{% icono 'exito' %}Confirmar y apartar</button>
+            </form>
+            {% else %}
+            <p class="texto-suave">No hay ejemplares disponibles de este libro ahora. Podés esperar a que se devuelva uno o rechazar la reserva.</p>
+            {% endif %}
+        </section>
+
+        <section class="tarjeta" aria-labelledby="titulo-rechazar">
+            <div class="tarjeta-titulo"><h2 id="titulo-rechazar">Rechazar</h2></div>
+            <form method="post" action="{% url 'biblioteca:reserva_rechazar' reserva.pk %}" class="formulario">
+                {% csrf_token %}
+                <div class="campo">
+                    <label for="id_motivo">Motivo</label>
+                    <textarea id="id_motivo" name="motivo" rows="3" maxlength="500" required></textarea>
+                    <small class="ayuda">La persona lo ve en su perfil y en el correo de aviso.</small>
+                </div>
+                <button type="submit" class="boton-peligro">{% icono 'cerrar' %}Rechazar reserva</button>
+            </form>
+        </section>
+    {% elif reserva.estado == 'CONFIRMADA' and perms.biblioteca.change_reserva %}
+        <section class="tarjeta" aria-labelledby="titulo-retiro">
+            <div class="tarjeta-titulo"><h2 id="titulo-retiro">Retiro</h2></div>
+            <p class="texto-suave">Cuando la persona venga a buscar el libro, registrá el retiro: se crea el préstamo del ejemplar {{ reserva.ejemplar.codigo_inventario }} con el plazo habitual.</p>
+            <form method="post" action="{% url 'biblioteca:reserva_retirar' reserva.pk %}" class="formulario">
+                {% csrf_token %}
+                <button type="submit" class="boton">{% icono 'prestamo' %}Registrar retiro y prestar</button>
+            </form>
+        </section>
+
+        <section class="tarjeta" aria-labelledby="titulo-liberar">
+            <div class="tarjeta-titulo"><h2 id="titulo-liberar">Liberar el ejemplar</h2></div>
+            <p class="texto-suave">Si la persona avisó que no lo va a retirar, el ejemplar vuelve a estar disponible. Si no viene, se libera solo al vencer el plazo.</p>
+            <form method="post" action="{% url 'biblioteca:reserva_liberar' reserva.pk %}" class="formulario"
+                  data-confirmar="El ejemplar {{ reserva.ejemplar.codigo_inventario }} vuelve a estar disponible y la reserva queda cancelada."
+                  data-confirmar-titulo="¿Liberar el ejemplar?" data-confirmar-boton="Liberar">
+                {% csrf_token %}
+                <button type="submit" class="boton-secundario">{% icono 'devolver' %}Liberar ejemplar</button>
+            </form>
+        </section>
+    {% endif %}
+    </div>
+</div>
+{% endblock %}

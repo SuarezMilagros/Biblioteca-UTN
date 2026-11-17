@@ -91,13 +91,11 @@ class LibroQuerySet(models.QuerySet):
     def con_disponibilidad(self):
         """Agrega a cada libro `ejemplares_activos` y `ejemplares_disponibles`, en la misma consulta.
 
-        Disponible = activo y sin un préstamo sin devolver. Lo usan el listado del personal y el
-        catálogo del portal (S7-05), así los dos muestran siempre lo mismo.
+        Disponible = activo, sin un préstamo sin devolver y sin estar apartado por una reserva (D-R2-20).
+        Lo usan el listado del personal y el catálogo del portal, así los dos muestran siempre lo mismo.
         """
-        prestamo_activo = Prestamo.objects.filter(ejemplar=models.OuterRef('pk'), fecha_devolucion__isnull=True)
         disponibles = (
-            Ejemplar.objects.filter(libro=models.OuterRef('pk'), activo=True)
-            .filter(~models.Exists(prestamo_activo))
+            Ejemplar.objects.disponibles().filter(libro=models.OuterRef('pk'))
             .order_by()
             .values('libro')
             .annotate(cantidad=models.Count('pk'))
@@ -157,7 +155,18 @@ class EjemplarQuerySet(models.QuerySet):
         la propiedad `prestado` usa ese dato cuando está.
         """
         prestamo_activo = Prestamo.objects.filter(ejemplar=models.OuterRef('pk'), fecha_devolucion__isnull=True)
-        return self.annotate(con_prestamo_activo=models.Exists(prestamo_activo))
+        return self.annotate(
+            con_prestamo_activo=models.Exists(prestamo_activo),
+            # S8-03: apartado por una reserva confirmada que todavía no venció.
+            con_reserva_vigente=models.Exists(Reserva.objects.vigentes().filter(ejemplar=models.OuterRef('pk'))),
+        )
+
+    def disponibles(self):
+        """Se pueden prestar o apartar ahora: activos, sin préstamo sin devolver y sin reserva vigente."""
+        prestamo_activo = Prestamo.objects.filter(ejemplar=models.OuterRef('pk'), fecha_devolucion__isnull=True)
+        return self.filter(activo=True).exclude(models.Exists(prestamo_activo)).exclude(
+            models.Exists(Reserva.objects.vigentes().filter(ejemplar=models.OuterRef('pk')))
+        )
 
 
 class Ejemplar(models.Model):
@@ -245,9 +254,16 @@ class Ejemplar(models.Model):
         return self.prestamos.filter(fecha_devolucion__isnull=True).exists()
 
     @property
+    def apartado(self):
+        """Apartado para una reserva confirmada vigente (S8-03). Usa la anotación si la hay."""
+        if hasattr(self, 'con_reserva_vigente'):
+            return self.con_reserva_vigente
+        return Reserva.objects.vigentes().filter(ejemplar=self).exists()
+
+    @property
     def disponible(self):
-        """Se puede prestar: está activo y no tiene un préstamo sin devolver."""
-        return self.activo and not self.prestado
+        """Se puede prestar: está activo, no tiene un préstamo sin devolver y no está apartado (D-R2-20)."""
+        return self.activo and not self.prestado and not self.apartado
 
 
 class Persona(models.Model):
@@ -497,6 +513,12 @@ class MaterialDigital(models.Model):
         return f'{slugify(self.titulo)[:80] or "material"}.pdf'
 
 
+class ReservaQuerySet(models.QuerySet):
+    def vigentes(self):
+        """Confirmadas con el plazo de retiro todavía abierto: su ejemplar está apartado."""
+        return self.filter(estado='CONFIRMADA', vence_retiro__gt=timezone.now())
+
+
 class Reserva(models.Model):
     """Reserva de un libro físico desde el portal (Release 2, S8-02 y S8-03, D-R2-3).
 
@@ -513,6 +535,8 @@ class Reserva(models.Model):
         VENCIDA = 'VENCIDA', 'Vencida'
 
     ACTIVAS = [Estado.PENDIENTE, Estado.CONFIRMADA]
+
+    objects = ReservaQuerySet.as_manager()
 
     id_reserva = models.BigAutoField(primary_key=True)
     persona = models.ForeignKey(Persona, on_delete=models.PROTECT, db_column='id_persona', related_name='reservas')

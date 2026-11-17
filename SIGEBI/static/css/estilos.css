@@ -336,7 +336,22 @@ a:hover { color: var(--naranja-hover); }
 .acciones .icono { width: 16px; height: 16px; }
 /* Botón de un formulario POST con aspecto de acción de la tabla (por ejemplo, dar de baja material). S7-07 */
 .acciones form.en-linea { display: inline; margin: 0; }
+/* Cantidad junto a un enlace del menú (por ejemplo, reservas pendientes). S8-03 */
+.nav-contador { margin-left: auto; min-width: 1.4rem; padding: 0 0.4rem; border-radius: 999px; background: var(--naranja-accion); color: #fff; font-size: 0.75rem; font-weight: 700; text-align: center; line-height: 1.4rem; }
 .acciones .enlace-boton { border: 0; background: none; font: inherit; cursor: pointer; }
+
+/* Pestañas de estado (Reservas) */
+.pestanas { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-bottom: 1rem; border-bottom: 1px solid var(--borde); }
+.pestanas a {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.6rem 0.9rem; margin-bottom: -1px;
+    color: var(--texto-suave); font-weight: 600; text-decoration: none;
+    border-bottom: 3px solid transparent;
+}
+.pestanas a:hover { color: var(--texto-fuerte); }
+.pestanas a.activa { color: var(--naranja-texto); border-bottom-color: var(--naranja); }
+.pestanas a:focus-visible { outline: none; box-shadow: var(--foco); border-radius: var(--radio-chico); }
+.pestanas .nav-contador { margin-left: 0; }
 
 /* =====================================================================
    Tarjetas
@@ -724,6 +739,8 @@ a.indicador:hover { border-color: var(--naranja-borde); box-shadow: var(--sombra
 
 .resumen-prestamo { display: flex; gap: 0.9rem; align-items: flex-start; }
 .resumen-prestamo .indicador-icono { flex-shrink: 0; width: 42px; height: 42px; }
+.resumen-prestamo .detalle { flex: 1; min-width: 0; }
+.detalle .secundario { display: block; color: var(--texto-suave); font-size: 0.8rem; font-weight: 400; }
 
 /* Vista previa en el formulario de libro */
 .vista-previa { text-align: center; position: sticky; top: 88px; }
