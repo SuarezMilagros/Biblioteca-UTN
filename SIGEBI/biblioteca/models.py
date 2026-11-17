@@ -601,3 +601,36 @@ class Reserva(models.Model):
     @property
     def activa(self):
         return self.estado in self.ACTIVAS
+
+
+class AvisoPrestamo(models.Model):
+    """Correo que se le envió a una persona por un préstamo (Release 2, S8-06, D-R2-27).
+
+    Se registra al enviarlo. La base garantiza un solo aviso de cada tipo por préstamo: así el comando
+    `enviar_avisos` se puede ejecutar varias veces sin repetir correos.
+    """
+
+    class Tipo(models.TextChoices):
+        VENCE_PRONTO = 'VENCE_PRONTO', 'Vence pronto'
+        VENCIDO = 'VENCIDO', 'Venció'
+
+    id_aviso = models.BigAutoField(primary_key=True)
+    prestamo = models.ForeignKey(
+        Prestamo, on_delete=models.CASCADE, db_column='id_prestamo', related_name='avisos'
+    )
+    tipo = models.CharField(max_length=12, choices=Tipo.choices)
+    fecha_envio = models.DateTimeField(default=timezone.now, verbose_name='fecha de envío')
+
+    class Meta:
+        verbose_name = 'aviso de préstamo'
+        verbose_name_plural = 'avisos de préstamos'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['prestamo', 'tipo'],
+                name='un_aviso_por_tipo_y_prestamo',
+                violation_error_message='Ese aviso ya se envió para este préstamo.',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.get_tipo_display()} · {self.prestamo}'
