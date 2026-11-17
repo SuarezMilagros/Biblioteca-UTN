@@ -60,6 +60,10 @@ urlpatterns = [
 
     path('prestamos/', views.PrestamoListView.as_view(), name='prestamo_list'),
 
+    path('opiniones/', views.OpinionListView.as_view(), name='opinion_list'),
+    path('opiniones/<int:pk>/aprobar/', views.OpinionAprobarView.as_view(), name='opinion_aprobar'),
+    path('opiniones/<int:pk>/rechazar/', views.OpinionRechazarView.as_view(), name='opinion_rechazar'),
+
     path('reservas/', views.ReservaListView.as_view(), name='reserva_list'),
     path('reservas/<int:pk>/', views.ReservaDetailView.as_view(), name='reserva_detail'),
     path('reservas/<int:pk>/confirmar/', views.ReservaConfirmarView.as_view(), name='reserva_confirmar'),

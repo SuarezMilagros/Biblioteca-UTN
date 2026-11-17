@@ -9,6 +9,7 @@ urlpatterns = [
     path('catalogo/', views.CatalogoView.as_view(), name='catalogo'),
     path('catalogo/<int:pk>/', views.LibroView.as_view(), name='libro'),
     path('catalogo/<int:pk>/reservar/', views.ReservarView.as_view(), name='reservar'),
+    path('catalogo/<int:pk>/opinar/', views.OpinarView.as_view(), name='opinar'),
     path('reservas/<int:pk>/cancelar/', views.CancelarReservaView.as_view(), name='cancelar_reserva'),
     path('material/', views.MaterialView.as_view(), name='material'),
     path('material/compartir/', views.CompartirMaterialView.as_view(), name='material_compartir'),

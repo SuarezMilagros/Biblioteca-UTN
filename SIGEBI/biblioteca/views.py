@@ -23,7 +23,11 @@ from cuentas.roles import es_lector
 from cuentas.views import ERRORES_DE_ENVIO
 
 from .informes import ExportarCSVMixin, nombre_de_archivo
-from .models import Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, MaterialDigital, Persona, Prestamo, Reserva
+from .models import (
+    Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, MaterialDigital, Opinion, Persona, Prestamo, Reserva,
+)
+from .opiniones import OpinionNoPermitida
+from .opiniones import revisar as revisar_opinion
 from . import qr
 from . import reservas as reglas_de_reservas
 from . import revision_de_material
@@ -914,6 +918,68 @@ class ReservaLiberarView(AccionDeReservaView):
 
     def destino(self, reserva):
         return reverse('biblioteca:reserva_list') + '?estado=para_retirar'
+
+
+# ---------- Opiniones (Release 2, S8-04) ----------
+
+ESTADOS_DE_OPINION = {
+    'pendientes': ('Pendientes', Opinion.Estado.PENDIENTE, ['fecha_opinion', 'pk']),
+    'aprobadas': ('Aprobadas', Opinion.Estado.APROBADA, ['-fecha_revision', '-pk']),
+    'rechazadas': ('Rechazadas', Opinion.Estado.RECHAZADA, ['-fecha_revision', '-pk']),
+}
+
+
+class OpinionListView(PermissionRequiredMixin, ListView):
+    """Opiniones de alumnos y profesores. Las pendientes se aprueban o rechazan desde acá."""
+
+    permission_required = 'biblioteca.view_opinion'
+    template_name = 'biblioteca/opinion_list.html'
+    context_object_name = 'opiniones'
+    paginate_by = ELEMENTOS_POR_PAGINA
+
+    def estado(self):
+        estado = self.request.GET.get('estado', 'pendientes')
+        return estado if estado in ESTADOS_DE_OPINION else 'pendientes'
+
+    def get_queryset(self):
+        _, estado, orden = ESTADOS_DE_OPINION[self.estado()]
+        return Opinion.objects.filter(estado=estado).select_related('libro', 'persona', 'usuario_revision').order_by(*orden)
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        contexto['estado'] = self.estado()
+        contexto['estados'] = [(clave, datos[0]) for clave, datos in ESTADOS_DE_OPINION.items()]
+        contexto['cantidad_pendientes'] = Opinion.objects.filter(estado=Opinion.Estado.PENDIENTE).count()
+        return contexto
+
+
+class OpinionRevisarView(PermissionRequiredMixin, View):
+    """Aprueba (se publica) o rechaza una opinión pendiente."""
+
+    permission_required = 'biblioteca.change_opinion'
+    http_method_names = ['post']
+    estado = None
+    mensaje = ''
+
+    def post(self, request, pk):
+        opinion = get_object_or_404(Opinion, pk=pk)
+        try:
+            revisar_opinion(opinion, self.estado, request.user)
+        except OpinionNoPermitida as error:
+            messages.error(request, error.motivo)
+        else:
+            messages.success(request, self.mensaje.format(libro=opinion.libro, persona=opinion.persona))
+        return redirect(reverse('biblioteca:opinion_list') + '?estado=pendientes')
+
+
+class OpinionAprobarView(OpinionRevisarView):
+    estado = Opinion.Estado.APROBADA
+    mensaje = 'Opinión de "{persona}" sobre "{libro}" aprobada: ya se ve en el portal.'
+
+
+class OpinionRechazarView(OpinionRevisarView):
+    estado = Opinion.Estado.RECHAZADA
+    mensaje = 'Opinión de "{persona}" sobre "{libro}" rechazada.'
 
 
 # ---------- Personas ----------

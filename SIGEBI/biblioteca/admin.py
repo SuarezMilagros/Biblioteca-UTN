@@ -1,7 +1,8 @@
 from django.contrib import admin
 
 from .models import (
-    AvisoPrestamo, Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, MaterialDigital, Persona, Prestamo, Reserva,
+    AvisoPrestamo, Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, MaterialDigital, Opinion, Persona, Prestamo,
+    Reserva,
 )
 
 
@@ -104,3 +105,10 @@ class AvisoPrestamoAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+
+@admin.register(Opinion)
+class OpinionAdmin(admin.ModelAdmin):
+    list_display = ('libro', 'persona', 'estrellas', 'estado', 'fecha_opinion')
+    list_filter = ('estado', 'estrellas')
+    search_fields = ('libro__titulo', 'persona__apellido', 'persona__documento')

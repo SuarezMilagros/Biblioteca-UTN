@@ -914,3 +914,31 @@ a.indicador:hover { border-color: var(--naranja-borde); box-shadow: var(--sombra
     .etiquetas { gap: 0.2cm; }
     .etiqueta { border-color: #BBB; }
 }
+
+/* =====================================================================
+   Opiniones sobre los libros (S8-04)
+   ===================================================================== */
+
+.estrellas { display: inline-flex; letter-spacing: 0.05em; font-size: 1rem; line-height: 1; vertical-align: -1px; }
+.estrella-llena { color: #B7791F; }
+.estrella-vacia { color: #D7DBE0; }
+.valoracion { display: inline-flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
+.secundario.valoracion { display: flex; margin-top: 0.15rem; }
+.opiniones { list-style: none; margin: 0 0 1.25rem; padding: 0; display: grid; gap: 0.9rem; }
+.opinion { padding-bottom: 0.9rem; border-bottom: 1px solid var(--borde); }
+.opinion:last-child { border-bottom: 0; }
+.opinion p { margin: 0.4rem 0 0; }
+.opinion-cabeza { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.mi-opinion { padding-top: 1rem; border-top: 1px solid var(--borde); }
+.mi-opinion h3 { margin: 0 0 0.6rem; font-size: 1rem; }
+.elegir-estrellas { border: 0; padding: 0; margin: 0 0 1rem; min-width: 0; }
+.elegir-estrellas legend { font-weight: 600; font-size: 0.9rem; color: var(--texto-fuerte); padding: 0; margin-bottom: 0.4rem; }
+.opciones-estrellas { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.opciones-estrellas label {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.45rem 0.75rem; border: 1px solid var(--borde-campo); border-radius: var(--radio-chico);
+    font-weight: 600; cursor: pointer; background: var(--blanco);
+}
+.opciones-estrellas label:has(input:checked) { border-color: var(--naranja); background: var(--naranja-suave); color: var(--naranja-texto); }
+.opciones-estrellas input { accent-color: var(--naranja-accion); margin: 0; }
+.celda-opinion .secundario { max-width: 46ch; white-space: normal; }

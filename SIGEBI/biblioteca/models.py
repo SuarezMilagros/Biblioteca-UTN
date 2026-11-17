@@ -108,6 +108,22 @@ class LibroQuerySet(models.QuerySet):
             ),
         )
 
+    def con_opiniones(self):
+        """Agrega `promedio_estrellas` y `cantidad_opiniones`, contando solo las opiniones aprobadas (S8-04).
+
+        El promedio no se guarda: se calcula cada vez (DER, sección 7), así nunca queda desactualizado.
+        """
+        # Subconsultas (como la disponibilidad): no se mezclan con otras anotaciones que cuentan ejemplares.
+        aprobadas = (
+            Opinion.objects.filter(libro=models.OuterRef('pk'), estado='APROBADA').order_by().values('libro')
+        )
+        promedio = aprobadas.annotate(promedio=models.Avg('estrellas')).values('promedio')
+        cantidad = aprobadas.annotate(cantidad=models.Count('pk')).values('cantidad')
+        return self.annotate(
+            promedio_estrellas=models.Subquery(promedio, output_field=models.FloatField()),
+            cantidad_opiniones=Coalesce(models.Subquery(cantidad, output_field=models.IntegerField()), 0),
+        )
+
     def de_las_carreras(self, carreras):
         """Libros cuya categoría corresponde a alguna de esas carreras (D-R2-6), sin repetir."""
         return self.filter(categoria__in=Categoria.objects.filter(carreras__in=carreras))
@@ -616,7 +632,7 @@ class AvisoPrestamo(models.Model):
 
     id_aviso = models.BigAutoField(primary_key=True)
     prestamo = models.ForeignKey(
-        Prestamo, on_delete=models.CASCADE, db_column='id_prestamo', related_name='avisos'
+        Prestamo, on_delete=models.PROTECT, db_column='id_prestamo', related_name='avisos'
     )
     tipo = models.CharField(max_length=12, choices=Tipo.choices)
     fecha_envio = models.DateTimeField(default=timezone.now, verbose_name='fecha de envío')
@@ -634,3 +650,62 @@ class AvisoPrestamo(models.Model):
 
     def __str__(self):
         return f'{self.get_tipo_display()} · {self.prestamo}'
+
+
+class Opinion(models.Model):
+    """Estrellas y comentario de un alumno o profesor sobre un libro que tuvo prestado (Release 2, S8-04, D-R2-29).
+
+    Una por persona y libro; se puede editar. Se publica cuando un bibliotecario la aprueba (DER, sección 5.3).
+    """
+
+    class Estado(models.TextChoices):
+        PENDIENTE = 'PENDIENTE', 'Pendiente'
+        APROBADA = 'APROBADA', 'Aprobada'
+        RECHAZADA = 'RECHAZADA', 'Rechazada'
+
+    id_opinion = models.BigAutoField(primary_key=True)
+    persona = models.ForeignKey(Persona, on_delete=models.PROTECT, db_column='id_persona', related_name='opiniones')
+    libro = models.ForeignKey(Libro, on_delete=models.PROTECT, db_column='id_libro', related_name='opiniones')
+    estrellas = models.PositiveSmallIntegerField()
+    comentario = models.TextField(blank=True)
+    estado = models.CharField(max_length=10, choices=Estado.choices, default=Estado.PENDIENTE)
+    fecha_opinion = models.DateTimeField(default=timezone.now, verbose_name='fecha de la opinión')
+    usuario_revision = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        db_column='id_usuario_revision', related_name='opiniones_revisadas',
+    )
+    fecha_revision = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'opinión'
+        verbose_name_plural = 'opiniones'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['persona', 'libro'],
+                name='una_opinion_por_persona_y_libro',
+                violation_error_message='Ya opinaste sobre este libro.',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(estrellas__gte=1, estrellas__lte=5),
+                name='opinion_estrellas_validas',
+                violation_error_message='Las estrellas van de 1 a 5.',
+            ),
+            # Pendiente: sin revisión. Aprobada o rechazada: con quién y cuándo la revisó.
+            models.CheckConstraint(
+                condition=(
+                    models.Q(estado='PENDIENTE', usuario_revision__isnull=True, fecha_revision__isnull=True)
+                    | models.Q(estado__in=['APROBADA', 'RECHAZADA'], usuario_revision__isnull=False,
+                               fecha_revision__isnull=False)
+                ),
+                name='opinion_revision_coherente',
+                violation_error_message='El estado de la opinión no coincide con los datos de su revisión.',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.libro} · {self.estrellas}★ · {self.persona}'
+
+    @property
+    def autor_publico(self):
+        """Cómo se muestra quien opinó: nombre e inicial del apellido, sin datos personales."""
+        return f'{self.persona.nombre} {self.persona.apellido[:1]}.'

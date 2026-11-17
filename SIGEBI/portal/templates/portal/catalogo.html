@@ -54,7 +54,7 @@
                 <td data-etiqueta="Título">
                     <div class="celda-libro">
                         <span class="miniatura" aria-hidden="true">{% if libro.imagen %}<img src="{{ libro.imagen.url }}" alt="">{% else %}{{ libro.titulo|slice:":1"|upper }}{% endif %}</span>
-                        <span><a href="{% url 'portal:libro' libro.pk %}">{{ libro.titulo }}</a><span class="secundario">{{ libro.autor }} · {{ libro.editorial }}</span></span>
+                        <span><a href="{% url 'portal:libro' libro.pk %}">{{ libro.titulo }}</a><span class="secundario">{{ libro.autor }} · {{ libro.editorial }}</span>{% if libro.cantidad_opiniones %}<span class="secundario valoracion">{% estrellas libro.promedio_estrellas libro.cantidad_opiniones %} ({{ libro.cantidad_opiniones }})</span>{% endif %}</span>
                     </div>
                 </td>
                 <td data-etiqueta="Categoría"><span class="badge badge-etiqueta">{{ libro.categoria }}</span></td>
