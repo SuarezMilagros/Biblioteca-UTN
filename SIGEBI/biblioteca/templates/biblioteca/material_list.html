@@ -9,7 +9,7 @@
     <div>
         <p class="sobretitulo">Catálogo</p>
         <h1>Material digital</h1>
-        <p class="bajada">Libros, tesis y apuntes en PDF. Cada alumno y profesor ve el material de sus carreras.</p>
+        <p class="bajada">Libros, tesis y apuntes en PDF. Cada alumno y profesor ve el material de sus carreras. Lo que ellos comparten se publica cuando lo aprueba la biblioteca.</p>
     </div>
     {% if perms.biblioteca.add_materialdigital %}
     <div class="botones-encabezado">
@@ -17,6 +17,13 @@
     </div>
     {% endif %}
 </div>
+
+{% if cantidad_para_revisar and estado != 'pendientes' %}
+<div class="alerta-aviso" role="note">
+    {% icono 'alerta' %}
+    <p>Hay {{ cantidad_para_revisar }} material{{ cantidad_para_revisar|pluralize:"es" }} que compartieron alumnos o profesores esperando revisión. <a href="?estado=pendientes">Revisar</a></p>
+</div>
+{% endif %}
 
 <div class="barra-filtros">
     <form method="get" class="busqueda" role="search" action="{% url 'biblioteca:material_list' %}">
@@ -37,9 +44,7 @@
         </select>
         <label for="estado" class="sr-only">Estado</label>
         <select id="estado" name="estado">
-            <option value="activos"{% if estado == 'activos' %} selected{% endif %}>Publicados</option>
-            <option value="baja"{% if estado == 'baja' %} selected{% endif %}>Dados de baja</option>
-            <option value="todos"{% if estado == 'todos' %} selected{% endif %}>Todos</option>
+            {% for clave, titulo in estados %}<option value="{{ clave }}"{% if estado == clave %} selected{% endif %}>{{ titulo }}</option>{% endfor %}
         </select>
         <button type="submit" class="boton">Buscar</button>
     </form>
@@ -54,6 +59,7 @@
                 <th scope="col">Título</th>
                 <th scope="col">Tipo</th>
                 <th scope="col">Carrera</th>
+                <th scope="col">Subido por</th>
                 <th scope="col">Estado</th>
                 <th scope="col"><span class="sr-only">Acciones</span></th>
             </tr>
@@ -64,10 +70,17 @@
                 <td data-etiqueta="Título"><strong>{{ material.titulo }}</strong><span class="secundario">{{ material.autores|default:"Sin autores" }}{% if material.anio %} · {{ material.anio }}{% endif %}</span></td>
                 <td data-etiqueta="Tipo"><span class="badge badge-etiqueta">{{ material.get_tipo_display }}</span></td>
                 <td data-etiqueta="Carrera">{{ material.carrera.nombre }}</td>
-                <td data-etiqueta="Estado">{% if material.activo %}<span class="badge badge-disponible">Publicado</span>{% else %}<span class="badge badge-baja">Dado de baja</span>{% endif %}</td>
+                <td data-etiqueta="Subido por">{% include 'biblioteca/_subido_por.html' %}<span class="secundario">{{ material.fecha_carga|date:"d/m/Y" }}</span></td>
+                <td data-etiqueta="Estado">{% include 'biblioteca/_estado_material.html' %}</td>
                 <td class="acciones">
+                    {% if material.estado == 'PENDIENTE' %}
+                    <a href="{% url 'biblioteca:material_revisar' material.pk %}" aria-label="Revisar {{ material.titulo }}">{% icono 'ver' %}Revisar</a>
+                    {% elif material.estado == 'RECHAZADO' %}
+                    <a href="{% url 'biblioteca:material_revisar' material.pk %}" aria-label="Ver {{ material.titulo }}">{% icono 'ver' %}Ver</a>
+                    {% else %}
                     <a href="{% url 'biblioteca:material_archivo' material.pk %}" target="_blank" rel="noopener">{% icono 'documento' %}Abrir PDF</a>
-                    {% if perms.biblioteca.change_materialdigital %}
+                    {% endif %}
+                    {% if perms.biblioteca.change_materialdigital and material.estado == 'APROBADO' %}
                     <a href="{% url 'biblioteca:material_update' material.pk %}">{% icono 'editar' %}Editar</a>
                     {% if material.activo %}
                     <form method="post" action="{% url 'biblioteca:material_baja' material.pk %}" class="en-linea"
@@ -87,6 +100,8 @@
     </table>
 </div>
 {% include 'componentes/paginacion.html' %}
+{% elif estado == 'pendientes' %}
+{% include 'componentes/vacio.html' with icono='exito' titulo='No hay material para revisar.' texto='Todo lo que compartieron alumnos y profesores ya tiene respuesta.' %}
 {% else %}
 {% url 'biblioteca:material_create' as url_nuevo %}
 {% include 'componentes/vacio.html' with icono='documento' titulo='No hay material para mostrar.' texto='Cuando subas un PDF, aparecerá en esta lista.' accion_url=url_nuevo accion_texto='Subir material' %}

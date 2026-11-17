@@ -21,6 +21,9 @@ urlpatterns = [
     path('material/nuevo/', views.MaterialDigitalCreateView.as_view(), name='material_create'),
     path('material/<int:pk>/editar/', views.MaterialDigitalUpdateView.as_view(), name='material_update'),
     path('material/<int:pk>/archivo/', views.MaterialDigitalArchivoView.as_view(), name='material_archivo'),
+    path('material/<int:pk>/', views.MaterialDigitalRevisarView.as_view(), name='material_revisar'),
+    path('material/<int:pk>/aprobar/', views.MaterialDigitalAprobarView.as_view(), name='material_aprobar'),
+    path('material/<int:pk>/rechazar/', views.MaterialDigitalRechazarView.as_view(), name='material_rechazar'),
     path('material/<int:pk>/baja/', views.MaterialDigitalBajaView.as_view(), name='material_baja'),
     path('material/<int:pk>/reactivar/', views.MaterialDigitalReactivarView.as_view(), name='material_reactivar'),
 

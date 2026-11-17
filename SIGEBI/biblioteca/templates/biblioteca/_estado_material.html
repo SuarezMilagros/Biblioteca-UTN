@@ -1,0 +1,2 @@
+{% comment %}Estado de un material digital, para el personal (S8-01). Requiere `material`.{% endcomment %}
+{% if material.estado == 'PENDIENTE' %}<span class="badge badge-prestado">Para revisar</span>{% elif material.estado == 'RECHAZADO' %}<span class="badge badge-vencido">Rechazado</span>{% elif not material.activo %}<span class="badge badge-baja">Dado de baja</span>{% else %}<span class="badge badge-disponible">Publicado</span>{% endif %}

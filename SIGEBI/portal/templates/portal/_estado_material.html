@@ -1,0 +1,10 @@
+{% comment %}Estado de un material que compartió el lector (S8-01). Requiere `material`.{% endcomment %}
+{% if material.estado == 'PENDIENTE' %}
+    <span class="badge badge-prestado">En revisión</span> <span class="secundario">La biblioteca todavía no lo revisó.</span>
+{% elif material.estado == 'RECHAZADO' %}
+    <span class="badge badge-vencido">Rechazado</span> <span class="secundario">{{ material.motivo_rechazo }}</span>
+{% elif not material.activo %}
+    <span class="badge badge-baja">Dado de baja</span> <span class="secundario">Ya no se ve en el portal.</span>
+{% else %}
+    <span class="badge badge-disponible">Publicado</span>
+{% endif %}

@@ -643,6 +643,16 @@ a.indicador:hover { border-color: var(--naranja-borde); box-shadow: var(--sombra
 .formulario input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--naranja-accion); margin: 0; }
 .campo-casilla label { display: inline-flex; align-items: center; gap: 0.6rem; margin: 0; font-weight: 600; cursor: pointer; }
 
+/* Declaración de derechos de autor al compartir material (S8-01) */
+.aviso-derechos { margin: 0.4rem 0 1.1rem; padding: 0.9rem 1rem; border: 1px solid var(--ambar-claro); border-left: 4px solid var(--ambar); border-radius: var(--radio-chico); background: #FFFBF2; }
+.aviso-derechos p { margin: 0 0 0.6rem; font-size: 0.9rem; }
+.aviso-derechos-titulo { display: flex; align-items: center; gap: 0.4rem; font-weight: 700; color: var(--ambar); }
+.aviso-derechos-titulo .icono { width: 18px; height: 18px; }
+.aviso-derechos label { display: flex; align-items: flex-start; gap: 0.6rem; margin: 0; font-weight: 600; font-size: 0.9rem; color: var(--texto-fuerte); cursor: pointer; }
+.aviso-derechos input[type="checkbox"] { flex: none; margin-top: 2px; }
+.aviso-derechos.campo-error { border-color: var(--rojo); border-left-color: var(--rojo); background: var(--rojo-claro); }
+.aviso-derechos .error { margin-top: 0.5rem; }
+
 /* Varias casillas (por ejemplo, las carreras de una persona o de una categoría). S7-02 */
 .campo-casillas { border: 0; padding: 0; margin: 0 0 1.1rem; min-width: 0; }
 .campo-casillas legend { font-weight: 600; font-size: 0.9rem; color: var(--texto-fuerte); padding: 0; }
@@ -733,6 +743,7 @@ a.indicador:hover { border-color: var(--naranja-borde); box-shadow: var(--sombra
 .anteriores { margin: 0.5rem 0 1rem; }
 .anteriores summary { cursor: pointer; font-weight: 600; color: var(--naranja-texto); }
 .lista-simple { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; gap: 0.35rem; font-size: 0.9rem; }
+.lista-revision { margin: 0; padding-left: 1.1rem; display: grid; gap: 0.45rem; font-size: 0.9rem; color: var(--texto); }
 .cifra { background: var(--fondo); border-radius: var(--radio-chico); padding: 0.75rem 0.9rem; }
 .cifra strong { display: block; font-size: 1.4rem; color: var(--texto-fuerte); line-height: 1.2; }
 .cifra span { font-size: 0.8rem; color: var(--texto-suave); }

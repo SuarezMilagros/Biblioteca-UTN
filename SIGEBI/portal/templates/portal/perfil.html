@@ -87,6 +87,37 @@
 </details>
 {% endif %}
 
+<div class="subencabezado" id="material-compartido">
+    <h2>Material que compartiste</h2>
+    <a class="boton-texto" href="{% url 'portal:material_compartir' %}">{% icono 'mas' %}Compartir material</a>
+</div>
+{% if materiales_compartidos %}
+<div class="tabla-contenedor">
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Título</th>
+                <th scope="col">Subido el</th>
+                <th scope="col">Estado</th>
+                <th scope="col"><span class="sr-only">Abrir</span></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for material in materiales_compartidos %}
+            <tr>
+                <td data-etiqueta="Título"><strong>{{ material.titulo }}</strong><span class="secundario">{{ material.get_tipo_display }} · {{ material.carrera.nombre }}</span></td>
+                <td data-etiqueta="Subido el">{{ material.fecha_carga|date:"d/m/Y" }}</td>
+                <td data-etiqueta="Estado">{% include 'portal/_estado_material.html' %}</td>
+                <td class="acciones"><a href="{% url 'portal:material_archivo' material.pk %}" target="_blank" rel="noopener">{% icono 'documento' %}Abrir PDF</a></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="texto-suave">Todavía no compartiste material. Podés subir apuntes, tesis u otros PDF para tus carreras.</p>
+{% endif %}
+
 <div class="subencabezado"><h2>Sin devolver</h2></div>
 {% if activos %}
 {% if activos.0.vencido %}
