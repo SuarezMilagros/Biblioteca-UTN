@@ -134,6 +134,13 @@ class CompartirDesdeElPortalTests(CompartidoTestCase):
         self.client.force_login(self.lector)
         self.assertContains(self.client.get(reverse('portal:material')), reverse('portal:material_compartir'))
 
+    def test_con_material_publicado_el_boton_de_compartir_sigue_arriba(self):
+        self.material(titulo='Guía publicada')
+        self.client.force_login(self.lector)
+        respuesta = self.client.get(reverse('portal:material'))
+        self.assertContains(respuesta, 'Guía publicada')
+        self.assertContains(respuesta, f'<a class="boton" href="{reverse("portal:material_compartir")}">')
+
 
 class VisibilidadTests(CompartidoTestCase):
     def test_lo_pendiente_no_lo_ve_nadie_mas(self):
@@ -255,6 +262,10 @@ class RevisionTests(CompartidoTestCase):
         respuesta = self.client.post(reverse('biblioteca:material_aprobar', args=[material.pk]), follow=True)
         self.assertContains(respuesta, 'Este material ya fue revisado.')
         self.assertEqual(self.recargar(material).estado, 'RECHAZADO')
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_un_material_sin_revisar_no_genera_aviso(self):
+        self.assertFalse(reglas.avisar_por_correo(self.pendiente()))
         self.assertEqual(len(mail.outbox), 0)
 
     def test_si_el_correo_falla_queda_aprobado_y_lo_advierte(self):

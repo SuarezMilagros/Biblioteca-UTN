@@ -24,6 +24,7 @@ from cuentas.views import ERRORES_DE_ENVIO
 
 from .informes import ExportarCSVMixin, nombre_de_archivo
 from .models import Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, MaterialDigital, Persona, Prestamo, Reserva
+from . import qr
 from . import reservas as reglas_de_reservas
 from . import revision_de_material
 
@@ -424,6 +425,48 @@ class EjemplarDetailView(PermissionRequiredMixin, DetailView):
         contexto['prestamo_activo'] = next((p for p in prestamos if p.activo), None)
         contexto['reserva_vigente'] = reglas_de_reservas.reserva_vigente_de(self.object)
         contexto['form_baja'] = EjemplarBajaForm()
+        # S8-05: QR con la dirección de esta ficha, para pegar en el ejemplar.
+        contexto['qr'] = qr.svg(qr.direccion_de_la_ficha(self.request, self.object))
+        return contexto
+
+
+class EjemplarEtiquetasView(PermissionRequiredMixin, TemplateView):
+    """Hoja de etiquetas para imprimir (S8-05): código de inventario, título y QR de cada ejemplar.
+
+    Se eligen con ?libro=<id> (todos los ejemplares activos del libro) o con ?ejemplar=<id>&ejemplar=<id>...
+    Los dados de baja no se incluyen: no se prestan, no necesitan etiqueta.
+    """
+
+    permission_required = 'biblioteca.view_ejemplar'
+    template_name = 'biblioteca/ejemplar_etiquetas.html'
+    MAXIMO = 120
+
+    def elegidos(self):
+        ids = [int(valor) for valor in self.request.GET.getlist('ejemplar') if valor.isdigit()]
+        libro = self.request.GET.get('libro', '')
+        if libro.isdigit():
+            self.libro = get_object_or_404(Libro, pk=int(libro))
+            return Ejemplar.objects.filter(libro=self.libro)
+        self.libro = None
+        return Ejemplar.objects.filter(pk__in=ids)
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        elegidos = self.elegidos()
+        activos = elegidos.filter(activo=True).select_related('libro').order_by('codigo_inventario')
+        cantidad = activos.count()
+        etiquetas = [
+            (ejemplar, qr.svg(qr.direccion_de_la_ficha(self.request, ejemplar)))
+            for ejemplar in activos[:self.MAXIMO]
+        ]
+        contexto.update({
+            'libro': self.libro,
+            'etiquetas': etiquetas,
+            'cantidad_de_baja': elegidos.filter(activo=False).count(),
+            'cantidad_fuera': max(cantidad - self.MAXIMO, 0),
+            'maximo': self.MAXIMO,
+            'direccion_local': qr.es_direccion_local(self.request),
+        })
         return contexto
 
 

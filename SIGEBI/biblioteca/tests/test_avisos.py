@@ -270,6 +270,13 @@ class ComandoTests(AvisosTestCase):
         self.assertEqual(len(mail.outbox), 0)
         self.assertFalse(AvisoPrestamo.objects.exists())
 
+    def test_simular_despues_de_enviar_no_repite_lo_ya_enviado(self):
+        self.prestar(vence_en=2)
+        self.ejecutar()
+        salida, _ = self.ejecutar('--simular')
+        self.assertIn('Se enviarían "Vence pronto": 0', salida)
+        self.assertIn('Total: 0 avisos para enviar.', salida)
+
     def test_informa_los_que_fallaron(self):
         self.prestar(vence_en=1)
         with mock.patch('biblioteca.avisos.EmailMessage.send', side_effect=smtplib.SMTPException('caído')):
