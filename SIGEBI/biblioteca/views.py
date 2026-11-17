@@ -28,7 +28,7 @@ from .models import (
 )
 from .opiniones import OpinionNoPermitida
 from .opiniones import revisar as revisar_opinion
-from . import qr
+from . import demanda, qr
 from . import reservas as reglas_de_reservas
 from . import revision_de_material
 
@@ -148,6 +148,55 @@ class InformesView(LoginRequiredMixin, TemplateView):
                 'profesores': Persona.objects.filter(activo=True, tipo=Persona.Tipo.PROFESOR).count(),
                 'total': Persona.objects.count(),
             }
+        return contexto
+
+
+class InformeDemandaView(PermissionRequiredMixin, ExportarCSVMixin, ListView):
+    """Informe de demanda (S8-07): qué libros conviene comprar porque se piden más de lo que se puede prestar."""
+
+    permission_required = ('biblioteca.view_prestamo', 'biblioteca.view_reserva')
+    template_name = 'biblioteca/informe_demanda.html'
+    context_object_name = 'libros'
+    paginate_by = ELEMENTOS_POR_PAGINA
+    encabezados_csv = [
+        'Título', 'Autor', 'Categoría', 'Préstamos', 'Reservas', 'Reservas sin ejemplar',
+        'Ejemplares activos', 'Conviene comprar más',
+    ]
+
+    def periodo(self):
+        if not hasattr(self, '_periodo'):
+            self._periodo = demanda.leer_periodo(self.request.GET.get('desde', ''), self.request.GET.get('hasta', ''))
+        return self._periodo
+
+    def solo_comprar(self):
+        return self.request.GET.get('solo_comprar') == '1'
+
+    def get_queryset(self):
+        desde, hasta, _ = self.periodo()
+        libros = demanda.informe_de_demanda(desde, hasta)
+        return libros.filter(conviene_comprar=True) if self.solo_comprar() else libros
+
+    def nombre_csv(self):
+        desde, hasta, _ = self.periodo()
+        return nombre_de_archivo('demanda', f'{desde:%Y%m%d}', f'{hasta:%Y%m%d}')
+
+    def fila_csv(self, libro):
+        return [
+            libro.titulo, libro.autor, libro.categoria, libro.total_prestamos, libro.total_reservas,
+            libro.reservas_sin_ejemplar, libro.ejemplares_activos, 'Sí' if libro.conviene_comprar else 'No',
+        ]
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        desde, hasta, error = self.periodo()
+        contexto.update({
+            'desde': desde,
+            'hasta': hasta,
+            'error_periodo': error,
+            'solo_comprar': self.solo_comprar(),
+            'dias_por_defecto': demanda.DIAS_POR_DEFECTO,
+            'cantidad_para_comprar': demanda.informe_de_demanda(desde, hasta).filter(conviene_comprar=True).count(),
+        })
         return contexto
 
 

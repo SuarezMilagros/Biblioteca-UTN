@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load interfaz %}
+
+{% block titulo %}Informe de demanda · SIGEBI{% endblock %}
+{% block seccion %}Gestión / Informes / <strong>Demanda</strong>{% endblock %}
+
+{% block contenido %}
+<a class="volver" href="{% url 'biblioteca:informes' %}">{% icono 'volver' %}Volver a informes</a>
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Informes</p>
+        <h1>Informe de demanda</h1>
+        <p class="bajada">Qué libros se piden más de lo que la biblioteca puede prestar, para decidir qué comprar.</p>
+    </div>
+    {% if libros %}
+    <div class="botones-encabezado">
+        <a class="boton-secundario" href="{% querystring formato='csv' page=None %}">{% icono 'descargar' %}Exportar CSV</a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="barra-filtros">
+    <form method="get" class="busqueda" action="{% url 'biblioteca:informe_demanda' %}">
+        <label for="desde">Desde</label>
+        <input type="date" id="desde" name="desde" value="{{ desde|date:'Y-m-d' }}">
+        <label for="hasta">Hasta</label>
+        <input type="date" id="hasta" name="hasta" value="{{ hasta|date:'Y-m-d' }}">
+        <label class="filtro-casilla"><input type="checkbox" name="solo_comprar" value="1"{% if solo_comprar %} checked{% endif %}> Solo los que conviene comprar</label>
+        <button type="submit" class="boton">Ver</button>
+    </form>
+</div>
+
+{% if error_periodo %}
+<div class="alerta-error" role="alert">{% icono 'alerta' %}<p>{{ error_periodo }}</p></div>
+{% endif %}
+
+<p class="resumen-listado">Del {{ desde|date:"d/m/Y" }} al {{ hasta|date:"d/m/Y" }}{% if libros %} · {{ paginator.count }} libro{{ paginator.count|pluralize }} con pedidos{% endif %}{% if cantidad_para_comprar %} · <strong>{{ cantidad_para_comprar }} conviene{{ cantidad_para_comprar|pluralize:"n" }} comprar</strong>{% endif %}</p>
+
+{% if libros %}
+<div class="tabla-contenedor">
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Libro</th>
+                <th scope="col" class="numero">Préstamos</th>
+                <th scope="col" class="numero">Reservas</th>
+                <th scope="col" class="numero">Reservas sin ejemplar</th>
+                <th scope="col" class="numero">Ejemplares activos</th>
+                <th scope="col">Recomendación</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for libro in libros %}
+            <tr>
+                <td data-etiqueta="Libro"><a href="{% url 'biblioteca:libro_detail' libro.pk %}">{{ libro.titulo }}</a><span class="secundario">{{ libro.autor }} · {{ libro.categoria }}</span></td>
+                <td data-etiqueta="Préstamos" class="numero">{{ libro.total_prestamos }}</td>
+                <td data-etiqueta="Reservas" class="numero">{{ libro.total_reservas }}</td>
+                <td data-etiqueta="Reservas sin ejemplar" class="numero">{{ libro.reservas_sin_ejemplar }}</td>
+                <td data-etiqueta="Ejemplares activos" class="numero">{{ libro.ejemplares_activos }}</td>
+                <td data-etiqueta="Recomendación">{% if libro.conviene_comprar %}<span class="badge badge-vencido">Conviene comprar más</span>{% else %}<span class="badge badge-disponible">Alcanza</span>{% endif %}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include 'componentes/paginacion.html' %}
+{% elif solo_comprar %}
+{% include 'componentes/vacio.html' with icono='exito' titulo='En este período no hay libros que convenga comprar.' texto='Los ejemplares alcanzaron para la demanda.' %}
+{% else %}
+{% include 'componentes/vacio.html' with icono='informe' titulo='No hubo préstamos ni reservas en este período.' texto='Probá con un período más largo.' %}
+{% endif %}
+
+<p class="ayuda">Cómo se calcula: «Reservas sin ejemplar» son las reservas pedidas en el período que nunca recibieron un ejemplar (siguen pendientes o se rechazaron). Se marca «Conviene comprar más» cuando hubo más reservas sin ejemplar que ejemplares activos. Por defecto se muestran los últimos {{ dias_por_defecto }} días.</p>
+{% endblock %}
