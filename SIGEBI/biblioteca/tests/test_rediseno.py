@@ -142,7 +142,7 @@ class InformesTests(RedisenoTestCase):
     def test_estadisticas_reales(self):
         contexto = self.client.get(reverse('biblioteca:informes')).context
         self.assertEqual(contexto['prestamos'], {'al_dia': 1, 'vencidos': 1, 'devueltos': 1, 'total': 3})
-        self.assertEqual(contexto['ejemplares'], {'disponibles': 1, 'prestados': 2, 'baja': 1, 'total': 4})
+        self.assertEqual(contexto['ejemplares'], {'disponibles': 1, 'prestados': 2, 'apartados': 0, 'baja': 1, 'total': 4})
         self.assertEqual(
             contexto['personas'], {'activas': 2, 'baja': 1, 'alumnos': 1, 'profesores': 1, 'total': 3}
         )

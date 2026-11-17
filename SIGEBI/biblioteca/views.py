@@ -3,7 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
-from django.db.models import Count, Exists, OuterRef, Q
+from django.db.models import Count, Exists, IntegerField, OuterRef, Q, Subquery
+from django.db.models.functions import Coalesce
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -22,7 +23,8 @@ from cuentas.roles import es_lector
 from cuentas.views import ERRORES_DE_ENVIO
 
 from .informes import ExportarCSVMixin, nombre_de_archivo
-from .models import Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, MaterialDigital, Persona, Prestamo
+from .models import Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, MaterialDigital, Persona, Prestamo, Reserva
+from . import reservas as reglas_de_reservas
 
 ELEMENTOS_POR_PAGINA = 20
 MENSAJE_DATO_REPETIDO = 'Ya existe un registro con esos datos. Revisá los valores e intentá de nuevo.'
@@ -81,7 +83,11 @@ def inicio(request):
     if usuario.has_perm('biblioteca.view_ejemplar'):
         activos = Ejemplar.objects.filter(activo=True)
         contexto['ejemplares_activos'] = activos.count()
-        contexto['ejemplares_disponibles'] = activos.filter(~prestamo_activo_de(OuterRef('pk'))).count()
+        contexto['ejemplares_disponibles'] = Ejemplar.objects.disponibles().count()
+    if usuario.has_perm('biblioteca.view_reserva'):
+        reglas_de_reservas.vencer_reservas()
+        contexto['reservas_pendientes'] = Reserva.objects.filter(estado=Reserva.Estado.PENDIENTE).count()
+        contexto['reservas_para_retirar'] = Reserva.objects.vigentes().count()
     if usuario.has_perm('biblioteca.view_persona'):
         contexto['personas_activas'] = Persona.objects.filter(activo=True).count()
     if usuario.has_perm('biblioteca.view_libro'):
@@ -107,10 +113,10 @@ class InformesView(LoginRequiredMixin, TemplateView):
         if usuario.has_perm('biblioteca.view_ejemplar'):
             activos = Ejemplar.objects.filter(activo=True)
             prestados = activos.filter(prestamo_activo_de(OuterRef('pk'))).count()
-            total_activos = activos.count()
             contexto['ejemplares'] = {
-                'disponibles': total_activos - prestados,
+                'disponibles': Ejemplar.objects.disponibles().count(),
                 'prestados': prestados,
+                'apartados': Reserva.objects.vigentes().count(),
                 'baja': Ejemplar.objects.filter(activo=False).count(),
                 'total': Ejemplar.objects.count(),
             }
@@ -385,7 +391,12 @@ class EjemplarListView(PermissionRequiredMixin, ExportarCSVMixin, BuscarAntesDeL
         if not ejemplar.activo:
             estado = 'Dado de baja'
         else:
-            estado = 'Prestado' if ejemplar.con_prestamo_activo else 'Disponible'
+            if ejemplar.con_prestamo_activo:
+                estado = 'Prestado'
+            elif ejemplar.con_reserva_vigente:
+                estado = 'Apartado'
+            else:
+                estado = 'Disponible'
         return [
             ejemplar.codigo_inventario, ejemplar.id_inventario, libro.titulo, libro.autor,
             libro.editorial, libro.categoria, libro.isbn, estado,
@@ -406,6 +417,7 @@ class EjemplarDetailView(PermissionRequiredMixin, DetailView):
         prestamos = self.object.prestamos.select_related('persona').order_by('-fecha_prestamo', '-pk')
         contexto['prestamos'] = prestamos
         contexto['prestamo_activo'] = next((p for p in prestamos if p.activo), None)
+        contexto['reserva_vigente'] = reglas_de_reservas.reserva_vigente_de(self.object)
         contexto['form_baja'] = EjemplarBajaForm()
         return contexto
 
@@ -424,6 +436,11 @@ class EjemplarBajaView(PermissionRequiredMixin, View):
         elif ejemplar.prestado:
             messages.error(
                 request, f'No se puede dar de baja el ejemplar {ejemplar}: tiene un préstamo sin devolver.'
+            )
+        elif ejemplar.apartado:
+            messages.error(
+                request, f'No se puede dar de baja el ejemplar {ejemplar}: está apartado por una reserva. '
+                'Liberá la reserva primero.'
             )
         elif not form.is_valid():
             messages.error(request, 'Elegí el motivo de la baja.')
@@ -658,6 +675,140 @@ class MaterialDigitalBajaView(PermissionRequiredMixin, View):
 
 class MaterialDigitalReactivarView(MaterialDigitalBajaView):
     activo = True
+
+
+# ---------- Reservas (Release 2, S8-03) ----------
+
+ESTADOS_DE_RESERVA = {
+    'pendientes': ('Pendientes', [Reserva.Estado.PENDIENTE], ['fecha_reserva', 'pk']),
+    'para_retirar': ('Para retirar', [Reserva.Estado.CONFIRMADA], ['vence_retiro', 'pk']),
+    'anteriores': ('Anteriores', [Reserva.Estado.RETIRADA, Reserva.Estado.RECHAZADA,
+                                  Reserva.Estado.CANCELADA, Reserva.Estado.VENCIDA], ['-fecha_reserva', '-pk']),
+}
+
+
+class ReservaListView(PermissionRequiredMixin, ListView):
+    permission_required = 'biblioteca.view_reserva'
+    template_name = 'biblioteca/reserva_list.html'
+    context_object_name = 'reservas'
+    paginate_by = ELEMENTOS_POR_PAGINA
+
+    def estado(self):
+        estado = self.request.GET.get('estado', 'pendientes')
+        return estado if estado in ESTADOS_DE_RESERVA else 'pendientes'
+
+    def get_queryset(self):
+        reglas_de_reservas.vencer_reservas()
+        _, estados, orden = ESTADOS_DE_RESERVA[self.estado()]
+        disponibles = (
+            Ejemplar.objects.disponibles().filter(libro=OuterRef('libro')).order_by()
+            .values('libro').annotate(cantidad=Count('pk')).values('cantidad')
+        )
+        return (
+            Reserva.objects.filter(estado__in=estados)
+            .select_related('libro', 'persona', 'ejemplar', 'prestamo')
+            .annotate(disponibles=Coalesce(Subquery(disponibles, output_field=IntegerField()), 0))
+            .order_by(*orden)
+        )
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        contexto['estado'] = self.estado()
+        contexto['estados'] = [(clave, datos[0]) for clave, datos in ESTADOS_DE_RESERVA.items()]
+        contexto['cantidad_pendientes'] = Reserva.objects.filter(estado=Reserva.Estado.PENDIENTE).count()
+        contexto['cantidad_para_retirar'] = Reserva.objects.vigentes().count()
+        contexto['horas_para_retirar'] = reglas_de_reservas.HORAS_PARA_RETIRAR
+        return contexto
+
+
+class ReservaDetailView(PermissionRequiredMixin, DetailView):
+    """Para responder una reserva pendiente: confirmarla eligiendo el ejemplar, o rechazarla con un motivo."""
+
+    permission_required = 'biblioteca.view_reserva'
+    model = Reserva
+    template_name = 'biblioteca/reserva_detail.html'
+    context_object_name = 'reserva'
+
+    def get_queryset(self):
+        reglas_de_reservas.vencer_reservas()
+        return Reserva.objects.select_related('libro', 'persona', 'ejemplar', 'prestamo', 'usuario_respuesta')
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        reserva = self.object
+        contexto['ejemplares_para_apartar'] = reglas_de_reservas.ejemplares_para_apartar(reserva.libro)
+        contexto['horas_para_retirar'] = reglas_de_reservas.HORAS_PARA_RETIRAR
+        contexto['prestamos_vencidos'] = reserva.persona.prestamos.filter(
+            fecha_devolucion__isnull=True, fecha_vencimiento__lt=timezone.localdate()
+        ).count()
+        return contexto
+
+
+class AccionDeReservaView(PermissionRequiredMixin, View):
+    """Base de las acciones sobre una reserva (POST). Cada subclase define `ejecutar`."""
+
+    permission_required = 'biblioteca.change_reserva'
+    http_method_names = ['post']
+
+    def post(self, request, pk):
+        reserva = get_object_or_404(Reserva, pk=pk)
+        try:
+            reserva = self.ejecutar(request, reserva)
+        except reglas_de_reservas.ReservaNoPermitida as error:
+            for motivo in error.motivos:
+                messages.error(request, motivo)
+            return redirect('biblioteca:reserva_detail', pk=reserva.pk)
+        return redirect(self.destino(reserva))
+
+    def destino(self, reserva):
+        return reverse('biblioteca:reserva_list')
+
+    def avisar(self, request, reserva, mensaje):
+        if reglas_de_reservas.avisar_por_correo(reserva):
+            messages.success(request, f'{mensaje} Se le avisó por correo.')
+        elif reserva.persona.cuenta_id:
+            messages.warning(request, f'{mensaje} No se pudo enviar el correo de aviso.')
+        else:
+            messages.success(request, f'{mensaje} La persona no tiene cuenta: avisale por otro medio.')
+
+
+class ReservaConfirmarView(AccionDeReservaView):
+    def ejecutar(self, request, reserva):
+        ejemplar = get_object_or_404(Ejemplar, pk=request.POST.get('ejemplar') or 0)
+        reserva = reglas_de_reservas.confirmar(reserva, ejemplar, request.user)
+        self.avisar(request, reserva, f'Reserva confirmada: se apartó {reserva.ejemplar} para "{reserva.persona}".')
+        return reserva
+
+
+class ReservaRechazarView(AccionDeReservaView):
+    def ejecutar(self, request, reserva):
+        reserva = reglas_de_reservas.rechazar(reserva, request.POST.get('motivo'), request.user)
+        self.avisar(request, reserva, f'Reserva de "{reserva.persona}" rechazada.')
+        return reserva
+
+
+class ReservaRetirarView(AccionDeReservaView):
+    def ejecutar(self, request, reserva):
+        reserva = reglas_de_reservas.retirar(reserva, request.user)
+        messages.success(
+            request,
+            f'Préstamo registrado: {reserva.ejemplar} a "{reserva.persona}". '
+            f'Vence el {reserva.prestamo.fecha_vencimiento:%d/%m/%Y}.',
+        )
+        return reserva
+
+    def destino(self, reserva):
+        return reverse('biblioteca:reserva_list') + '?estado=para_retirar'
+
+
+class ReservaLiberarView(AccionDeReservaView):
+    def ejecutar(self, request, reserva):
+        reserva = reglas_de_reservas.liberar(reserva)
+        messages.success(request, f'Reserva de "{reserva.persona}" liberada: el ejemplar vuelve a estar disponible.')
+        return reserva
+
+    def destino(self, reserva):
+        return reverse('biblioteca:reserva_list') + '?estado=para_retirar'
 
 
 # ---------- Personas ----------
@@ -976,7 +1127,7 @@ class PrestamoCreateView(PermissionRequiredMixin, FormView):
         if not self.ejemplar.activo:
             messages.error(request, MENSAJE_EJEMPLAR_DADO_DE_BAJA)
             return redirect('biblioteca:ejemplar_detail', pk=self.ejemplar.pk)
-        if not self.ejemplar.disponible:
+        if self.ejemplar.prestado:
             messages.error(request, MENSAJE_EJEMPLAR_YA_PRESTADO)
             return redirect('biblioteca:ejemplar_detail', pk=self.ejemplar.pk)
         return super().get(request, *args, **kwargs)
@@ -989,6 +1140,7 @@ class PrestamoCreateView(PermissionRequiredMixin, FormView):
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
         contexto['ejemplar'] = self.ejemplar
+        contexto['reserva_vigente'] = reglas_de_reservas.reserva_vigente_de(self.ejemplar)
         return contexto
 
     def form_valid(self, form):
@@ -1002,6 +1154,10 @@ class PrestamoCreateView(PermissionRequiredMixin, FormView):
                     usuario_sistema=self.request.user,
                     fecha_prestamo=form.cleaned_data['fecha_prestamo'],
                     fecha_vencimiento=form.cleaned_data['fecha_vencimiento'],
+                )
+                # Si el ejemplar estaba apartado para esta persona, su reserva queda retirada (S8-03).
+                Reserva.objects.vigentes().filter(ejemplar=self.ejemplar, persona=form.persona).update(
+                    estado=Reserva.Estado.RETIRADA, prestamo=prestamo
                 )
         except IntegrityError:
             form.add_error(None, MENSAJE_EJEMPLAR_YA_PRESTADO)

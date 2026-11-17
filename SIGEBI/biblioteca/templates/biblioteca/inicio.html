@@ -50,6 +50,13 @@
         <span class="indicador-detalle">de {{ ejemplares_activos }} ejemplar{{ ejemplares_activos|pluralize:"es" }} activo{{ ejemplares_activos|pluralize }}{% if libros_total is not None %} · {{ libros_total }} título{{ libros_total|pluralize }}{% endif %}</span>
     </a>
     {% endif %}
+    {% if perms.biblioteca.view_reserva %}
+    <a class="indicador {% if reservas_pendientes %}indicador-alerta{% else %}indicador-ok{% endif %}" href="{% url 'biblioteca:reserva_list' %}">
+        <span class="indicador-cabeza">Reservas pendientes <span class="indicador-icono">{% icono 'calendario' %}</span></span>
+        <span class="indicador-valor">{{ reservas_pendientes }}</span>
+        <span class="indicador-detalle">{% if reservas_pendientes %}Esperan una respuesta{% else %}Todas respondidas{% endif %} · {{ reservas_para_retirar }} para retirar</span>
+    </a>
+    {% endif %}
     {% if perms.biblioteca.view_persona %}
     <a class="indicador" href="{% url 'biblioteca:persona_list' %}">
         <span class="indicador-cabeza">Personas activas <span class="indicador-icono">{% icono 'personas' %}</span></span>

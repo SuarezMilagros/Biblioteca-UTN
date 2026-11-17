@@ -14,6 +14,15 @@
     </div>
 </div>
 
+{% if reserva_vigente %}
+<div class="alerta-aviso" role="note">
+    {% icono 'alerta' %}
+    <p>Este ejemplar está apartado para <strong>{{ reserva_vigente.persona }}</strong> (documento {{ reserva_vigente.persona.documento }})
+        hasta el {{ reserva_vigente.vence_retiro|date:"d/m/Y H:i" }}. Solo se le puede prestar a esa persona;
+        el préstamo marca la reserva como retirada.</p>
+</div>
+{% endif %}
+
 <div class="dos-columnas">
     <form method="post" class="formulario tarjeta">
         {% csrf_token %}

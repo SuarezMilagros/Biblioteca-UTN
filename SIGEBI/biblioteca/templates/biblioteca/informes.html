@@ -47,15 +47,17 @@
             <span class="badge badge-neutro">{{ ejemplares.total }} en total</span>
         </div>
         {% with total=ejemplares.total %}
-        <div class="distribucion" role="img" aria-label="Ejemplares: {{ ejemplares.disponibles }} disponibles, {{ ejemplares.prestados }} prestados y {{ ejemplares.baja }} dados de baja">
+        <div class="distribucion" role="img" aria-label="Ejemplares: {{ ejemplares.disponibles }} disponibles, {{ ejemplares.prestados }} prestados, {{ ejemplares.apartados }} apartados por reservas y {{ ejemplares.baja }} dados de baja">
             <span class="fondo-verde" style="width: {{ ejemplares.disponibles|porcentaje:total }}%"></span>
             <span class="fondo-ambar" style="width: {{ ejemplares.prestados|porcentaje:total }}%"></span>
+            <span class="fondo-azul" style="width: {{ ejemplares.apartados|porcentaje:total }}%"></span>
             <span class="fondo-gris" style="width: {{ ejemplares.baja|porcentaje:total }}%"></span>
         </div>
         {% endwith %}
         <ul class="leyenda">
             <li><span class="punto fondo-verde"></span>Disponibles <strong>{{ ejemplares.disponibles }}</strong></li>
             <li><span class="punto fondo-ambar"></span>Prestados <strong>{{ ejemplares.prestados }}</strong></li>
+            <li><span class="punto fondo-azul"></span>Apartados por reservas <strong>{{ ejemplares.apartados }}</strong></li>
             <li><span class="punto fondo-gris"></span>Dados de baja <strong>{{ ejemplares.baja }}</strong></li>
         </ul>
         <div class="botones-encabezado">

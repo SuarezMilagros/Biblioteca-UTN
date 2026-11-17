@@ -12,6 +12,7 @@ from django.views.generic import DetailView, ListView, TemplateView
 from biblioteca.models import Categoria, Libro, MaterialDigital, Reserva
 from biblioteca.reservas import (
     HORAS_PARA_RETIRAR, MAXIMO_RESERVAS_ACTIVAS, ReservaNoPermitida, cancelar, motivos_para_no_reservar, reservar,
+    vencer_reservas,
 )
 from biblioteca.views import abrir_pdf
 
@@ -53,6 +54,7 @@ class PerfilView(LectorRequeridoMixin, TemplateView):
             prestamo.dias_restantes = (prestamo.fecha_vencimiento - hoy).days
             prestamo.dias_de_atraso = -prestamo.dias_restantes
         activos.sort(key=lambda prestamo: prestamo.fecha_vencimiento)
+        vencer_reservas()
         reservas = list(self.persona.reservas.select_related('libro', 'ejemplar').order_by('-fecha_reserva', '-pk'))
         contexto.update({
             'persona': self.persona,
@@ -144,6 +146,7 @@ class LibroView(LibrosDeSusCarrerasMixin, DetailView):
         return self.libros_visibles()
 
     def get_context_data(self, **kwargs):
+        vencer_reservas()
         contexto = super().get_context_data(**kwargs)
         contexto['reserva_activa'] = self.persona.reservas.filter(
             libro=self.object, estado__in=Reserva.ACTIVAS

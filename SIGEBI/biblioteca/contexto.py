@@ -1,5 +1,6 @@
 """Variables de `biblioteca` para la cabecera común (registradas en config/settings.py).
 
+- reservas_pendientes_total: reservas que esperan respuesta del personal (S8-03).
 - prestamos_vencidos_total: préstamos sin devolver con el vencimiento pasado. Se muestra como
   aviso en la cabecera (visibilidad del estado del sistema). Vale 0 si la persona no puede ver préstamos.
 
@@ -19,4 +20,9 @@ def interfaz(request):
         vencidos = Prestamo.objects.filter(
             fecha_devolucion__isnull=True, fecha_vencimiento__lt=timezone.localdate()
         ).count()
-    return {'prestamos_vencidos_total': vencidos}
+    pendientes = 0
+    if usuario.has_perm('biblioteca.view_reserva'):
+        # S8-03: cantidad de reservas que esperan respuesta, junto a "Reservas" en el menú.
+        from .models import Reserva
+        pendientes = Reserva.objects.filter(estado=Reserva.Estado.PENDIENTE).count()
+    return {'prestamos_vencidos_total': vencidos, 'reservas_pendientes_total': pendientes}

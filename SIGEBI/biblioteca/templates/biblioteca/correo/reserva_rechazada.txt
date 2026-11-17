@@ -1,0 +1,10 @@
+{% autoescape off %}Hola, {{ reserva.persona.nombre }}:
+
+La biblioteca no pudo aceptar tu reserva de "{{ reserva.libro.titulo }}".
+
+Motivo: {{ reserva.motivo_rechazo }}
+
+Si tenés dudas, consultá en la biblioteca.
+
+SIGEBI · Biblioteca UTN FRT Concepción
+{% endautoescape %}

@@ -218,8 +218,17 @@ class PrestamoForm(forms.Form):
         datos = super().clean()
         if not self.ejemplar.activo:
             raise forms.ValidationError(MENSAJE_EJEMPLAR_DADO_DE_BAJA)
-        if not self.ejemplar.disponible:
+        if self.ejemplar.prestado:
             raise forms.ValidationError('Este ejemplar ya está prestado. Primero hay que registrar su devolución.')
+        # S8-03: un ejemplar apartado solo se presta a la persona de la reserva.
+        from .reservas import reserva_vigente_de
+        reserva = reserva_vigente_de(self.ejemplar)
+        persona = getattr(self, 'persona', None)
+        if reserva and persona is not None and reserva.persona_id != persona.pk:
+            raise forms.ValidationError(
+                f'Este ejemplar está apartado para {reserva.persona} hasta el '
+                f'{timezone.localtime(reserva.vence_retiro):%d/%m/%Y %H:%M}. Prestá otro ejemplar del libro.'
+            )
         fecha_prestamo = datos.get('fecha_prestamo')
         if fecha_prestamo is None:
             return datos

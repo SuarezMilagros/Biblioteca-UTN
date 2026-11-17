@@ -55,5 +55,12 @@ urlpatterns = [
     path('personas/<int:pk>/reactivar/', views.PersonaReactivarView.as_view(), name='persona_reactivar'),
 
     path('prestamos/', views.PrestamoListView.as_view(), name='prestamo_list'),
+
+    path('reservas/', views.ReservaListView.as_view(), name='reserva_list'),
+    path('reservas/<int:pk>/', views.ReservaDetailView.as_view(), name='reserva_detail'),
+    path('reservas/<int:pk>/confirmar/', views.ReservaConfirmarView.as_view(), name='reserva_confirmar'),
+    path('reservas/<int:pk>/rechazar/', views.ReservaRechazarView.as_view(), name='reserva_rechazar'),
+    path('reservas/<int:pk>/retirar/', views.ReservaRetirarView.as_view(), name='reserva_retirar'),
+    path('reservas/<int:pk>/liberar/', views.ReservaLiberarView.as_view(), name='reserva_liberar'),
     path('prestamos/<int:pk>/devolver/', views.DevolucionView.as_view(), name='prestamo_devolver'),
 ]

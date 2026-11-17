@@ -44,6 +44,9 @@
                 <p class="nav-grupo">Operación</p>
                 <a class="nav-enlace" href="{% url 'biblioteca:inicio' %}"{% if seccion == "inicio" %} aria-current="page"{% endif %}>{% icono 'inicio' %}Inicio</a>
                 <a class="nav-enlace" href="{% url 'biblioteca:prestamo_list' %}"{% if seccion|slice:":9" == "prestamo_" %} aria-current="page"{% endif %}>{% icono 'prestamo' %}Préstamos</a>
+                {% if perms.biblioteca.view_reserva %}
+                <a class="nav-enlace" href="{% url 'biblioteca:reserva_list' %}"{% if seccion|slice:":8" == "reserva_" %} aria-current="page"{% endif %}>{% icono 'calendario' %}Reservas{% if reservas_pendientes_total %}<span class="nav-contador" aria-label="{{ reservas_pendientes_total }} pendiente{{ reservas_pendientes_total|pluralize }}">{{ reservas_pendientes_total }}</span>{% endif %}</a>
+                {% endif %}
                 <a class="nav-enlace" href="{% url 'biblioteca:ejemplar_list' %}"{% if seccion|slice:":9" == "ejemplar_" %} aria-current="page"{% endif %}>{% icono 'ejemplar' %}Ejemplares</a>
                 <a class="nav-enlace" href="{% url 'biblioteca:persona_list' %}"{% if seccion|slice:":8" == "persona_" %} aria-current="page"{% endif %}>{% icono 'personas' %}Personas</a>
 

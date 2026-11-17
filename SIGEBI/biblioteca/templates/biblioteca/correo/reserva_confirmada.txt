@@ -1,0 +1,9 @@
+{% autoescape off %}Hola, {{ reserva.persona.nombre }}:
+
+Tu reserva de "{{ reserva.libro.titulo }}" está lista para retirar.
+
+Te apartamos el ejemplar {{ reserva.ejemplar.codigo_inventario }} hasta el {{ reserva.vence_retiro|date:"d/m/Y" }} a las {{ reserva.vence_retiro|date:"H:i" }}.
+Pasá por la biblioteca antes de esa fecha. Si no lo retirás, la reserva vence y el ejemplar queda libre para otra persona.
+
+SIGEBI · Biblioteca UTN FRT Concepción
+{% endautoescape %}
