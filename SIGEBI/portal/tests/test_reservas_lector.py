@@ -165,6 +165,7 @@ class CancelarTests(ReservasTestCase):
         reserva = Reserva.objects.get()
         respuesta = self.client.post(reverse('portal:cancelar_reserva', args=[reserva.pk]), follow=True)
         self.assertContains(respuesta, 'Cancelaste la reserva de &quot;Python&quot;.')
+        self.assertRedirects(respuesta, reverse('portal:mis_reservas'))
         reserva.refresh_from_db()
         self.assertEqual(reserva.estado, 'CANCELADA')
 

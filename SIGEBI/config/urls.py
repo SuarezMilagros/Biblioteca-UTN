@@ -13,6 +13,8 @@ urlpatterns = [
         auth_views.LoginView.as_view(
             template_name='registration/login.html',
             authentication_form=CorreoAuthenticationForm,
+            # Si ya inició sesión (por ejemplo, en otra pestaña), no se le vuelve a pedir: va a donde iba.
+            redirect_authenticated_user=True,
         ),
         name='login',
     ),

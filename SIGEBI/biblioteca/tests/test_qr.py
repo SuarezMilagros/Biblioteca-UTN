@@ -140,6 +140,14 @@ class EtiquetasTests(QRTestCase):
                 pedido = mock.Mock(get_host=mock.Mock(return_value=host))
                 self.assertEqual(qr.es_direccion_local(pedido), local)
 
+    def test_la_hoja_no_choca_con_las_insignias_de_las_fichas(self):
+        # `etiquetas` es la fila de insignias (Alumno, Activa…): la hoja de etiquetas usa otra clase.
+        respuesta = self.etiquetas(f'?libro={self.python.pk}')
+        self.assertContains(respuesta, '<div class="hoja-etiquetas">')
+        estilos = (Path(settings.BASE_DIR) / 'static' / 'css' / 'estilos.css').read_text(encoding='utf-8')
+        self.assertNotIn('.etiquetas { display: grid', estilos)
+        self.assertIn('.etiquetas { display: flex', estilos)
+
     def test_el_boton_imprimir_y_los_estilos_de_impresion(self):
         respuesta = self.etiquetas(f'?libro={self.python.pk}')
         self.assertContains(respuesta, 'data-imprimir')

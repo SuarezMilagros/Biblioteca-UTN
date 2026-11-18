@@ -9,7 +9,7 @@
 
 <div class="encabezado-seccion">
     <div class="ficha">
-        <span class="avatar avatar-grande" aria-hidden="true">{{ object.nombre|slice:":1"|upper }}{{ object.apellido|slice:":1"|upper }}</span>
+        {% include 'componentes/avatar_persona.html' with persona=object clase='avatar-grande' %}
         <div>
             <h1>{{ object.apellido }}, {{ object.nombre }}</h1>
             <div class="etiquetas">

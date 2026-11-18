@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load interfaz %}
+
+{% block titulo %}Mis reservas · SIGEBI{% endblock %}
+{% block seccion %}Mi perfil / <strong>Mis reservas</strong>{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Mi perfil</p>
+        <h1>Mis reservas</h1>
+    </div>
+</div>
+
+{% if reservas_activas %}
+<div class="tabla-contenedor">
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Libro</th>
+                <th scope="col">Reservado el</th>
+                <th scope="col">Estado</th>
+                <th scope="col"><span class="sr-only">Acciones</span></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for reserva in reservas_activas %}
+            <tr>
+                <td data-etiqueta="Libro"><a href="{% url 'portal:libro' reserva.libro_id %}">{{ reserva.libro.titulo }}</a></td>
+                <td data-etiqueta="Reservado el">{{ reserva.fecha_reserva|date:"d/m/Y" }}</td>
+                <td data-etiqueta="Estado">{% include 'portal/_estado_reserva.html' %}</td>
+                <td class="acciones">
+                    {% if reserva.estado == 'PENDIENTE' %}
+                    <form method="post" action="{% url 'portal:cancelar_reserva' reserva.pk %}" class="en-linea"
+                          data-confirmar="La reserva se cancela y el libro queda libre para otra persona." data-confirmar-titulo="¿Cancelar esta reserva?" data-confirmar-boton="Cancelar reserva">
+                        {% csrf_token %}<button type="submit" class="enlace-boton accion">{% icono 'cerrar' %}Cancelar</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p class="ayuda">Podés tener hasta {{ maximo_reservas }} reservas activas.</p>
+{% else %}
+<p class="texto-suave">No tenés reservas activas. Podés reservar un libro desde el <a href="{% url 'portal:catalogo' %}">catálogo</a>.</p>
+{% endif %}
+{% if reservas_anteriores %}
+<details class="anteriores">
+    <summary>Reservas anteriores</summary>
+    <ul class="lista-simple">
+        {% for reserva in reservas_anteriores %}<li>{{ reserva.libro.titulo }} · {{ reserva.fecha_reserva|date:"d/m/Y" }} · {% include 'portal/_estado_reserva.html' %}</li>{% endfor %}
+    </ul>
+</details>
+{% endif %}
+{% endblock %}

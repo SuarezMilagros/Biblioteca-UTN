@@ -12,6 +12,7 @@ from django.urls import reverse
 from django.views.generic import CreateView, DetailView, ListView, TemplateView
 
 from biblioteca.forms import MaterialCompartidoForm
+from biblioteca.fotos import MAXIMO_MB, FotoForm, guardar_foto, quitar_foto
 from biblioteca.models import Categoria, Libro, MaterialDigital, Opinion, Persona, Reserva
 from biblioteca.opiniones import MAXIMO_COMENTARIO, OpinionNoPermitida, opinar, tuvo_prestado
 from biblioteca.revision_de_material import MAXIMO_PENDIENTES_POR_PERSONA, puede_subir
@@ -19,7 +20,7 @@ from biblioteca.reservas import (
     HORAS_PARA_RETIRAR, MAXIMO_RESERVAS_ACTIVAS, ReservaNoPermitida, cancelar, motivos_para_no_reservar, reservar,
     vencer_reservas,
 )
-from biblioteca.views import abrir_pdf
+from biblioteca.views import abrir_pdf, responder_foto
 
 from .acceso import LectorRequeridoMixin
 
@@ -43,12 +44,19 @@ class InicioView(LectorRequeridoMixin, TemplateView):
 
 
 class PerfilView(LectorRequeridoMixin, TemplateView):
-    """Mi perfil (S7-06): sus datos (solo lectura), sus carreras y sus préstamos. Nunca los de otra persona."""
+    """Mi perfil (S7-06): sus datos (solo lectura), sus carreras y sus préstamos. Nunca los de otra persona.
+
+    A pedido de la profesora (18/11/2026), cada parte tiene su propia página en el menú (Mis reservas, Material
+    que compartí, Sin devolver e Historial) para no tener que bajar tanto. Todas usan estos mismos datos;
+    cada URL elige su plantilla con `template_name`.
+    """
 
     template_name = 'portal/perfil.html'
 
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
+        contexto['form_foto'] = FotoForm()
+        contexto['maximo_mb_foto'] = MAXIMO_MB
         hoy = timezone.localdate()
         prestamos = list(
             self.persona.prestamos.select_related('ejemplar__libro').order_by('-fecha_prestamo', '-pk')
@@ -223,7 +231,7 @@ class CancelarReservaView(LectorRequeridoMixin, View):
             messages.error(request, error.motivos[0])
         else:
             messages.success(request, f'Cancelaste la reserva de "{reserva.libro}".')
-        return redirect('portal:perfil')
+        return redirect('portal:mis_reservas')
 
 
 class MaterialDeSusCarrerasMixin(LectorRequeridoMixin):
@@ -322,4 +330,36 @@ class CompartirMaterialView(LectorRequeridoMixin, CreateView):
             f'Recibimos "{material.titulo}". La biblioteca lo va a revisar antes de publicarlo; '
             'te avisamos por correo.',
         )
-        return redirect(reverse('portal:perfil') + '#material-compartido')
+        return redirect('portal:mi_material')
+
+
+class FotoView(LectorRequeridoMixin, View):
+    """Sube o reemplaza la foto de perfil (pedido de la profesora)."""
+
+    http_method_names = ['post']
+
+    def post(self, request):
+        form = FotoForm(request.POST, request.FILES)
+        if form.is_valid():
+            guardar_foto(self.persona, form.cleaned_data['foto'])
+            messages.success(request, 'Actualizaste tu foto de perfil.')
+        else:
+            for error in form.errors.get('foto', []):
+                messages.error(request, error)
+        return redirect('portal:perfil')
+
+
+class MiFotoView(LectorRequeridoMixin, View):
+    """El lector ve su propia foto. Nunca la de otra persona: sale de la persona de su cuenta."""
+
+    def get(self, request):
+        return responder_foto(self.persona)
+
+
+class QuitarFotoView(LectorRequeridoMixin, View):
+    http_method_names = ['post']
+
+    def post(self, request):
+        quitar_foto(self.persona)
+        messages.success(request, 'Quitaste tu foto de perfil.')
+        return redirect('portal:perfil')

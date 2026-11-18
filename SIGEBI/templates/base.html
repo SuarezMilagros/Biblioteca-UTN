@@ -40,6 +40,12 @@
                 <a class="nav-enlace" href="{% url 'portal:catalogo' %}"{% if request.resolver_match.view_name == "portal:catalogo" or request.resolver_match.view_name == "portal:libro" %} aria-current="page"{% endif %}>{% icono 'libro' %}Catálogo</a>
                 <a class="nav-enlace" href="{% url 'portal:material' %}"{% if request.resolver_match.view_name == "portal:material" or request.resolver_match.view_name == "portal:material_compartir" %} aria-current="page"{% endif %}>{% icono 'documento' %}Material digital</a>
                 <a class="nav-enlace" href="{% url 'portal:perfil' %}"{% if request.resolver_match.view_name == "portal:perfil" %} aria-current="page"{% endif %}>{% icono 'persona' %}Mi perfil</a>
+                <div class="nav-sub" aria-label="Mi perfil">
+                    <a class="nav-enlace nav-enlace-sub" href="{% url 'portal:mis_reservas' %}"{% if request.resolver_match.view_name == "portal:mis_reservas" %} aria-current="page"{% endif %}>Mis reservas</a>
+                    <a class="nav-enlace nav-enlace-sub" href="{% url 'portal:mi_material' %}"{% if request.resolver_match.view_name == "portal:mi_material" %} aria-current="page"{% endif %}>Material que compartí</a>
+                    <a class="nav-enlace nav-enlace-sub" href="{% url 'portal:sin_devolver' %}"{% if request.resolver_match.view_name == "portal:sin_devolver" %} aria-current="page"{% endif %}>Sin devolver</a>
+                    <a class="nav-enlace nav-enlace-sub" href="{% url 'portal:historial' %}"{% if request.resolver_match.view_name == "portal:historial" %} aria-current="page"{% endif %}>Historial</a>
+                </div>
                 {% else %}
                 <p class="nav-grupo">Operación</p>
                 <a class="nav-enlace" href="{% url 'biblioteca:inicio' %}"{% if seccion == "inicio" %} aria-current="page"{% endif %}>{% icono 'inicio' %}Inicio</a>
@@ -91,7 +97,7 @@
                     </a>
                     {% endif %}
                     <div class="perfil">
-                        <span class="avatar" aria-hidden="true">{{ user|iniciales }}</span>
+                        {% if es_lector and user.persona.foto %}{% include 'componentes/avatar_persona.html' with persona=user.persona %}{% else %}<span class="avatar" aria-hidden="true">{{ user|iniciales }}</span>{% endif %}
                         <span class="perfil-texto"><strong>{{ user.get_full_name|default:user.get_username }}</strong><small>{{ rol_usuario }}</small></span>
                     </div>
                 </div>

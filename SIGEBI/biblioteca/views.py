@@ -1178,6 +1178,28 @@ class PersonaListView(PermissionRequiredMixin, ExportarCSVMixin, ListView):
         return contexto
 
 
+def responder_foto(persona):
+    """La foto de perfil (privada) como imagen. Sin foto, 404."""
+    if not persona.foto:
+        raise Http404('Esta persona no tiene foto.')
+    try:
+        archivo = persona.foto.open('rb')
+    except FileNotFoundError:
+        raise Http404('No se encontró la foto.')
+    respuesta = FileResponse(archivo, content_type='image/jpeg')
+    respuesta['Cache-Control'] = 'private, max-age=86400'
+    return respuesta
+
+
+class PersonaFotoView(PermissionRequiredMixin, View):
+    """El personal ve la foto de una persona. El lector ve la suya desde el portal (portal:mi_foto)."""
+
+    permission_required = 'biblioteca.view_persona'
+
+    def get(self, request, pk):
+        return responder_foto(get_object_or_404(Persona, pk=pk))
+
+
 class PersonaDetailView(PermissionRequiredMixin, DetailView):
     permission_required = 'biblioteca.view_persona'
     model = Persona

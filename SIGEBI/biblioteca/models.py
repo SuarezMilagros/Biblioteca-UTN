@@ -7,7 +7,7 @@ from django.db.models.functions import Coalesce, Upper
 from django.utils import timezone
 from django.utils.text import slugify
 
-from .almacenamiento import AlmacenPrivado, nombre_de_archivo
+from .almacenamiento import AlmacenPrivado, nombre_de_archivo, nombre_de_foto
 
 # Plazo del préstamo en días corridos (decisión D2). Es el único lugar donde se define.
 PLAZO_PRESTAMO_DIAS = 14
@@ -300,6 +300,9 @@ class Persona(models.Model):
     documento = models.CharField(max_length=20, unique=True)
     tipo = models.CharField(max_length=20, choices=Tipo.choices)
     legajo = models.CharField(max_length=20, blank=True)
+    # Foto de perfil opcional que sube el propio alumno o profesor (pedido de la profesora, 18/11/2026).
+    # Se guarda fuera de la carpeta pública: la ven solo esa persona y el personal.
+    foto = models.ImageField(upload_to=nombre_de_foto, storage=AlmacenPrivado(), blank=True)
     # Carreras que cursa (alumno) o dicta (profesor). Puede tener varias (D-R2-5).
     carreras = models.ManyToManyField(
         Carrera,
