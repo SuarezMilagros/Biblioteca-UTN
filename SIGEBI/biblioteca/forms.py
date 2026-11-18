@@ -7,6 +7,7 @@ from .models import Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, Mater
 
 MENSAJE_CODIGO_REPETIDO = 'Ya existe un ejemplar con ese código de inventario.'
 MENSAJE_DOCUMENTO_REPETIDO = 'Ya existe una persona con ese documento.'
+MENSAJE_DOCUMENTO_INVALIDO = 'El documento tiene que tener 7 u 8 números, sin letras.'
 MENSAJE_EJEMPLAR_DADO_DE_BAJA = 'Este ejemplar está dado de baja: no se puede prestar.'
 MENSAJE_CARRERA_REPETIDA = 'Ya existe una carrera con ese nombre.'
 
@@ -95,7 +96,7 @@ class LibroForm(forms.ModelForm):
 class EjemplarForm(forms.ModelForm):
     class Meta:
         model = Ejemplar
-        fields = ['id_inventario', 'codigo_inventario', 'libro', 'observaciones']
+        fields = ['id_inventario', 'codigo_inventario', 'tipo', 'libro', 'observaciones']
         labels = {
             'id_inventario': 'ID de inventario (opcional)',
             'codigo_inventario': 'Código de inventario (numeración)',
@@ -105,6 +106,12 @@ class EjemplarForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['libro'].queryset = Libro.objects.order_by('titulo')
         con_buscador(self.fields['libro'], 'Buscar libro por título')
+        # Si no se elige, queda "Original", como todos los ejemplares cargados antes de este campo.
+        self.fields['tipo'].required = False
+        self.fields['tipo'].help_text = 'Original del libro, copia (fotocopia) o tesis.'
+
+    def clean_tipo(self):
+        return self.cleaned_data.get('tipo') or Ejemplar.Tipo.ORIGINAL
 
     def clean_codigo_inventario(self):
         # Se compara sin distinguir mayúsculas, igual que la restricción de la base.
@@ -129,10 +136,13 @@ class PersonaForm(forms.ModelForm):
             'legajo': 'Legajo (opcional)',
         }
         help_texts = {
-            'documento': 'Sin puntos ni espacios; si los escribís, se quitan al guardar.',
+            'documento': 'Solo números, 7 u 8 dígitos, sin puntos ni espacios.',
         }
         error_messages = {
             'documento': {'unique': MENSAJE_DOCUMENTO_REPETIDO},
+        }
+        widgets = {
+            'documento': forms.TextInput(attrs={'inputmode': 'numeric', 'autocomplete': 'off'}),
         }
 
     carreras = campo_de_carreras(
@@ -140,10 +150,17 @@ class PersonaForm(forms.ModelForm):
         'Las que cursa, si es alumno, o las que dicta, si es profesor. Puede tener varias.',
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Django pone en la pantalla el largo de la columna (20): se limita a 8, el máximo de un DNI.
+        self.fields['documento'].widget.attrs['maxlength'] = '8'
+
     def clean_documento(self):
         documento = Persona.normalizar_documento(self.cleaned_data['documento'])
         if not documento:
             raise forms.ValidationError('Este campo es obligatorio.')
+        if not Persona.documento_valido(documento):
+            raise forms.ValidationError(MENSAJE_DOCUMENTO_INVALIDO)
         otras = Persona.objects.filter(documento__iexact=documento)
         if self.instance.pk is not None:
             otras = otras.exclude(pk=self.instance.pk)

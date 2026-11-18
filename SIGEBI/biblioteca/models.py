@@ -186,6 +186,12 @@ class EjemplarQuerySet(models.QuerySet):
 
 
 class Ejemplar(models.Model):
+    class Tipo(models.TextChoices):
+        # Pedido de la profesora (18/11/2026): un ejemplar físico puede ser el libro original, una copia o una tesis.
+        ORIGINAL = 'ORIGINAL', 'Original'
+        COPIA = 'COPIA', 'Copia'
+        TESIS = 'TESIS', 'Tesis'
+
     id_ejemplar = models.BigAutoField(primary_key=True)
     id_inventario = models.PositiveIntegerField(
         unique=True,
@@ -199,6 +205,7 @@ class Ejemplar(models.Model):
         verbose_name='código de inventario',
         help_text='Numeración física del ejemplar. Admite letras y números; se guarda en mayúsculas.',
     )
+    tipo = models.CharField(max_length=10, choices=Tipo.choices, default=Tipo.ORIGINAL)
     observaciones = models.TextField(blank=True)
     libro = models.ForeignKey(
         Libro,
@@ -327,6 +334,11 @@ class Persona(models.Model):
     def normalizar_documento(valor):
         """Quita espacios y puntos, y pasa a mayúsculas: "40.111.222" queda "40111222"."""
         return (valor or '').replace('.', '').replace(' ', '').strip().upper()
+
+    @staticmethod
+    def documento_valido(documento):
+        """DNI argentino: solo números, de 7 u 8 dígitos (pedido de la profesora, 18/11/2026)."""
+        return documento.isascii() and documento.isdigit() and 7 <= len(documento) <= 8
 
     def save(self, *args, **kwargs):
         self.documento = self.normalizar_documento(self.documento)

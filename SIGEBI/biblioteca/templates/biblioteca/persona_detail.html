@@ -2,7 +2,7 @@
 {% load interfaz %}
 
 {% block titulo %}{{ object }} · SIGEBI{% endblock %}
-{% block seccion %}Operación / Personas / <strong>{{ object }}</strong>{% endblock %}
+{% block seccion %}Gestión / Personas / <strong>{{ object }}</strong>{% endblock %}
 
 {% block contenido %}
 <a class="volver" href="{% url 'biblioteca:persona_list' %}">{% icono 'volver' %}Volver a personas</a>

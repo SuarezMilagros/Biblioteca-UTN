@@ -92,6 +92,16 @@
     </section>
     {% endif %}
 
+    {% if perms.biblioteca.view_prestamo and perms.biblioteca.view_persona %}
+    <section class="tarjeta" aria-labelledby="titulo-informe-por-persona">
+        <div class="tarjeta-titulo"><h2 id="titulo-informe-por-persona">Préstamos por persona</h2></div>
+        <p class="texto-suave">Cuántos préstamos tuvo cada alumno o profesor en un rango de fechas de hasta un mes, y cuántos devolvió, tiene sin devolver o vencidos.</p>
+        <div class="botones-encabezado">
+            <a class="boton" href="{% url 'biblioteca:informe_prestamos_por_persona' %}">{% icono 'personas' %}Ver préstamos por persona</a>
+        </div>
+    </section>
+    {% endif %}
+
     {% if perms.biblioteca.view_prestamo and perms.biblioteca.view_reserva %}
     <section class="tarjeta" aria-labelledby="titulo-informe-demanda">
         <div class="tarjeta-titulo"><h2 id="titulo-informe-demanda">Demanda de libros</h2></div>

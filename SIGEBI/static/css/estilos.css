@@ -565,6 +565,8 @@ a.indicador:hover { border-color: var(--naranja-borde); box-shadow: var(--sombra
     background: var(--blanco);
 }
 .campo-busqueda input[type="search"] { width: 100%; padding-left: 2.4rem; }
+/* Un filtro con opciones largas (por ejemplo, el nombre de una carrera) no puede ensanchar la pantalla. */
+.busqueda select { max-width: 100%; min-width: 0; text-overflow: ellipsis; }
 .busqueda input:focus, .busqueda select:focus { border-color: var(--naranja); box-shadow: var(--foco); outline: none; }
 .quitar-filtros { font-size: 0.88rem; font-weight: 600; }
 .resumen-listado { margin: 0 0 0.75rem; color: var(--texto-suave); font-size: 0.88rem; }
@@ -832,6 +834,7 @@ a.indicador:hover { border-color: var(--naranja-borde); box-shadow: var(--sombra
     .encabezado-seccion { align-items: stretch; }
     .botones-encabezado { width: 100%; }
     .botones-encabezado > * { flex: 1 1 auto; justify-content: center; }
+    .busqueda select { flex: 1 1 100%; }
     .aviso-texto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
     .tarjeta { padding: 1.1rem; }
     .tarjeta-acceso { padding: 1.75rem 1.25rem 1.5rem; }

@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% load interfaz %}
+
+{% block titulo %}Préstamos por persona · SIGEBI{% endblock %}
+{% block seccion %}Gestión / Informes / <strong>Préstamos por persona</strong>{% endblock %}
+
+{% block contenido %}
+<a class="volver" href="{% url 'biblioteca:informes' %}">{% icono 'volver' %}Volver a informes</a>
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Informes</p>
+        <h1>Préstamos por persona</h1>
+        <p class="bajada">Préstamos que empezaron en el rango elegido, por alumno o profesor. El rango puede ser de hasta {{ maximo_dias }} días (un mes).</p>
+    </div>
+    {% if personas %}
+    <div class="botones-encabezado">
+        <a class="boton-secundario" href="{% querystring formato='csv' page=None %}">{% icono 'descargar' %}Exportar CSV</a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="barra-filtros">
+    <form method="get" class="busqueda" action="{% url 'biblioteca:informe_prestamos_por_persona' %}">
+        <label for="desde">Desde</label>
+        <input type="date" id="desde" name="desde" value="{{ desde|date:'Y-m-d' }}">
+        <label for="hasta">Hasta</label>
+        <input type="date" id="hasta" name="hasta" value="{{ hasta|date:'Y-m-d' }}">
+        <button type="submit" class="boton">Ver</button>
+    </form>
+</div>
+
+{% if error_periodo %}
+<div class="alerta-error" role="alert">{% icono 'alerta' %}<p>{{ error_periodo }}</p></div>
+{% endif %}
+
+<p class="resumen-listado">Del {{ desde|date:"d/m/Y" }} al {{ hasta|date:"d/m/Y" }}{% if personas %} · {{ paginator.count }} persona{{ paginator.count|pluralize }} con préstamos{% endif %}</p>
+
+{% if personas %}
+<div class="tabla-contenedor">
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Persona</th>
+                <th scope="col">Tipo</th>
+                <th scope="col" class="numero">Préstamos</th>
+                <th scope="col" class="numero">Devueltos</th>
+                <th scope="col" class="numero">Sin devolver</th>
+                <th scope="col" class="numero">Vencidos</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for persona in personas %}
+            <tr>
+                <td data-etiqueta="Persona"><a href="{% url 'biblioteca:persona_detail' persona.pk %}">{{ persona }}</a><span class="secundario">{{ persona.documento }}</span></td>
+                <td data-etiqueta="Tipo">{{ persona.get_tipo_display }}</td>
+                <td data-etiqueta="Préstamos" class="numero">{{ persona.total_prestamos }}</td>
+                <td data-etiqueta="Devueltos" class="numero">{{ persona.devueltos }}</td>
+                <td data-etiqueta="Sin devolver" class="numero">{{ persona.sin_devolver }}</td>
+                <td data-etiqueta="Vencidos" class="numero">{% if persona.vencidos %}<span class="badge badge-vencido">{{ persona.vencidos }}</span>{% else %}0{% endif %}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include 'componentes/paginacion.html' %}
+{% else %}
+{% include 'componentes/vacio.html' with icono='personas' titulo='Nadie tuvo préstamos en este rango.' texto='Probá con otro mes.' %}
+{% endif %}
+{% endblock %}

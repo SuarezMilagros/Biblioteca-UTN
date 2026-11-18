@@ -58,6 +58,7 @@
             <tr>
                 <th scope="col">Código de inventario</th>
                 <th scope="col">ID de inventario</th>
+                <th scope="col">Tipo</th>
                 <th scope="col">Estado</th>
                 <th scope="col"><span class="sr-only">Acciones</span></th>
             </tr>
@@ -67,6 +68,7 @@
             <tr>
                 <td data-etiqueta="Código"><a class="codigo" href="{% url 'biblioteca:ejemplar_detail' ejemplar.pk %}">{{ ejemplar.codigo_inventario }}</a></td>
                 <td data-etiqueta="ID">{{ ejemplar.id_inventario|default:"—" }}</td>
+                <td data-etiqueta="Tipo">{{ ejemplar.get_tipo_display }}</td>
                 <td data-etiqueta="Estado">{% include 'biblioteca/_estado_ejemplar.html' %}</td>
                 <td class="acciones">
                     <a href="{% url 'biblioteca:ejemplar_detail' ejemplar.pk %}">{% icono 'ver' %}Ver</a>
