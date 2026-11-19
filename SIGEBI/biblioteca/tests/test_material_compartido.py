@@ -65,7 +65,7 @@ class CompartirDesdeElPortalTests(CompartidoTestCase):
             ('Resumen de Python', self.programacion, 'PENDIENTE', self.lector, True),
         )
         self.assertIsNone(material.usuario_revision)
-        self.assertRedirects(respuesta, reverse('portal:perfil') + '#material-compartido')
+        self.assertRedirects(respuesta, reverse('portal:mi_material'))
         self.assertContains(respuesta, 'Recibimos &quot;Resumen de Python&quot;')
         self.assertContains(respuesta, 'En revisión')
 
@@ -153,8 +153,8 @@ class VisibilidadTests(CompartidoTestCase):
         material = self.pendiente()
         self.client.force_login(self.lector)
         self.assertNotContains(self.client.get(reverse('portal:material')), 'Resumen de Python')
-        perfil = self.client.get(reverse('portal:perfil'))
-        self.assertContains(perfil, 'Material que compartiste')
+        perfil = self.client.get(reverse('portal:mi_material'))
+        self.assertContains(perfil, 'Material que compartí')
         self.assertContains(perfil, 'La biblioteca todavía no lo revisó.')
         respuesta = self.client.get(reverse('portal:material_archivo', args=[material.pk]))
         self.assertEqual(respuesta.status_code, 200)
@@ -167,7 +167,7 @@ class VisibilidadTests(CompartidoTestCase):
         self.material(usuario_carga=self.lector, titulo='Retirado', activo=False)
         self.material(titulo='De la biblioteca')
         self.client.force_login(self.lector)
-        respuesta = self.client.get(reverse('portal:perfil'))
+        respuesta = self.client.get(reverse('portal:mi_material'))
         self.assertEqual(
             {material.titulo for material in respuesta.context['materiales_compartidos']},
             {'En espera', 'Aprobado', 'Rechazado', 'Retirado'},

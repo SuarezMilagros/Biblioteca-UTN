@@ -28,7 +28,7 @@ from .models import (
 )
 from .opiniones import OpinionNoPermitida
 from .opiniones import revisar as revisar_opinion
-from . import demanda, qr
+from . import demanda, prestamos_por_persona, qr
 from . import reservas as reglas_de_reservas
 from . import revision_de_material
 
@@ -200,6 +200,48 @@ class InformeDemandaView(PermissionRequiredMixin, ExportarCSVMixin, ListView):
         return contexto
 
 
+class InformePrestamosPorPersonaView(PermissionRequiredMixin, ExportarCSVMixin, ListView):
+    """Préstamos por persona en un rango de hasta un mes (pedido de la profesora, 18/11/2026)."""
+
+    permission_required = ('biblioteca.view_prestamo', 'biblioteca.view_persona')
+    template_name = 'biblioteca/informe_prestamos_por_persona.html'
+    context_object_name = 'personas'
+    paginate_by = ELEMENTOS_POR_PAGINA
+    encabezados_csv = ['Apellido', 'Nombre', 'Documento', 'Tipo', 'Préstamos', 'Devueltos', 'Sin devolver', 'Vencidos']
+
+    def periodo(self):
+        if not hasattr(self, '_periodo'):
+            self._periodo = prestamos_por_persona.leer_periodo(
+                self.request.GET.get('desde', ''), self.request.GET.get('hasta', '')
+            )
+        return self._periodo
+
+    def get_queryset(self):
+        desde, hasta, _ = self.periodo()
+        return prestamos_por_persona.informe_por_persona(desde, hasta)
+
+    def nombre_csv(self):
+        desde, hasta, _ = self.periodo()
+        return nombre_de_archivo('prestamos-por-persona', f'{desde:%Y%m%d}', f'{hasta:%Y%m%d}')
+
+    def fila_csv(self, persona):
+        return [
+            persona.apellido, persona.nombre, persona.documento, persona.get_tipo_display(),
+            persona.total_prestamos, persona.devueltos, persona.sin_devolver, persona.vencidos,
+        ]
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        desde, hasta, error = self.periodo()
+        contexto.update({
+            'desde': desde,
+            'hasta': hasta,
+            'error_periodo': error,
+            'maximo_dias': prestamos_por_persona.MAXIMO_DIAS,
+        })
+        return contexto
+
+
 class GuardarRegistroMixin:
     """Muestra un mensaje de éxito al guardar.
 
@@ -338,11 +380,25 @@ class LibroListView(PermissionRequiredMixin, BuscarAntesDeListarMixin, ListView)
         if q:
             # unaccent (PostgreSQL): "calculo" también encuentra "Cálculo I".
             queryset = queryset.filter(titulo__unaccent__icontains=q)
+        if self.tipo():
+            # Libros con algún ejemplar activo de ese tipo. Con una subconsulta, para no repetir libros
+            # ni alterar la cuenta de ejemplares de `con_disponibilidad`.
+            con_ese_tipo = Ejemplar.objects.filter(tipo=self.tipo(), activo=True).values('libro')
+            queryset = queryset.filter(pk__in=con_ese_tipo)
         return queryset
+
+    def tipo(self):
+        tipo = self.request.GET.get('tipo', '')
+        return tipo if tipo in Ejemplar.Tipo.values else ''
+
+    def filtro_aplicado(self):
+        return bool(self.tipo())
 
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
         contexto['q'] = self.request.GET.get('q', '').strip()
+        contexto['tipo'] = self.tipo()
+        contexto['tipos'] = Ejemplar.Tipo.choices
         return contexto
 
 
@@ -398,7 +454,7 @@ class EjemplarListView(PermissionRequiredMixin, ExportarCSVMixin, BuscarAntesDeL
 
     # Informe del catálogo de ejemplares (D5).
     encabezados_csv = [
-        'Código de inventario', 'ID de inventario', 'Título', 'Autor', 'Editorial',
+        'Código de inventario', 'ID de inventario', 'Título', 'Tipo', 'Autor', 'Editorial',
         'Categoría', 'ISBN', 'Estado', 'Motivo de baja', 'Fecha de baja', 'Observaciones',
     ]
 
@@ -406,8 +462,16 @@ class EjemplarListView(PermissionRequiredMixin, ExportarCSVMixin, BuscarAntesDeL
         estado = self.request.GET.get('estado', 'activos')
         return estado if estado in ESTADOS_DE_EJEMPLAR else 'activos'
 
+    def tipo(self):
+        tipo = self.request.GET.get('tipo', '')
+        return tipo if tipo in Ejemplar.Tipo.values else ''
+
+    def categoria(self):
+        categoria = self.request.GET.get('categoria', '')
+        return Categoria.objects.filter(pk=int(categoria)).first() if categoria.isdigit() else None
+
     def filtro_aplicado(self):
-        return self.estado() != 'activos'
+        return self.estado() != 'activos' or bool(self.tipo()) or self.categoria() is not None
 
     def get(self, request, *args, **kwargs):
         # Búsqueda por código de inventario (mostrador): si el código coincide exacto,
@@ -430,12 +494,20 @@ class EjemplarListView(PermissionRequiredMixin, ExportarCSVMixin, BuscarAntesDeL
             if q.isdigit():
                 filtro |= Q(id_inventario=int(q))
             queryset = queryset.filter(filtro)
+        if self.tipo():
+            queryset = queryset.filter(tipo=self.tipo())
+        if self.categoria():
+            queryset = queryset.filter(libro__categoria=self.categoria())
         return queryset
 
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
         contexto['q'] = self.request.GET.get('q', '').strip()
         contexto['estado'] = self.estado()
+        contexto['tipo'] = self.tipo()
+        contexto['tipos'] = Ejemplar.Tipo.choices
+        contexto['categoria'] = self.categoria()
+        contexto['categorias'] = Categoria.objects.order_by('nombre')
         return contexto
 
     def queryset_csv(self, queryset):
@@ -457,8 +529,8 @@ class EjemplarListView(PermissionRequiredMixin, ExportarCSVMixin, BuscarAntesDeL
             else:
                 estado = 'Disponible'
         return [
-            ejemplar.codigo_inventario, ejemplar.id_inventario, libro.titulo, libro.autor,
-            libro.editorial, libro.categoria, libro.isbn, estado,
+            ejemplar.codigo_inventario, ejemplar.id_inventario, libro.titulo, ejemplar.get_tipo_display(),
+            libro.autor, libro.editorial, libro.categoria, libro.isbn, estado,
             ejemplar.get_motivo_baja_display(), ejemplar.fecha_baja, ejemplar.observaciones,
         ]
 
@@ -1069,8 +1141,20 @@ class PersonaListView(PermissionRequiredMixin, ExportarCSVMixin, ListView):
         estado = self.request.GET.get('estado', 'activas')
         return estado if estado in ESTADOS_DE_PERSONA else 'activas'
 
+    def tipo(self):
+        tipo = self.request.GET.get('tipo', '')
+        return tipo if tipo in Persona.Tipo.values else ''
+
+    def carrera(self):
+        carrera = self.request.GET.get('carrera', '')
+        return Carrera.objects.filter(pk=int(carrera)).first() if carrera.isdigit() else None
+
     def get_queryset(self):
         queryset = super().get_queryset().filter(**ESTADOS_DE_PERSONA[self.estado()])
+        if self.tipo():
+            queryset = queryset.filter(tipo=self.tipo())
+        if self.carrera():
+            queryset = queryset.filter(carreras=self.carrera())
         q = self.request.GET.get('q', '').strip()
         if q:
             # unaccent (PostgreSQL): "perez" también encuentra "Pérez".
@@ -1087,7 +1171,33 @@ class PersonaListView(PermissionRequiredMixin, ExportarCSVMixin, ListView):
         contexto = super().get_context_data(**kwargs)
         contexto['q'] = self.request.GET.get('q', '').strip()
         contexto['estado'] = self.estado()
+        contexto['tipo'] = self.tipo()
+        contexto['tipos'] = Persona.Tipo.choices
+        contexto['carrera'] = self.carrera()
+        contexto['carreras'] = Carrera.objects.all()
         return contexto
+
+
+def responder_foto(persona):
+    """La foto de perfil (privada) como imagen. Sin foto, 404."""
+    if not persona.foto:
+        raise Http404('Esta persona no tiene foto.')
+    try:
+        archivo = persona.foto.open('rb')
+    except FileNotFoundError:
+        raise Http404('No se encontró la foto.')
+    respuesta = FileResponse(archivo, content_type='image/jpeg')
+    respuesta['Cache-Control'] = 'private, max-age=86400'
+    return respuesta
+
+
+class PersonaFotoView(PermissionRequiredMixin, View):
+    """El personal ve la foto de una persona. El lector ve la suya desde el portal (portal:mi_foto)."""
+
+    permission_required = 'biblioteca.view_persona'
+
+    def get(self, request, pk):
+        return responder_foto(get_object_or_404(Persona, pk=pk))
 
 
 class PersonaDetailView(PermissionRequiredMixin, DetailView):

@@ -41,7 +41,7 @@
     <div class="tarjeta-titulo"><h2 id="titulo-reserva">Reservar</h2></div>
     {% if reserva_activa %}
         {% include 'portal/_estado_reserva.html' with reserva=reserva_activa %}
-        <p class="ayuda">Podés ver y cancelar tus reservas en <a href="{% url 'portal:perfil' %}">Mi perfil</a>.</p>
+        <p class="ayuda">Podés ver y cancelar tus reservas en <a href="{% url 'portal:mis_reservas' %}">Mis reservas</a>.</p>
     {% elif motivos_para_no_reservar %}
         <p class="ayuda">Ahora no podés reservar este libro:</p>
         <ul class="ayuda">{% for motivo in motivos_para_no_reservar %}<li>{{ motivo }}</li>{% endfor %}</ul>

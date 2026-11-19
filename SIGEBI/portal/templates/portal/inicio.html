@@ -32,8 +32,8 @@
 </div>
 
 {% if prestamos_vencidos %}
-<div class="alerta-error" role="alert">{% icono 'alerta' %}<p>Tenés {{ prestamos_vencidos }} préstamo{{ prestamos_vencidos|pluralize }} vencido{{ prestamos_vencidos|pluralize }}. <a href="{% url 'portal:perfil' %}">Ver mis préstamos</a></p></div>
+<div class="alerta-error" role="alert">{% icono 'alerta' %}<p>Tenés {{ prestamos_vencidos }} préstamo{{ prestamos_vencidos|pluralize }} vencido{{ prestamos_vencidos|pluralize }}. <a href="{% url 'portal:sin_devolver' %}">Ver mis préstamos</a></p></div>
 {% elif prestamos_sin_devolver %}
-<p class="texto-suave">Tenés {{ prestamos_sin_devolver }} libro{{ prestamos_sin_devolver|pluralize }} sin devolver. <a href="{% url 'portal:perfil' %}">Ver mis préstamos</a></p>
+<p class="texto-suave">Tenés {{ prestamos_sin_devolver }} libro{{ prestamos_sin_devolver|pluralize }} sin devolver. <a href="{% url 'portal:sin_devolver' %}">Ver mis préstamos</a></p>
 {% endif %}
 {% endblock %}

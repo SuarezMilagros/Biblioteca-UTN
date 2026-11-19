@@ -2,7 +2,7 @@
 {% load interfaz %}
 
 {% block titulo %}Ejemplar {{ object.codigo_inventario }} · SIGEBI{% endblock %}
-{% block seccion %}Operación / Ejemplares / <strong>{{ object.codigo_inventario }}</strong>{% endblock %}
+{% block seccion %}Catálogo / Ejemplares / <strong>{{ object.codigo_inventario }}</strong>{% endblock %}
 
 {% block contenido %}
 <a class="volver" href="{% url 'biblioteca:libro_detail' object.libro_id %}">{% icono 'volver' %}Volver al libro</a>
@@ -27,6 +27,9 @@
 
             <dt>ID de inventario</dt>
             <dd>{{ object.id_inventario|default:"No registrado" }}</dd>
+
+            <dt>Tipo</dt>
+            <dd>{{ object.get_tipo_display }}</dd>
 
             <dt>Libro</dt>
             <dd><a href="{% url 'biblioteca:libro_detail' object.libro_id %}">{{ object.libro.titulo }}</a></dd>

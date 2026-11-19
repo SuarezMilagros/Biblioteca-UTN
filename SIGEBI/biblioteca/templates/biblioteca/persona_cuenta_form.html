@@ -2,7 +2,7 @@
 {% load interfaz %}
 
 {% block titulo %}Crear cuenta · {{ persona }} · SIGEBI{% endblock %}
-{% block seccion %}Operación / Personas / {{ persona }} / <strong>Crear cuenta</strong>{% endblock %}
+{% block seccion %}Gestión / Personas / {{ persona }} / <strong>Crear cuenta</strong>{% endblock %}
 
 {% block contenido %}
 <a class="volver" href="{% url 'biblioteca:persona_detail' persona.pk %}">{% icono 'volver' %}Volver a la persona</a>

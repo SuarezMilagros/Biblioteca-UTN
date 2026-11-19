@@ -8,6 +8,8 @@ urlpatterns = [
     path('', views.inicio, name='inicio'),
     path('informes/', views.InformesView.as_view(), name='informes'),
     path('informes/demanda/', views.InformeDemandaView.as_view(), name='informe_demanda'),
+    path('informes/prestamos-por-persona/', views.InformePrestamosPorPersonaView.as_view(),
+         name='informe_prestamos_por_persona'),
 
     path('categorias/', views.CategoriaListView.as_view(), name='categoria_list'),
     path('categorias/nueva/', views.CategoriaCreateView.as_view(), name='categoria_create'),
@@ -53,6 +55,7 @@ urlpatterns = [
     path('personas/', views.PersonaListView.as_view(), name='persona_list'),
     path('personas/nueva/', views.PersonaCreateView.as_view(), name='persona_create'),
     path('personas/<int:pk>/', views.PersonaDetailView.as_view(), name='persona_detail'),
+    path('personas/<int:pk>/foto/', views.PersonaFotoView.as_view(), name='persona_foto'),
     path('personas/<int:pk>/editar/', views.PersonaUpdateView.as_view(), name='persona_update'),
     path('personas/<int:pk>/cuenta/nueva/', views.PersonaCuentaCreateView.as_view(), name='persona_cuenta_create'),
     path('personas/<int:pk>/cuenta/reenviar/', views.PersonaCuentaReenviarView.as_view(), name='persona_cuenta_reenviar'),

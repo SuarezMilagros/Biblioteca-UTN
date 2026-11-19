@@ -15,4 +15,12 @@ urlpatterns = [
     path('material/compartir/', views.CompartirMaterialView.as_view(), name='material_compartir'),
     path('material/<int:pk>/archivo/', views.MaterialArchivoView.as_view(), name='material_archivo'),
     path('perfil/', views.PerfilView.as_view(), name='perfil'),
+    path('perfil/reservas/', views.PerfilView.as_view(template_name='portal/perfil_reservas.html'), name='mis_reservas'),
+    path('perfil/material/', views.PerfilView.as_view(template_name='portal/perfil_material.html'), name='mi_material'),
+    path('perfil/sin-devolver/', views.PerfilView.as_view(template_name='portal/perfil_sin_devolver.html'),
+         name='sin_devolver'),
+    path('perfil/historial/', views.PerfilView.as_view(template_name='portal/perfil_historial.html'), name='historial'),
+    path('perfil/foto/', views.FotoView.as_view(), name='foto'),
+    path('perfil/foto/ver/', views.MiFotoView.as_view(), name='mi_foto'),
+    path('perfil/foto/quitar/', views.QuitarFotoView.as_view(), name='quitar_foto'),
 ]

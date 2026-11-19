@@ -2,7 +2,7 @@
 {% load interfaz %}
 
 {% block titulo %}Etiquetas con QR · SIGEBI{% endblock %}
-{% block seccion %}Operación / Ejemplares / <strong>Etiquetas</strong>{% endblock %}
+{% block seccion %}Catálogo / Ejemplares / <strong>Etiquetas</strong>{% endblock %}
 
 {% block contenido %}
 <div class="no-imprimir">
@@ -43,7 +43,7 @@
 </div>
 
 {% if etiquetas %}
-<div class="etiquetas">
+<div class="hoja-etiquetas">
     {% for ejemplar, qr in etiquetas %}
     <div class="etiqueta">
         <span class="qr-imagen" role="img" aria-label="Código QR del ejemplar {{ ejemplar.codigo_inventario }}">{{ qr }}</span>

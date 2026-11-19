@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% load interfaz %}
+
+{% block titulo %}Sin devolver · SIGEBI{% endblock %}
+{% block seccion %}Mi perfil / <strong>Sin devolver</strong>{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Mi perfil</p>
+        <h1>Sin devolver</h1>
+    </div>
+</div>
+
+{% if activos %}
+{% if activos.0.vencido %}
+<div class="alerta-error" role="alert">{% icono 'alerta' %}<p>Tenés libros vencidos. Devolvelos en la biblioteca lo antes posible.</p></div>
+{% endif %}
+<div class="tabla-contenedor">
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Libro</th>
+                <th scope="col">Préstamo</th>
+                <th scope="col">Vencimiento</th>
+                <th scope="col">Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for prestamo in activos %}
+            <tr>
+                <td data-etiqueta="Libro"><strong>{{ prestamo.ejemplar.libro.titulo }}</strong><span class="secundario codigo">{{ prestamo.ejemplar.codigo_inventario }}</span></td>
+                <td data-etiqueta="Préstamo">{{ prestamo.fecha_prestamo|date:"d/m/Y" }}</td>
+                <td data-etiqueta="Vencimiento">
+                    {{ prestamo.fecha_vencimiento|date:"d/m/Y" }}
+                    <span class="secundario">{% if prestamo.dias_restantes > 1 %}Faltan {{ prestamo.dias_restantes }} días{% elif prestamo.dias_restantes == 1 %}Vence mañana{% elif prestamo.dias_restantes == 0 %}Vence hoy{% else %}{{ prestamo.dias_de_atraso }} día{{ prestamo.dias_de_atraso|pluralize }} de atraso{% endif %}</span>
+                </td>
+                <td data-etiqueta="Estado">{% include 'biblioteca/_estado_prestamo.html' %}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="texto-suave">No tenés libros sin devolver.</p>
+{% endif %}
+{% endblock %}

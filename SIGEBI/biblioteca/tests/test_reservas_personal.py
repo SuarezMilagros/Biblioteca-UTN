@@ -251,7 +251,7 @@ class RechazarTests(ReservasPersonalTestCase):
         reserva = self.pendiente()
         self.post('reserva_rechazar', reserva, motivo='No hay ejemplares en condiciones.')
         self.client.force_login(self.cuenta_ana)
-        self.assertContains(self.client.get(reverse('portal:perfil')), 'No hay ejemplares en condiciones.')
+        self.assertContains(self.client.get(reverse('portal:mis_reservas')), 'No hay ejemplares en condiciones.')
 
 
 class RetirarYLiberarTests(ReservasPersonalTestCase):
@@ -323,7 +323,7 @@ class VencimientoTests(ReservasPersonalTestCase):
     def test_el_perfil_del_lector_la_muestra_vencida(self):
         self.confirmada(horas_restantes=-1)
         self.client.force_login(self.cuenta_ana)
-        respuesta = self.client.get(reverse('portal:perfil'))
+        respuesta = self.client.get(reverse('portal:mis_reservas'))
         self.assertContains(respuesta, 'No se retiró a tiempo.')
         self.assertEqual(Reserva.objects.get().estado, 'VENCIDA')
 

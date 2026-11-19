@@ -22,7 +22,7 @@
     <span class="vacio-icono">{% icono 'reloj' %}</span>
     <p class="vacio-titulo">Ya tenés {{ maximo_pendientes }} materiales esperando revisión.</p>
     <p>Cuando la biblioteca los revise, vas a poder subir más.</p>
-    <a class="boton-secundario" href="{% url 'portal:perfil' %}#material-compartido">{% icono 'ver' %}Ver mi material</a>
+    <a class="boton-secundario" href="{% url 'portal:mi_material' %}">{% icono 'ver' %}Ver mi material</a>
 </div>
 {% else %}
 <form method="post" enctype="multipart/form-data" class="formulario tarjeta formulario-angosto">

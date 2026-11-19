@@ -23,8 +23,13 @@
             <label for="q" class="sr-only">Buscar por título</label>
             <input type="search" id="q" name="q" value="{{ q }}" placeholder="Buscar por título (sin importar las tildes)" autofocus>
         </div>
+        <label for="tipo" class="sr-only">Tipo de ejemplar</label>
+        <select id="tipo" name="tipo">
+            <option value="">Todos los tipos</option>
+            {% for valor, nombre in tipos %}<option value="{{ valor }}"{% if tipo == valor %} selected{% endif %}>Con ejemplares: {{ nombre|lower }}</option>{% endfor %}
+        </select>
         <button type="submit" class="boton">Buscar</button>
-        {% if q or todos %}
+        {% if q or todos or tipo %}
             <a class="quitar-filtros" href="{% url 'biblioteca:libro_list' %}">Quitar búsqueda</a>
         {% endif %}
     </form>
@@ -82,10 +87,10 @@
         <p>El catálogo tiene {{ total_registros }} título{{ total_registros|pluralize }}. Escribí parte del título arriba; no hace falta poner tildes.</p>
         <a class="boton-secundario" href="?todos=1">{% icono 'libro' %}Ver todos los libros</a>
     </div>
-    {% elif q %}
+    {% elif q or tipo %}
     <div class="vacio">
         <span class="vacio-icono">{% icono 'buscar' %}</span>
-        <p class="vacio-titulo">No se encontraron libros con «{{ q }}».</p>
+        <p class="vacio-titulo">No se encontraron libros{% if q %} con «{{ q }}»{% endif %}{% if tipo %} con ejemplares de ese tipo{% endif %}.</p>
         <p>Probá con otra palabra del título.</p>
     </div>
     {% else %}

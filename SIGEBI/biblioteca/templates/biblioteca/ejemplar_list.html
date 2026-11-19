@@ -2,12 +2,12 @@
 {% load interfaz %}
 
 {% block titulo %}Ejemplares · SIGEBI{% endblock %}
-{% block seccion %}Operación / <strong>Ejemplares</strong>{% endblock %}
+{% block seccion %}Catálogo / <strong>Ejemplares</strong>{% endblock %}
 
 {% block contenido %}
 <div class="encabezado-seccion">
     <div>
-        <p class="sobretitulo">Operación</p>
+        <p class="sobretitulo">Catálogo</p>
         <h1>Ejemplares</h1>
         <p class="bajada">Copias físicas de cada libro. Buscá por código para prestar o registrar una devolución.</p>
     </div>
@@ -30,8 +30,18 @@
             <option value="baja"{% if estado == 'baja' %} selected{% endif %}>Dados de baja</option>
             <option value="todos"{% if estado == 'todos' %} selected{% endif %}>Todos</option>
         </select>
+        <label for="tipo" class="sr-only">Tipo</label>
+        <select id="tipo" name="tipo">
+            <option value="">Todos los tipos</option>
+            {% for valor, nombre in tipos %}<option value="{{ valor }}"{% if tipo == valor %} selected{% endif %}>{{ nombre }}</option>{% endfor %}
+        </select>
+        <label for="categoria" class="sr-only">Categoría</label>
+        <select id="categoria" name="categoria">
+            <option value="">Todas las categorías</option>
+            {% for opcion in categorias %}<option value="{{ opcion.pk }}"{% if categoria == opcion %} selected{% endif %}>{{ opcion.nombre }}</option>{% endfor %}
+        </select>
         <button type="submit" class="boton">Buscar</button>
-        {% if q or estado != 'activos' or todos %}
+        {% if q or estado != 'activos' or todos or tipo or categoria %}
             <a class="quitar-filtros" href="{% url 'biblioteca:ejemplar_list' %}">Quitar filtros</a>
         {% endif %}
     </form>
@@ -50,6 +60,7 @@
                 <th scope="col">Código de inventario</th>
                 <th scope="col">ID de inventario</th>
                 <th scope="col">Libro</th>
+                <th scope="col">Tipo</th>
                 <th scope="col">Estado</th>
                 <th scope="col"><span class="sr-only">Acciones</span></th>
             </tr>
@@ -61,6 +72,7 @@
                 <td data-etiqueta="Código"><a class="codigo" href="{% url 'biblioteca:ejemplar_detail' ejemplar.pk %}">{{ ejemplar.codigo_inventario }}</a></td>
                 <td data-etiqueta="ID">{{ ejemplar.id_inventario|default:"—" }}</td>
                 <td data-etiqueta="Libro"><a href="{% url 'biblioteca:libro_detail' ejemplar.libro_id %}">{{ ejemplar.libro.titulo }}</a></td>
+                <td data-etiqueta="Tipo"><span class="badge badge-etiqueta">{{ ejemplar.get_tipo_display }}</span></td>
                 <td data-etiqueta="Estado">{% include 'biblioteca/_estado_ejemplar.html' %}</td>
                 <td class="acciones">
                     <a href="{% url 'biblioteca:ejemplar_detail' ejemplar.pk %}">{% icono 'ver' %}Ver</a>

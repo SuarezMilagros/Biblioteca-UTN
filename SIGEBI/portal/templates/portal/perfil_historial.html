@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% load interfaz %}
+
+{% block titulo %}Historial de préstamos · SIGEBI{% endblock %}
+{% block seccion %}Mi perfil / <strong>Historial de préstamos</strong>{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Mi perfil</p>
+        <h1>Historial de préstamos</h1>
+    </div>
+</div>
+
+{% if devueltos %}
+<div class="tabla-contenedor">
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Libro</th>
+                <th scope="col">Préstamo</th>
+                <th scope="col">Devolución</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for prestamo in devueltos %}
+            <tr>
+                <td data-etiqueta="Libro">{{ prestamo.ejemplar.libro.titulo }}</td>
+                <td data-etiqueta="Préstamo">{{ prestamo.fecha_prestamo|date:"d/m/Y" }}</td>
+                <td data-etiqueta="Devolución">{{ prestamo.fecha_devolucion|date:"d/m/Y" }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="texto-suave">Todavía no devolviste ningún préstamo.</p>
+{% endif %}
+{% endblock %}

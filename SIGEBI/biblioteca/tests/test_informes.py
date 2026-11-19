@@ -120,10 +120,10 @@ class InformeDeEjemplaresTests(InformesTestCase):
     def test_columnas_y_disponibilidad(self):
         filas = self.filas(self.exportar('biblioteca:ejemplar_list'))
         self.assertEqual(filas[0], [
-            'Código de inventario', 'ID de inventario', 'Título', 'Autor', 'Editorial',
+            'Código de inventario', 'ID de inventario', 'Título', 'Tipo', 'Autor', 'Editorial',
             'Categoría', 'ISBN', 'Estado', 'Motivo de baja', 'Fecha de baja', 'Observaciones',
         ])
-        comunes = ['Cálculo I', 'Ledesma, Hugo', 'Ediciones del Valle', 'Matemática', '978-987-1']
+        comunes = ['Cálculo I', 'Original', 'Ledesma, Hugo', 'Ediciones del Valle', 'Matemática', '978-987-1']
         self.assertEqual(filas[1:], [
             ['CAL-001', '101', *comunes, 'Prestado', '', '', ''],
             ['CAL-002', '', *comunes, 'Prestado', '', '', 'Tapa rota'],
@@ -138,7 +138,7 @@ class InformeDeEjemplaresTests(InformesTestCase):
         self.assertEqual(len(self.filas(self.exportar('biblioteca:ejemplar_list'))), 4)  # solo activos
         filas = self.filas(self.exportar('biblioteca:ejemplar_list', estado='baja'))
         self.assertEqual(filas[1][0], 'CAL-009')
-        self.assertEqual(filas[1][7:10], ['Dado de baja', 'Perdido', self.fecha(0)])
+        self.assertEqual(filas[1][8:11], ['Dado de baja', 'Perdido', self.fecha(0)])
 
     def test_exporta_todas_las_paginas(self):
         for numero in range(ELEMENTOS_POR_PAGINA + 5):

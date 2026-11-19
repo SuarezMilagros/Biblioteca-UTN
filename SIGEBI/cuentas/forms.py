@@ -4,6 +4,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm
 
 from . import intentos
+from biblioteca.forms import MENSAJE_DOCUMENTO_INVALIDO
+from biblioteca.models import Persona
+
 from .models import IntentoDeAcceso
 from .roles import ADMINISTRATIVO, BIBLIOTECARIO
 
@@ -79,6 +82,11 @@ class UsuarioForm(forms.ModelForm):
     def __init__(self, *args, solicitante, **kwargs):
         super().__init__(*args, **kwargs)
         self.solicitante = solicitante
+        self.fields['username'].help_text = 'Solo números, 7 u 8 dígitos, sin puntos ni espacios.'
+        self.fields['username'].widget.attrs.update({'maxlength': '8', 'inputmode': 'numeric'})
+        if self.instance.pk and len(self.instance.username) > 8:
+            # Una cuenta vieja con otro formato tiene que poder verse completa para editarse.
+            self.fields['username'].widget.attrs['maxlength'] = str(len(self.instance.username))
         self.fields['first_name'].required = True
         self.fields['last_name'].required = True
         self.fields['email'].required = True
@@ -100,6 +108,17 @@ class UsuarioForm(forms.ModelForm):
         else:
             # El Administrativo solo puede asignar el rol Bibliotecario.
             self.fields['rol'].choices = [(BIBLIOTECARIO, BIBLIOTECARIO)]
+
+    def clean_username(self):
+        escrito = self.cleaned_data['username']
+        # Las cuentas creadas antes de la regla (por ejemplo, un superusuario "admin") se pueden seguir editando:
+        # se controla solo si el documento es nuevo o cambia.
+        if self.instance.pk and escrito == self.instance.username:
+            return escrito
+        documento = Persona.normalizar_documento(escrito)
+        if not Persona.documento_valido(documento):
+            raise forms.ValidationError(MENSAJE_DOCUMENTO_INVALIDO)
+        return documento
 
     def clean_email(self):
         correo = self.cleaned_data['email'].strip()

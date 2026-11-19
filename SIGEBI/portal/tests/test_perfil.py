@@ -4,6 +4,7 @@
 - Ve sus préstamos sin devolver, con el vencimiento (resaltado si venció), y su historial.
 - Solo los suyos: nunca los de otra persona.
 """
+import re
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
@@ -56,8 +57,8 @@ class PerfilTestCase(TestCase):
     def setUp(self):
         self.client.force_login(self.lector)
 
-    def perfil(self):
-        return self.client.get(reverse('portal:perfil'))
+    def perfil(self, pagina='perfil'):
+        return self.client.get(reverse(f'portal:{pagina}'))
 
 
 class DatosTests(PerfilTestCase):
@@ -69,11 +70,13 @@ class DatosTests(PerfilTestCase):
                 self.assertContains(respuesta, dato)
 
     def test_no_tiene_formulario_para_editar_datos(self):
-        # El único formulario de la página es el botón Salir del menú; el contenido no tiene ninguno.
+        # Los datos son de solo lectura. Los únicos formularios del contenido son los de la foto de perfil.
         html = self.perfil().content.decode()
         contenido = html[html.index('<main'):html.index('</main>')]
-        self.assertNotIn('<form', contenido)
-        self.assertNotIn('<input', contenido)
+        acciones = set(re.findall(r'<form[^>]*action="([^"]+)"', contenido))
+        self.assertEqual(acciones, {reverse('portal:foto')})
+        for campo in ('nombre', 'apellido', 'documento', 'legajo', 'email', 'carreras'):
+            self.assertNotIn(f'name="{campo}"', contenido)
 
     def test_ofrece_cambiar_la_contrasena(self):
         self.assertContains(self.perfil(), f'href="{reverse("password_change")}"')
@@ -91,7 +94,7 @@ class PrestamosTests(PerfilTestCase):
         self.assertEqual([p.pk for p in contexto['devueltos']], [self.devuelto.pk])
 
     def test_muestra_cuanto_falta_o_el_atraso(self):
-        respuesta = self.perfil()
+        respuesta = self.perfil('sin_devolver')
         self.assertContains(respuesta, 'Faltan 12 días')
         self.assertContains(respuesta, '6 días de atraso')
         self.assertContains(respuesta, 'Tenés libros vencidos')
@@ -99,32 +102,34 @@ class PrestamosTests(PerfilTestCase):
     def test_vence_hoy_y_manana(self):
         Prestamo.objects.filter(pk=self.al_dia.pk).update(fecha_vencimiento=self.hoy)
         Prestamo.objects.filter(pk=self.vencido.pk).update(fecha_vencimiento=self.hoy + timedelta(days=1))
-        respuesta = self.perfil()
+        respuesta = self.perfil('sin_devolver')
         self.assertContains(respuesta, 'Vence hoy')
         self.assertContains(respuesta, 'Vence mañana')
         self.assertNotContains(respuesta, 'Tenés libros vencidos')
 
     def test_nunca_muestra_prestamos_de_otra_persona(self):
-        respuesta = self.perfil()
-        self.assertNotContains(respuesta, 'Libro de Carlos')
-        self.assertNotContains(respuesta, 'CA-1')
-        self.assertNotContains(respuesta, 'Ruiz')
+        for pagina in ('perfil', 'sin_devolver', 'historial', 'mis_reservas', 'mi_material'):
+            with self.subTest(pagina=pagina):
+                respuesta = self.perfil(pagina)
+                self.assertNotContains(respuesta, 'Libro de Carlos')
+                self.assertNotContains(respuesta, 'CA-1')
+                self.assertNotContains(respuesta, 'Ruiz')
 
     def test_sin_prestamos(self):
         Prestamo.objects.filter(persona=self.persona).delete()
-        respuesta = self.perfil()
-        self.assertContains(respuesta, 'No tenés libros sin devolver.')
-        self.assertContains(respuesta, 'Todavía no devolviste ningún préstamo.')
+        self.assertContains(self.perfil('sin_devolver'), 'No tenés libros sin devolver.')
+        self.assertContains(self.perfil('historial'), 'Todavía no devolviste ningún préstamo.')
 
     def test_el_inicio_avisa_los_vencidos(self):
         respuesta = self.client.get(reverse('portal:inicio'))
         self.assertContains(respuesta, 'Tenés 1 préstamo vencido.')
-        self.assertContains(respuesta, f'href="{reverse("portal:perfil")}"')
+        self.assertContains(respuesta, f'vencido. <a href="{reverse("portal:sin_devolver")}">Ver mis préstamos</a>')
 
     def test_el_inicio_sin_vencidos_avisa_los_sin_devolver(self):
         Prestamo.objects.filter(pk=self.vencido.pk).update(fecha_devolucion=self.hoy)
         respuesta = self.client.get(reverse('portal:inicio'))
         self.assertContains(respuesta, 'Tenés 1 libro sin devolver.')
+        self.assertContains(respuesta, f'sin devolver. <a href="{reverse("portal:sin_devolver")}">Ver mis préstamos</a>')
         self.assertNotContains(respuesta, 'vencido')
 
 

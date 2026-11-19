@@ -565,6 +565,8 @@ a.indicador:hover { border-color: var(--naranja-borde); box-shadow: var(--sombra
     background: var(--blanco);
 }
 .campo-busqueda input[type="search"] { width: 100%; padding-left: 2.4rem; }
+/* Un filtro con opciones largas (por ejemplo, el nombre de una carrera) no puede ensanchar la pantalla. */
+.busqueda select { max-width: 100%; min-width: 0; text-overflow: ellipsis; }
 .busqueda input:focus, .busqueda select:focus { border-color: var(--naranja); box-shadow: var(--foco); outline: none; }
 .quitar-filtros { font-size: 0.88rem; font-weight: 600; }
 .resumen-listado { margin: 0 0 0.75rem; color: var(--texto-suave); font-size: 0.88rem; }
@@ -832,6 +834,7 @@ a.indicador:hover { border-color: var(--naranja-borde); box-shadow: var(--sombra
     .encabezado-seccion { align-items: stretch; }
     .botones-encabezado { width: 100%; }
     .botones-encabezado > * { flex: 1 1 auto; justify-content: center; }
+    .busqueda select { flex: 1 1 100%; }
     .aviso-texto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
     .tarjeta { padding: 1.1rem; }
     .tarjeta-acceso { padding: 1.75rem 1.25rem 1.5rem; }
@@ -891,7 +894,8 @@ a.indicador:hover { border-color: var(--naranja-borde); box-shadow: var(--sombra
 .columna-eleccion input { width: 18px; height: 18px; accent-color: var(--naranja-accion); margin: 0; cursor: pointer; }
 
 /* Cada etiqueta mide 6,1 × 3,4 cm: en A4 (19 cm útiles con márgenes de 1 cm) entran 3 por fila y 7 filas. */
-.etiquetas { display: grid; grid-template-columns: repeat(auto-fill, 6.1cm); gap: 0.4cm; justify-content: start; }
+/* `hoja-etiquetas` y no `etiquetas`: esa clase ya es la fila de insignias (Alumno, Activa…) de las fichas. */
+.hoja-etiquetas { display: grid; grid-template-columns: repeat(auto-fill, 6.1cm); gap: 0.4cm; justify-content: start; }
 .etiqueta {
     display: flex; align-items: center; gap: 0.25cm;
     width: 6.1cm; height: 3.4cm; padding: 0.2cm;
@@ -911,7 +915,7 @@ a.indicador:hover { border-color: var(--naranja-borde); box-shadow: var(--sombra
     .app { display: block; background: none; min-height: 0; }
     .lateral, .lateral-fondo, .cabecera, .pie, .mensajes, .no-imprimir { display: none !important; }
     .contenido { max-width: none; padding: 0; margin: 0; }
-    .etiquetas { gap: 0.2cm; }
+    .hoja-etiquetas { gap: 0.2cm; }
     .etiqueta { border-color: #BBB; }
 }
 
@@ -948,3 +952,15 @@ a.indicador:hover { border-color: var(--naranja-borde); box-shadow: var(--sombra
 .filtro-casilla { display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 500; cursor: pointer; }
 .filtro-casilla input { width: 18px; height: 18px; accent-color: var(--naranja-accion); margin: 0; }
 .busqueda input[type="date"] { min-height: 42px; }
+
+/* Mi perfil en partes y foto de perfil (pedidos de la profesora) */
+.nav-sub { display: grid; gap: 0.1rem; margin: 0.1rem 0 0.4rem; }
+.nav-enlace-sub { padding-left: 3.1rem; font-size: 0.88rem; min-height: 36px; }
+.avatar-foto { object-fit: cover; padding: 0; background: var(--fondo); }
+.avatar-grande.avatar-foto { width: 64px; height: 64px; }
+.resumen-perfil { grid-template-columns: 1fr 1fr; }
+.resumen-perfil .cifra { text-decoration: none; color: inherit; transition: border-color 0.15s; }
+.resumen-perfil .cifra:hover { border-color: var(--naranja-borde); }
+.resumen-perfil .cifra:focus-visible { outline: none; box-shadow: var(--foco); }
+.cifra-alerta strong { color: var(--rojo); }
+.texto-alerta { color: var(--rojo); }

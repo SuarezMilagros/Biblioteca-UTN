@@ -35,3 +35,8 @@ class AlmacenPrivado(FileSystemStorage):
 def nombre_de_archivo(instancia, nombre_original):
     """Nombre al azar: no se puede adivinar ni choca con otro archivo. El título se usa al descargarlo."""
     return f'material/{uuid.uuid4().hex}.pdf'
+
+
+def nombre_de_foto(instancia, nombre_original):
+    """Fotos de perfil (pedido de la profesora): también privadas y con nombre al azar."""
+    return f'fotos/{uuid.uuid4().hex}.jpg'

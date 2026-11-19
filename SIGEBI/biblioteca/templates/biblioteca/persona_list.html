@@ -2,12 +2,12 @@
 {% load interfaz %}
 
 {% block titulo %}Personas · SIGEBI{% endblock %}
-{% block seccion %}Operación / <strong>Personas</strong>{% endblock %}
+{% block seccion %}Gestión / <strong>Personas</strong>{% endblock %}
 
 {% block contenido %}
 <div class="encabezado-seccion">
     <div>
-        <p class="sobretitulo">Operación</p>
+        <p class="sobretitulo">Gestión</p>
         <h1>Personas</h1>
         <p class="bajada">Alumnos y profesores que pueden pedir préstamos.</p>
     </div>
@@ -32,8 +32,18 @@
             <option value="baja"{% if estado == 'baja' %} selected{% endif %}>Dadas de baja</option>
             <option value="todas"{% if estado == 'todas' %} selected{% endif %}>Todas</option>
         </select>
+        <label for="tipo" class="sr-only">Alumno o profesor</label>
+        <select id="tipo" name="tipo">
+            <option value="">Alumnos y profesores</option>
+            {% for valor, nombre in tipos %}<option value="{{ valor }}"{% if tipo == valor %} selected{% endif %}>{{ nombre }}{% if valor == 'ALUMNO' %}s{% else %}es{% endif %}</option>{% endfor %}
+        </select>
+        <label for="carrera" class="sr-only">Carrera</label>
+        <select id="carrera" name="carrera">
+            <option value="">Todas las carreras</option>
+            {% for opcion in carreras %}<option value="{{ opcion.pk }}"{% if carrera == opcion %} selected{% endif %}>{{ opcion.nombre }}</option>{% endfor %}
+        </select>
         <button type="submit" class="boton">Buscar</button>
-        {% if q or estado != 'activas' %}
+        {% if q or estado != 'activas' or tipo or carrera %}
             <a class="quitar-filtros" href="{% url 'biblioteca:persona_list' %}">Quitar filtros</a>
         {% endif %}
     </form>
