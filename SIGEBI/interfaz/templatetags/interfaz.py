@@ -3,7 +3,11 @@
 Los íconos son trazos simples de 24×24, dibujados para SIGEBI (sin dependencias externas).
 Uso en plantillas:  {% load interfaz %}  {% icono 'libro' %}
 """
+import hashlib
+
 from django import template
+from django.contrib.staticfiles import finders
+from django.templatetags.static import static
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
@@ -52,7 +56,30 @@ ICONOS = {
     'imprimir': '<path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/>',
     'qr': '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v1M14 20h1M17 17h4v4h-4"/>',
     'admin': '<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>',
+    'bajar': '<path d="M12 5v14"/><path d="m6 13 6 6 6-6"/>',
 }
+
+
+_huellas = {}
+
+
+@register.simple_tag
+def estatico(ruta):
+    """Dirección de un archivo estático con su versión: `estilos.css?v=3f2a9c1b0d`.
+
+    La versión sale del contenido del archivo. Cuando el archivo cambia, cambia la dirección y el navegador
+    descarga el nuevo en lugar de usar el que tenía guardado (revisión de UX/UI, 24/11/2026: después de una
+    actualización, un navegador seguía mostrando la hoja de estilos anterior). Si no cambia, lo sigue usando.
+    """
+    archivo = finders.find(ruta)
+    if not archivo:
+        return static(ruta)
+    with open(archivo, 'rb') as contenido:
+        datos = contenido.read()
+    clave = (archivo, len(datos), hash(datos))
+    if clave not in _huellas:
+        _huellas[clave] = hashlib.sha256(datos).hexdigest()[:10]
+    return f'{static(ruta)}?v={_huellas[clave]}'
 
 
 @register.simple_tag

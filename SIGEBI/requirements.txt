@@ -1,6 +1,10 @@
 asgiref==3.12.1
 Django==5.2.18
+# Informes en PDF (24/11/2026): fpdf2 genera los PDF, puro Python. defusedxml y fonttools son sus dependencias.
+defusedxml==0.7.1
 et_xmlfile==2.0.0
+fonttools==4.60.1
+fpdf2==2.8.3
 openpyxl==3.1.5
 pillow==12.3.0
 psycopg==3.3.6

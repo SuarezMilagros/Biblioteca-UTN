@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load interfaz %}
+
+{% block titulo %}Mi perfil · SIGEBI{% endblock %}
+{% block seccion %}<strong>Mi perfil</strong>{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-seccion">
+    <div class="ficha">
+        {% include 'componentes/avatar_personal.html' with clase='avatar-grande' %}
+        <div>
+            <h1>{{ user.get_full_name|default:user.get_username }}</h1>
+            <div class="etiquetas"><span class="badge badge-rol badge-info">{{ rol_usuario }}</span></div>
+        </div>
+    </div>
+    <div class="botones-encabezado">
+        <a class="boton-secundario" href="{% url 'password_change' %}">{% icono 'clave' %}Cambiar contraseña</a>
+    </div>
+</div>
+
+<div class="dos-columnas">
+    <section class="tarjeta" aria-labelledby="titulo-datos">
+        <div class="tarjeta-titulo"><h2 id="titulo-datos">Mis datos</h2></div>
+        <dl class="detalle">
+            <dt>Nombre</dt>
+            <dd>{{ user.first_name|default:"No registrado" }}</dd>
+            <dt>Apellido</dt>
+            <dd>{{ user.last_name|default:"No registrado" }}</dd>
+            <dt>Documento</dt>
+            <dd>{{ user.get_username }}</dd>
+            <dt>Correo</dt>
+            <dd>{{ user.email|default:"No registrado" }}</dd>
+            <dt>Rol</dt>
+            <dd>{{ rol_usuario }}</dd>
+            <dt>Último ingreso</dt>
+            <dd>{{ user.last_login|date:"d/m/Y H:i"|default:"—" }}</dd>
+        </dl>
+        {% if perms.auth.change_user %}
+        <p class="ayuda">Podés corregir tus datos desde <a href="{% url 'cuentas:usuario_update' user.pk %}">Cuentas</a>.</p>
+        {% else %}
+        <p class="ayuda">Si algún dato está mal, pedíselo a un administrativo de la biblioteca.</p>
+        {% endif %}
+    </section>
+
+    <section class="tarjeta" aria-labelledby="titulo-foto">
+        <div class="tarjeta-titulo"><h2 id="titulo-foto">Foto de perfil</h2></div>
+        <form method="post" action="{% url 'cuentas:perfil_foto' %}" enctype="multipart/form-data" class="formulario">
+            {% csrf_token %}
+            <div class="campo">
+                <label for="id_foto">{% if perfil.foto %}Cambiar la foto{% else %}Subir una foto (opcional){% endif %}</label>
+                {{ form_foto.foto }}
+                <small class="ayuda">JPG, PNG o WEBP, hasta {{ maximo_mb }} MB. Se ve arriba a la derecha y solo la ves vos.</small>
+            </div>
+            <button type="submit" class="boton-secundario">{% icono 'imagen' %}Guardar foto</button>
+        </form>
+        {% if perfil.foto %}
+        <form method="post" action="{% url 'cuentas:perfil_quitar_foto' %}" class="formulario-baja"
+              data-confirmar="Se borra tu foto de perfil." data-confirmar-titulo="¿Quitar la foto?" data-confirmar-boton="Quitar">
+            {% csrf_token %}<button type="submit" class="boton-texto">{% icono 'cerrar' %}Quitar la foto</button>
+        </form>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

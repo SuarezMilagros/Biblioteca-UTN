@@ -14,7 +14,7 @@
     </div>
     {% if libros %}
     <div class="botones-encabezado">
-        <a class="boton-secundario" href="{% querystring formato='csv' page=None %}">{% icono 'descargar' %}Exportar CSV</a>
+        <a class="boton-secundario" href="{% querystring formato='csv' page=None %}">{% icono 'descargar' %}Exportar CSV</a><a class="boton-secundario" href="{% querystring formato='pdf' page=None %}">{% icono 'documento' %}Exportar PDF</a>
     </div>
     {% endif %}
 </div>

@@ -20,6 +20,45 @@
     {% endif %}
 </div>
 
+{% if perms.biblioteca.view_persona %}
+<div class="subencabezado" id="personas">
+    <h2>Alumnos y profesores activos</h2>
+</div>
+<nav class="pestanas" aria-label="Alumnos y profesores">
+    <a href="?tipo=alumnos#personas"{% if tipo == 'alumnos' %} aria-current="page" class="activa"{% endif %}>Alumnos <span class="nav-contador nav-contador-suave">{{ cantidad_alumnos }}</span></a>
+    <a href="?tipo=profesores#personas"{% if tipo == 'profesores' %} aria-current="page" class="activa"{% endif %}>Profesores <span class="nav-contador nav-contador-suave">{{ cantidad_profesores }}</span></a>
+</nav>
+{% if personas %}
+<div class="tabla-contenedor">
+    <table class="tabla tabla-compacta">
+        <thead>
+            <tr>
+                <th scope="col">Apellido y nombre</th>
+                <th scope="col">Documento</th>
+                <th scope="col">Legajo</th>
+                <th scope="col">Cuenta del portal</th>
+                <th scope="col"><span class="sr-only">Acciones</span></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for persona in personas %}
+            <tr>
+                <td data-etiqueta="Persona"><a href="{% url 'biblioteca:persona_detail' persona.pk %}">{{ persona }}</a></td>
+                <td data-etiqueta="Documento" data-prefijo="DNI">{{ persona.documento }}</td>
+                <td data-etiqueta="Legajo" data-prefijo="Legajo">{{ persona.legajo|default:"—" }}</td>
+                <td data-etiqueta="Cuenta">{% if persona.cuenta_id %}<span class="badge badge-disponible">Tiene cuenta</span>{% else %}<span class="badge badge-baja">Sin cuenta</span>{% endif %}</td>
+                <td class="acciones"><a href="{% url 'biblioteca:persona_detail' persona.pk %}" aria-label="Ver la ficha de {{ persona }}">{% icono 'ver' %}Ver</a></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include 'componentes/paginacion.html' %}
+{% else %}
+{% include 'componentes/vacio.html' with icono='personas' titulo='No hay '|add:tipo|add:' activos en esta carrera.' %}
+{% endif %}
+{% endif %}
+
 <div class="subencabezado">
     <h2>Categorías de libros</h2>
 </div>

@@ -1,0 +1,3 @@
+{% comment %}Avatar de quien inició sesión en el sistema del personal: su foto, o sus iniciales. Opcional `clase`.{% endcomment %}
+{% load interfaz %}
+{% if user.perfil_personal.foto %}<img class="avatar avatar-foto{% if clase %} {{ clase }}{% endif %}" src="{% url 'cuentas:perfil_foto_ver' %}?v={{ user.perfil_personal.foto.name|slice:'6:14' }}" alt="">{% else %}<span class="avatar{% if clase %} {{ clase }}{% endif %}" aria-hidden="true">{{ user|iniciales }}</span>{% endif %}

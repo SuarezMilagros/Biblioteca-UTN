@@ -7,6 +7,7 @@ import io
 
 from django import forms
 from django.core.files.base import ContentFile
+from django.http import FileResponse, Http404
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 MAXIMO_MB = 5
@@ -45,18 +46,32 @@ class FotoForm(forms.Form):
         return preparar_foto(self.cleaned_data['foto'])
 
 
-def guardar_foto(persona, contenido):
-    """Reemplaza la foto de la persona y borra la anterior del disco."""
-    anterior = persona.foto.name if persona.foto else ''
-    persona.foto.save('foto.jpg', contenido, save=False)
-    persona.save(update_fields=['foto'])
+def guardar_foto(titular, contenido):
+    """Reemplaza la foto y borra la anterior del disco. `titular` es una Persona (alumno o profesor)
+    o un PerfilDelPersonal (bibliotecario o administrativo): los dos tienen el campo `foto`."""
+    anterior = titular.foto.name if titular.foto else ''
+    titular.foto.save('foto.jpg', contenido, save=False)
+    titular.save(update_fields=['foto'])
     if anterior:
-        persona.foto.storage.delete(anterior)
+        titular.foto.storage.delete(anterior)
 
 
-def quitar_foto(persona):
-    if persona.foto:
-        nombre = persona.foto.name
-        persona.foto = ''
-        persona.save(update_fields=['foto'])
-        persona._meta.get_field('foto').storage.delete(nombre)
+def quitar_foto(titular):
+    if titular.foto:
+        nombre = titular.foto.name
+        titular.foto = ''
+        titular.save(update_fields=['foto'])
+        titular._meta.get_field('foto').storage.delete(nombre)
+
+
+def responder_foto(titular):
+    """La foto de perfil (privada) de una persona o de alguien del personal, como imagen. Sin foto, 404."""
+    if not titular.foto:
+        raise Http404('No tiene foto.')
+    try:
+        archivo = titular.foto.open('rb')
+    except FileNotFoundError:
+        raise Http404('No se encontró la foto.')
+    respuesta = FileResponse(archivo, content_type='image/jpeg')
+    respuesta['Cache-Control'] = 'private, max-age=86400'
+    return respuesta

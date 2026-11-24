@@ -6,6 +6,10 @@ app_name = 'cuentas'
 
 urlpatterns = [
     path('', views.UsuarioListView.as_view(), name='usuario_list'),
+    path('mi-perfil/', views.PerfilView.as_view(), name='perfil'),
+    path('mi-perfil/foto/', views.FotoView.as_view(), name='perfil_foto'),
+    path('mi-perfil/foto/ver/', views.MiFotoView.as_view(), name='perfil_foto_ver'),
+    path('mi-perfil/foto/quitar/', views.QuitarFotoView.as_view(), name='perfil_quitar_foto'),
     path('nueva/', views.UsuarioCreateView.as_view(), name='usuario_create'),
     path('<int:pk>/editar/', views.UsuarioUpdateView.as_view(), name='usuario_update'),
     path(

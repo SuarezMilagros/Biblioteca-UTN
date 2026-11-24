@@ -15,7 +15,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block titulo %}SIGEBI{% endblock %}</title>
     <script>document.documentElement.classList.add('js');</script>
-    <link rel="stylesheet" href="{% static 'css/estilos.css' %}">
+    <link rel="stylesheet" href="{% estatico 'css/estilos.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -77,6 +77,8 @@
             <div class="lateral-pie">
                 {% if es_lector %}
                 <a class="nav-enlace" href="{% url 'portal:perfil' %}"{% if request.resolver_match.view_name == "portal:perfil" %} aria-current="page"{% endif %}>{% icono 'persona' %}Mi perfil</a>
+                {% else %}
+                <a class="nav-enlace" href="{% url 'cuentas:perfil' %}"{% if request.resolver_match.view_name == "cuentas:perfil" %} aria-current="page"{% endif %}>{% icono 'persona' %}Mi perfil</a>
                 {% endif %}
                 <a class="nav-enlace" href="{% url 'password_change' %}"{% if seccion|slice:":15" == "password_change" %} aria-current="page"{% endif %}>{% icono 'clave' %}Cambiar contraseña</a>
                 <form method="post" action="{% url 'logout' %}" class="formulario-salir">
@@ -98,10 +100,10 @@
                         {% icono 'campana' %}<span>{{ prestamos_vencidos_total }}<span class="aviso-texto"> vencido{{ prestamos_vencidos_total|pluralize }}</span></span>
                     </a>
                     {% endif %}
-                    {% if es_lector %}<a class="perfil perfil-enlace" href="{% url 'portal:perfil' %}" title="Mi perfil">{% else %}<div class="perfil">{% endif %}
-                        {% if es_lector and user.persona.foto %}{% include 'componentes/avatar_persona.html' with persona=user.persona %}{% else %}<span class="avatar" aria-hidden="true">{{ user|iniciales }}</span>{% endif %}
+                    <a class="perfil perfil-enlace" href="{% if es_lector %}{% url 'portal:perfil' %}{% else %}{% url 'cuentas:perfil' %}{% endif %}" title="Mi perfil">
+                        {% if es_lector %}{% if user.persona.foto %}{% include 'componentes/avatar_persona.html' with persona=user.persona %}{% else %}<span class="avatar" aria-hidden="true">{{ user|iniciales }}</span>{% endif %}{% else %}{% include 'componentes/avatar_personal.html' %}{% endif %}
                         <span class="perfil-texto"><strong>{{ user.get_full_name|default:user.get_username }}</strong><small>{{ rol_usuario }}</small></span>
-                    {% if es_lector %}</a>{% else %}</div>{% endif %}
+                    </a>
                 </div>
             </header>
 
@@ -138,7 +140,7 @@
     </div>
     {% endif %}
 
-    <script src="{% static 'js/main.js' %}"></script>
+    <script src="{% estatico 'js/main.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

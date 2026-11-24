@@ -161,7 +161,9 @@ class NavegacionDelPortalTests(PerfilTestCase):
         html = self.client.get(reverse('biblioteca:inicio')).content.decode()
         self.assertNotIn(reverse('portal:mis_reservas'), html)
         self.assertNotIn('>Mi biblioteca</p>', html)
-        self.assertNotIn('perfil-enlace', html)
+        # El personal tiene su propio perfil (revisión del 24/11/2026), no el del portal.
+        self.assertIn(f'<a class="perfil perfil-enlace" href="{reverse("cuentas:perfil")}"', html)
+        self.assertNotIn(f'href="{reverse("portal:perfil")}"', html)
 
 
 class FotoTests(PerfilTestCase):
