@@ -35,17 +35,6 @@
     </section>
 
     <div class="columna">
-        <section class="tarjeta" aria-labelledby="titulo-resumen">
-            <div class="tarjeta-titulo"><h2 id="titulo-resumen">Resumen</h2></div>
-            <div class="cifras cifras-dos resumen-perfil">
-                <a class="cifra" href="{% url 'portal:mis_reservas' %}"><strong>{{ reservas_activas|length }}</strong><span>Reservas activas</span></a>
-                <a class="cifra" href="{% url 'portal:mi_material' %}"><strong>{{ materiales_compartidos|length }}</strong><span>Material compartido</span></a>
-                <a class="cifra{% if activos.0.vencido %} cifra-alerta{% endif %}" href="{% url 'portal:sin_devolver' %}"><strong>{{ activos|length }}</strong><span>Sin devolver</span></a>
-                <a class="cifra" href="{% url 'portal:historial' %}"><strong>{{ devueltos|length }}</strong><span>Devueltos</span></a>
-            </div>
-            {% if activos.0.vencido %}<p class="ayuda texto-alerta">Tenés libros vencidos: devolvelos en la biblioteca.</p>{% endif %}
-        </section>
-
         <section class="tarjeta" aria-labelledby="titulo-foto">
             <div class="tarjeta-titulo"><h2 id="titulo-foto">Foto de perfil</h2></div>
             <form method="post" action="{% url 'portal:foto' %}" enctype="multipart/form-data" class="formulario">

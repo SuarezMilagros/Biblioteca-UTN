@@ -154,7 +154,7 @@ class PantallasTests(ReservasTestCase):
         self.reservar(self.python)
         self.reservar(self.java)
         self.client.post(reverse('portal:cancelar_reserva', args=[self.persona.reservas.get(libro=self.java).pk]))
-        contexto = self.client.get(reverse('portal:perfil')).context
+        contexto = self.client.get(reverse('portal:mis_reservas')).context
         self.assertEqual([r.libro.titulo for r in contexto['reservas_activas']], ['Python'])
         self.assertEqual([r.libro.titulo for r in contexto['reservas_anteriores']], ['Java'])
 

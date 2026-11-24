@@ -1,0 +1,16 @@
+{% comment %}Encabezado y pestañas de Material digital. Requiere `cantidad_compartidos`; opcional `pestana`.{% endcomment %}
+{% load interfaz %}
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Explorar</p>
+        <h1>Material digital</h1>
+        <p class="bajada">{% if pestana == 'compartido' %}Lo que subiste para tus carreras y en qué estado está la revisión.{% else %}Libros, tesis y apuntes en PDF de tus carreras.{% endif %}</p>
+    </div>
+    <div class="botones-encabezado">
+        <a class="boton" href="{% url 'portal:material_compartir' %}">{% icono 'mas' %}Compartir material</a>
+    </div>
+</div>
+<nav class="pestanas" aria-label="Material digital">
+    <a href="{% url 'portal:material' %}"{% if pestana == 'carreras' %} aria-current="page" class="activa"{% endif %}>De mis carreras</a>
+    <a href="{% url 'portal:mi_material' %}"{% if pestana == 'compartido' %} aria-current="page" class="activa"{% endif %}>Lo que compartí{% if cantidad_compartidos %} <span class="nav-contador nav-contador-suave">{{ cantidad_compartidos }}</span>{% endif %}</a>
+</nav>

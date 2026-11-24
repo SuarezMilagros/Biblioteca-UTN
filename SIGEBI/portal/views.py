@@ -27,59 +27,91 @@ from .acceso import LectorRequeridoMixin
 LIBROS_POR_PAGINA = 20
 
 
+def actividad_del_lector(persona, usuario):
+    """Préstamos, reservas y material compartido de una persona. Nunca los de otra (D-R2-12).
+
+    Lo usan el Inicio (lo pendiente) y las páginas de Mi biblioteca (Préstamos, Reservas y Material compartido).
+    """
+    hoy = timezone.localdate()
+    prestamos = list(persona.prestamos.select_related('ejemplar__libro').order_by('-fecha_prestamo', '-pk'))
+    activos = [prestamo for prestamo in prestamos if prestamo.activo]
+    for prestamo in activos:
+        # Positivo: faltan días. Cero: vence hoy. Negativo: días de atraso.
+        prestamo.dias_restantes = (prestamo.fecha_vencimiento - hoy).days
+        prestamo.dias_de_atraso = -prestamo.dias_restantes
+    activos.sort(key=lambda prestamo: prestamo.fecha_vencimiento)
+    vencer_reservas()
+    reservas = list(persona.reservas.select_related('libro', 'ejemplar').order_by('-fecha_reserva', '-pk'))
+    return {
+        'persona': persona,
+        'reservas_activas': [reserva for reserva in reservas if reserva.activa],
+        'reservas_anteriores': [reserva for reserva in reservas if not reserva.activa][:10],
+        'maximo_reservas': MAXIMO_RESERVAS_ACTIVAS,
+        'activos': activos,
+        'devueltos': [prestamo for prestamo in prestamos if not prestamo.activo],
+        # S8-01: lo que compartió, con el estado de la revisión.
+        'materiales_compartidos': list(
+            usuario.materiales_subidos.select_related('carrera').order_by('-fecha_carga', '-pk')
+        ),
+    }
+
+
 class InicioView(LectorRequeridoMixin, TemplateView):
+    """Inicio del portal: primero lo que hay que hacer (retirar, devolver), después buscar y compartir."""
+
     template_name = 'portal/inicio.html'
+    DIAS_PARA_AVISAR = 3
 
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
+        actividad = actividad_del_lector(self.persona, self.request.user)
         carreras = self.persona.carreras.all()
-        contexto['persona'] = self.persona
-        contexto['carreras'] = carreras
-        # Un libro pertenece a las carreras de su categoría (D-R2-6).
-        contexto['cantidad_libros'] = Libro.objects.de_las_carreras(carreras).count()
-        sin_devolver = self.persona.prestamos.filter(fecha_devolucion__isnull=True)
-        contexto['prestamos_sin_devolver'] = sin_devolver.count()
-        contexto['prestamos_vencidos'] = sin_devolver.filter(fecha_vencimiento__lt=timezone.localdate()).count()
+        activos = actividad['activos']
+        contexto.update({
+            'persona': self.persona,
+            'carreras': carreras,
+            # Un libro pertenece a las carreras de su categoría (D-R2-6).
+            'cantidad_libros': Libro.objects.de_las_carreras(carreras).count(),
+            'prestamos_sin_devolver': len(activos),
+            'vencidos': [prestamo for prestamo in activos if prestamo.dias_restantes < 0],
+            'vencen_pronto': [p for p in activos if 0 <= p.dias_restantes <= self.DIAS_PARA_AVISAR],
+            'para_retirar': [r for r in actividad['reservas_activas'] if r.estado == Reserva.Estado.CONFIRMADA],
+            'reservas_pendientes': [r for r in actividad['reservas_activas'] if r.estado == Reserva.Estado.PENDIENTE],
+            'material_en_revision': [
+                m for m in actividad['materiales_compartidos'] if m.estado == MaterialDigital.Estado.PENDIENTE
+            ],
+        })
+        contexto['prestamos_vencidos'] = len(contexto['vencidos'])
+        contexto['hay_pendientes'] = bool(contexto['vencidos'] or contexto['vencen_pronto'] or contexto['para_retirar'])
+        return contexto
+
+
+class MiBibliotecaView(LectorRequeridoMixin, TemplateView):
+    """Páginas de Mi biblioteca: Préstamos (sin devolver e historial), Reservas y Material compartido.
+
+    Reorganización del portal (24/11/2026): la actividad sale de Mi perfil, que queda solo para la cuenta.
+    Cada URL elige su plantilla con `template_name`.
+    """
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        contexto.update(actividad_del_lector(self.persona, self.request.user))
+        contexto['cantidad_compartidos'] = len(contexto['materiales_compartidos'])
         return contexto
 
 
 class PerfilView(LectorRequeridoMixin, TemplateView):
-    """Mi perfil (S7-06): sus datos (solo lectura), sus carreras y sus préstamos. Nunca los de otra persona.
-
-    A pedido de la profesora (18/11/2026), cada parte tiene su propia página en el menú (Mis reservas, Material
-    que compartí, Sin devolver e Historial) para no tener que bajar tanto. Todas usan estos mismos datos;
-    cada URL elige su plantilla con `template_name`.
-    """
+    """Mi perfil: la cuenta. Sus datos (solo lectura), sus carreras, su foto y el cambio de contraseña."""
 
     template_name = 'portal/perfil.html'
 
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
-        contexto['form_foto'] = FotoForm()
-        contexto['maximo_mb_foto'] = MAXIMO_MB
-        hoy = timezone.localdate()
-        prestamos = list(
-            self.persona.prestamos.select_related('ejemplar__libro').order_by('-fecha_prestamo', '-pk')
-        )
-        activos = [prestamo for prestamo in prestamos if prestamo.activo]
-        for prestamo in activos:
-            # Positivo: faltan días. Cero: vence hoy. Negativo: días de atraso.
-            prestamo.dias_restantes = (prestamo.fecha_vencimiento - hoy).days
-            prestamo.dias_de_atraso = -prestamo.dias_restantes
-        activos.sort(key=lambda prestamo: prestamo.fecha_vencimiento)
-        vencer_reservas()
-        reservas = list(self.persona.reservas.select_related('libro', 'ejemplar').order_by('-fecha_reserva', '-pk'))
         contexto.update({
             'persona': self.persona,
             'carreras': self.persona.carreras.all(),
-            'reservas_activas': [reserva for reserva in reservas if reserva.activa],
-            'reservas_anteriores': [reserva for reserva in reservas if not reserva.activa][:10],
-            'maximo_reservas': MAXIMO_RESERVAS_ACTIVAS,
-            'activos': activos,
-            'devueltos': [prestamo for prestamo in prestamos if not prestamo.activo],
-            # S8-01: lo que compartió, con el estado de la revisión.
-            'materiales_compartidos': self.request.user.materiales_subidos.select_related('carrera')
-            .order_by('-fecha_carga', '-pk'),
+            'form_foto': FotoForm(),
+            'maximo_mb_foto': MAXIMO_MB,
         })
         return contexto
 
@@ -273,6 +305,7 @@ class MaterialView(MaterialDeSusCarrerasMixin, ListView):
             'carrera_elegida': carrera,
             'tipos': MaterialDigital.Tipo.choices,
             'tipo_elegido': tipo if tipo in MaterialDigital.Tipo.values else '',
+            'cantidad_compartidos': self.request.user.materiales_subidos.count(),
             'q': self.request.GET.get('q', '').strip(),
         })
         contexto['hay_filtros'] = bool(contexto['q'] or carrera or contexto['tipo_elegido'])

@@ -89,36 +89,79 @@ class IngresoConSesionTests(PerfilTestCase):
         self.assertContains(self.client.get(reverse('login')), 'Ingresar')
 
 
-class PerfilEnPartesTests(PerfilTestCase):
+class NavegacionDelPortalTests(PerfilTestCase):
+    """Reorganización del portal (24/11/2026): Explorar, Mi biblioteca y, abajo, Mi perfil (la cuenta)."""
+
     PAGINAS = {
-        'mis_reservas': 'Mis reservas',
-        'mi_material': 'Material que compartí',
-        'sin_devolver': 'Sin devolver',
-        'historial': 'Historial de préstamos',
+        'sin_devolver': ('Préstamos', 'sin_devolver'),
+        'historial': ('Préstamos', 'sin_devolver'),
+        'mis_reservas': ('Reservas', 'mis_reservas'),
+        'material': ('Material digital', 'material'),
+        'mi_material': ('Material digital', 'material'),
     }
 
-    def test_cada_parte_tiene_su_pagina_y_su_enlace_en_el_menu(self):
-        for nombre, titulo in self.PAGINAS.items():
+    def menu(self, html):
+        return html[html.index('<nav class="navegacion"'):html.index('</nav>', html.index('<nav class="navegacion"'))]
+
+    def test_cada_pagina_marca_su_entrada_del_menu(self):
+        for nombre, (titulo, entrada) in self.PAGINAS.items():
             with self.subTest(pagina=nombre):
                 respuesta = self.client.get(reverse(f'portal:{nombre}'))
                 self.assertContains(respuesta, f'<h1>{titulo}</h1>', html=True)
-                self.assertContains(respuesta, f'href="{reverse(f"portal:{nombre}")}" aria-current="page"')
+                self.assertIn(f'href="{reverse(f"portal:{entrada}")}" aria-current="page"', self.menu(respuesta.content.decode()))
 
-    def test_el_perfil_resume_y_enlaza_cada_parte(self):
+    def test_grupos_del_menu_en_orden(self):
+        menu = self.menu(self.client.get(reverse('portal:inicio')).content.decode())
+        posiciones = [menu.index(texto) for texto in (
+            f'href="{reverse("portal:inicio")}"', '>Explorar</p>', f'href="{reverse("portal:catalogo")}"',
+            f'href="{reverse("portal:material")}"', '>Mi biblioteca</p>', f'href="{reverse("portal:sin_devolver")}"',
+            f'href="{reverse("portal:mis_reservas")}"',
+        )]
+        self.assertEqual(posiciones, sorted(posiciones))
+        self.assertNotIn(reverse('portal:perfil') + '"', menu)  # Mi perfil va abajo, con la cuenta
+        self.assertNotIn(reverse('portal:historial'), menu)  # el historial es una pestaña de Préstamos
+        self.assertNotIn(reverse('portal:mi_material'), menu)  # "Lo que compartí" es una pestaña de Material
+
+    def test_mi_perfil_esta_abajo_con_la_cuenta_y_en_la_cabecera(self):
+        html = self.client.get(reverse('portal:inicio')).content.decode()
+        pie = html[html.index('<div class="lateral-pie">'):html.index('</aside>')]
+        self.assertIn(f'href="{reverse("portal:perfil")}"', pie)
+        self.assertLess(pie.index(reverse('portal:perfil')), pie.index(reverse('password_change')))
+        self.assertIn(f'<a class="perfil perfil-enlace" href="{reverse("portal:perfil")}"', html)
+
+    def test_el_perfil_es_solo_la_cuenta(self):
         respuesta = self.client.get(reverse('portal:perfil'))
-        for nombre in self.PAGINAS:
-            self.assertContains(respuesta, f'class="cifra" href="{reverse(f"portal:{nombre}")}"')
-        self.assertNotContains(respuesta, '<h2>Historial</h2>', html=True)
+        self.assertContains(respuesta, 'Mis datos')
+        self.assertContains(respuesta, 'Foto de perfil')
+        for otra in ('mis_reservas', 'sin_devolver', 'historial', 'mi_material'):
+            self.assertNotContains(respuesta, f'class="cifra" href="{reverse(f"portal:{otra}")}"')
+
+    def test_pestanas_de_prestamos_y_de_material(self):
+        historial = self.client.get(reverse('portal:historial'))
+        self.assertContains(historial, f'<a href="{reverse("portal:historial")}" aria-current="page" class="activa">Historial</a>', html=True)
+        self.assertContains(historial, f'href="{reverse("portal:sin_devolver")}"')
+        compartido = self.client.get(reverse('portal:mi_material'))
+        self.assertContains(compartido, f'href="{reverse("portal:mi_material")}" aria-current="page" class="activa"')
+        self.assertContains(self.client.get(reverse('portal:material')), 'De mis carreras')
+
+    def test_las_direcciones_anteriores_redirigen(self):
+        for vieja, nueva in (('/portal/perfil/reservas/', 'mis_reservas'), ('/portal/perfil/material/', 'mi_material'),
+                             ('/portal/perfil/sin-devolver/', 'sin_devolver'), ('/portal/perfil/historial/', 'historial')):
+            with self.subTest(vieja=vieja):
+                self.assertRedirects(self.client.get(vieja), reverse(f'portal:{nueva}'), status_code=302)
 
     def test_el_personal_no_entra(self):
         self.client.force_login(self.bibliotecario)
-        for nombre in self.PAGINAS:
+        for nombre in ('sin_devolver', 'historial', 'mis_reservas', 'mi_material'):
             with self.subTest(pagina=nombre):
                 self.assertEqual(self.client.get(reverse(f'portal:{nombre}')).status_code, 403)
 
-    def test_el_menu_del_personal_no_tiene_las_partes_del_perfil(self):
+    def test_el_menu_del_personal_no_cambia(self):
         self.client.force_login(self.bibliotecario)
-        self.assertNotContains(self.client.get(reverse('biblioteca:inicio')), reverse('portal:mis_reservas'))
+        html = self.client.get(reverse('biblioteca:inicio')).content.decode()
+        self.assertNotIn(reverse('portal:mis_reservas'), html)
+        self.assertNotIn('>Mi biblioteca</p>', html)
+        self.assertNotIn('perfil-enlace', html)
 
 
 class FotoTests(PerfilTestCase):
