@@ -1,16 +1,11 @@
 {% extends 'base.html' %}
 {% load interfaz %}
 
-{% block titulo %}Sin devolver · SIGEBI{% endblock %}
-{% block seccion %}Mi perfil / <strong>Sin devolver</strong>{% endblock %}
+{% block titulo %}Préstamos sin devolver · SIGEBI{% endblock %}
+{% block seccion %}Mi biblioteca / Préstamos / <strong>Sin devolver</strong>{% endblock %}
 
 {% block contenido %}
-<div class="encabezado-seccion">
-    <div>
-        <p class="sobretitulo">Mi perfil</p>
-        <h1>Sin devolver</h1>
-    </div>
-</div>
+{% include 'portal/_pestanas_prestamos.html' with pestana='sin_devolver' %}
 
 {% if activos %}
 {% if activos.0.vencido %}

@@ -89,7 +89,7 @@ class DatosTests(PerfilTestCase):
 
 class PrestamosTests(PerfilTestCase):
     def test_separa_sin_devolver_e_historial(self):
-        contexto = self.perfil().context
+        contexto = self.perfil('sin_devolver').context
         self.assertEqual([p.pk for p in contexto['activos']], [self.vencido.pk, self.al_dia.pk])
         self.assertEqual([p.pk for p in contexto['devueltos']], [self.devuelto.pk])
 

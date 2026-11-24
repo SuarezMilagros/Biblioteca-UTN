@@ -2,15 +2,10 @@
 {% load interfaz %}
 
 {% block titulo %}Historial de préstamos · SIGEBI{% endblock %}
-{% block seccion %}Mi perfil / <strong>Historial de préstamos</strong>{% endblock %}
+{% block seccion %}Mi biblioteca / Préstamos / <strong>Historial</strong>{% endblock %}
 
 {% block contenido %}
-<div class="encabezado-seccion">
-    <div>
-        <p class="sobretitulo">Mi perfil</p>
-        <h1>Historial de préstamos</h1>
-    </div>
-</div>
+{% include 'portal/_pestanas_prestamos.html' with pestana='historial' %}
 
 {% if devueltos %}
 <div class="tabla-contenedor">

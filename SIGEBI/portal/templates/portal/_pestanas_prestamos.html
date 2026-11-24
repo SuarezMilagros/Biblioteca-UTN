@@ -1,0 +1,13 @@
+{% comment %}Encabezado y pestañas de Préstamos (Mi biblioteca). Requiere `activos`; opcional `pestana`.{% endcomment %}
+{% load interfaz %}
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Mi biblioteca</p>
+        <h1>Préstamos</h1>
+        <p class="bajada">Los libros que te prestó la biblioteca. El plazo es de 14 días.</p>
+    </div>
+</div>
+<nav class="pestanas" aria-label="Préstamos">
+    <a href="{% url 'portal:sin_devolver' %}"{% if pestana == 'sin_devolver' %} aria-current="page" class="activa"{% endif %}>Sin devolver{% if activos %} <span class="nav-contador">{{ activos|length }}</span>{% endif %}</a>
+    <a href="{% url 'portal:historial' %}"{% if pestana == 'historial' %} aria-current="page" class="activa"{% endif %}>Historial</a>
+</nav>

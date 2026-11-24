@@ -87,6 +87,7 @@ TEMPLATES = [
                 # Variables de la cabecera común (ver la lista al inicio de templates/base.html).
                 'cuentas.contexto.interfaz',      # rol_usuario, es_lector, url_inicio
                 'biblioteca.contexto.interfaz',   # prestamos_vencidos_total
+                'portal.contexto.avisos_del_lector',  # contadores de Mi biblioteca (alumnos y profesores)
             ],
         },
     },

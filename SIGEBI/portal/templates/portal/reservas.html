@@ -1,14 +1,18 @@
 {% extends 'base.html' %}
 {% load interfaz %}
 
-{% block titulo %}Mis reservas · SIGEBI{% endblock %}
-{% block seccion %}Mi perfil / <strong>Mis reservas</strong>{% endblock %}
+{% block titulo %}Reservas · SIGEBI{% endblock %}
+{% block seccion %}Mi biblioteca / <strong>Reservas</strong>{% endblock %}
 
 {% block contenido %}
 <div class="encabezado-seccion">
     <div>
-        <p class="sobretitulo">Mi perfil</p>
-        <h1>Mis reservas</h1>
+        <p class="sobretitulo">Mi biblioteca</p>
+        <h1>Reservas</h1>
+        <p class="bajada">Libros físicos que pediste desde el catálogo. Cuando la biblioteca confirma una, tenés 48 horas para retirarla.</p>
+    </div>
+    <div class="botones-encabezado">
+        <a class="boton-secundario" href="{% url 'portal:catalogo' %}">{% icono 'buscar' %}Buscar un libro para reservar</a>
     </div>
 </div>
 

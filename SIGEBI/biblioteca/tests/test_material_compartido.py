@@ -154,7 +154,7 @@ class VisibilidadTests(CompartidoTestCase):
         self.client.force_login(self.lector)
         self.assertNotContains(self.client.get(reverse('portal:material')), 'Resumen de Python')
         perfil = self.client.get(reverse('portal:mi_material'))
-        self.assertContains(perfil, 'Material que compartí')
+        self.assertContains(perfil, 'Lo que compartí')
         self.assertContains(perfil, 'La biblioteca todavía no lo revisó.')
         respuesta = self.client.get(reverse('portal:material_archivo', args=[material.pk]))
         self.assertEqual(respuesta.status_code, 200)

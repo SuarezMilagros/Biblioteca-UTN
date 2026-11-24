@@ -953,14 +953,25 @@ a.indicador:hover { border-color: var(--naranja-borde); box-shadow: var(--sombra
 .filtro-casilla input { width: 18px; height: 18px; accent-color: var(--naranja-accion); margin: 0; }
 .busqueda input[type="date"] { min-height: 42px; }
 
-/* Mi perfil en partes y foto de perfil (pedidos de la profesora) */
-.nav-sub { display: grid; gap: 0.1rem; margin: 0.1rem 0 0.4rem; }
-.nav-enlace-sub { padding-left: 3.1rem; font-size: 0.88rem; min-height: 36px; }
+/* Foto de perfil (pedido de la profesora) */
 .avatar-foto { object-fit: cover; padding: 0; background: var(--fondo); }
 .avatar-grande.avatar-foto { width: 64px; height: 64px; }
-.resumen-perfil { grid-template-columns: 1fr 1fr; }
-.resumen-perfil .cifra { text-decoration: none; color: inherit; transition: border-color 0.15s; }
-.resumen-perfil .cifra:hover { border-color: var(--naranja-borde); }
-.resumen-perfil .cifra:focus-visible { outline: none; box-shadow: var(--foco); }
-.cifra-alerta strong { color: var(--rojo); }
 .texto-alerta { color: var(--rojo); }
+
+/* Portal reorganizado (24/11/2026): Inicio con lo pendiente, contadores y perfil en la cabecera */
+.lista-pendientes { list-style: none; margin: 0.25rem 0 0.75rem; padding: 0; display: grid; gap: 0.6rem; }
+.pendiente { display: flex; align-items: flex-start; gap: 0.7rem; padding: 0.7rem 0.85rem; border-radius: var(--radio-chico); background: var(--fondo); }
+.pendiente > .icono { flex: none; margin-top: 2px; color: var(--ambar); }
+.pendiente strong { display: block; color: var(--texto-fuerte); }
+.pendiente-alerta { background: var(--rojo-claro); }
+.pendiente-alerta > .icono { color: var(--rojo); }
+.pendiente-ok { background: var(--verde-claro); }
+.pendiente-ok > .icono { color: var(--verde); }
+.estas-al-dia { display: flex; align-items: center; gap: 0.5rem; }
+.estas-al-dia .icono { color: var(--verde); }
+.carreras-inicio { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; }
+.perfil-enlace { text-decoration: none; color: inherit; border-radius: var(--radio-chico); }
+.perfil-enlace:hover .perfil-texto strong { color: var(--naranja-texto); }
+.perfil-enlace:focus-visible { outline: none; box-shadow: var(--foco); }
+.nav-contador-suave { background: var(--gris-estado-claro); color: var(--gris-estado); }
+.tarjeta-pendientes { margin-bottom: 1.25rem; }

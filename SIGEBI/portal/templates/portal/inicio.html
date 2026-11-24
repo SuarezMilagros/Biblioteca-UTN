@@ -13,27 +13,58 @@
     </div>
 </div>
 
+{# Primero lo que hay que hacer: es lo que se busca al entrar (visibilidad del estado del sistema). #}
+<section class="tarjeta tarjeta-pendientes" aria-labelledby="titulo-pendientes">
+    <div class="tarjeta-titulo"><h2 id="titulo-pendientes">Para tener en cuenta</h2></div>
+    {% if vencidos %}
+    <div class="alerta-error" role="alert">{% icono 'alerta' %}<p>Tenés {{ prestamos_vencidos }} préstamo{{ prestamos_vencidos|pluralize }} vencido{{ prestamos_vencidos|pluralize }}. <a href="{% url 'portal:sin_devolver' %}">Ver mis préstamos</a></p></div>
+    {% endif %}
+    {% if hay_pendientes %}
+    <ul class="lista-pendientes">
+        {% for prestamo in vencidos %}
+        <li class="pendiente pendiente-alerta">{% icono 'reloj' %}<span><strong>Devolvé «{{ prestamo.ejemplar.libro.titulo }}»</strong><span class="secundario">Venció el {{ prestamo.fecha_vencimiento|date:"d/m/Y" }} ({{ prestamo.dias_de_atraso }} día{{ prestamo.dias_de_atraso|pluralize }} de atraso)</span></span></li>
+        {% endfor %}
+        {% for reserva in para_retirar %}
+        <li class="pendiente pendiente-ok">{% icono 'exito' %}<span><strong>Retirá «{{ reserva.libro.titulo }}»: tu reserva está lista</strong><span class="secundario">Ejemplar {{ reserva.ejemplar.codigo_inventario }}, hasta el {{ reserva.vence_retiro|date:"d/m/Y H:i" }}. <a href="{% url 'portal:mis_reservas' %}">Ver mis reservas</a></span></span></li>
+        {% endfor %}
+        {% for prestamo in vencen_pronto %}
+        <li class="pendiente">{% icono 'calendario' %}<span><strong>«{{ prestamo.ejemplar.libro.titulo }}» {% if prestamo.dias_restantes == 0 %}vence hoy{% elif prestamo.dias_restantes == 1 %}vence mañana{% else %}vence en {{ prestamo.dias_restantes }} días{% endif %}</strong><span class="secundario">Devolvelo en la biblioteca antes del {{ prestamo.fecha_vencimiento|date:"d/m/Y" }}.</span></span></li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="texto-suave estas-al-dia">{% icono 'exito' %}Estás al día: no tenés nada para retirar ni para devolver pronto.</p>
+    {% endif %}
+    {% if prestamos_sin_devolver and not vencidos %}
+    <p class="texto-suave">Tenés {{ prestamos_sin_devolver }} libro{{ prestamos_sin_devolver|pluralize }} sin devolver. <a href="{% url 'portal:sin_devolver' %}">Ver mis préstamos</a></p>
+    {% endif %}
+    {% if reservas_pendientes or material_en_revision %}
+    <p class="texto-suave">{% if reservas_pendientes %}{{ reservas_pendientes|length }} reserva{{ reservas_pendientes|length|pluralize }} esperando confirmación de la biblioteca. {% endif %}{% if material_en_revision %}{{ material_en_revision|length }} material{{ material_en_revision|length|pluralize:"es" }} que compartiste en revisión.{% endif %}</p>
+    {% endif %}
+</section>
+
 <div class="dos-columnas">
-    <section class="tarjeta" aria-labelledby="titulo-carreras">
-        <div class="tarjeta-titulo"><h2 id="titulo-carreras">{% if persona.tipo == 'PROFESOR' %}Carreras que dictás{% else %}Tus carreras{% endif %}</h2></div>
-        <ul class="lista-carreras">
-            {% for carrera in carreras %}<li>{% icono 'carrera' %}{{ carrera.nombre }}</li>{% endfor %}
-        </ul>
-        <p class="ayuda">Si falta una carrera o hay un dato mal, avisá en la biblioteca.</p>
+    <section class="tarjeta" aria-labelledby="titulo-buscar">
+        <div class="tarjeta-titulo"><h2 id="titulo-buscar">Buscar un libro</h2></div>
+        <form method="get" action="{% url 'portal:catalogo' %}" class="busqueda" role="search">
+            <div class="campo-busqueda">
+                {% icono 'buscar' %}
+                <label for="q-inicio" class="sr-only">Título, autor o ISBN</label>
+                <input type="search" id="q-inicio" name="q" placeholder="Título, autor o ISBN">
+            </div>
+            <button type="submit" class="boton">Buscar</button>
+        </form>
+        <p class="ayuda">Hay {{ cantidad_libros }} título{{ cantidad_libros|pluralize }} de tus carreras. <a href="{% url 'portal:catalogo' %}">Ver todo el catálogo</a></p>
     </section>
 
-    <section class="tarjeta" aria-labelledby="titulo-catalogo">
-        <div class="tarjeta-titulo"><h2 id="titulo-catalogo">Libros de tus carreras</h2></div>
-        <div class="cifras cifras-una">
-            <div class="cifra"><strong>{{ cantidad_libros }}</strong><span>título{{ cantidad_libros|pluralize }}</span></div>
+    <section class="tarjeta" aria-labelledby="titulo-material">
+        <div class="tarjeta-titulo"><h2 id="titulo-material">Material digital</h2></div>
+        <p class="texto-suave">Apuntes, tesis y libros en PDF de tus carreras. También podés compartir los tuyos.</p>
+        <div class="botones-encabezado">
+            <a class="boton-secundario" href="{% url 'portal:material' %}">{% icono 'documento' %}Ver material</a>
+            <a class="boton-secundario" href="{% url 'portal:material_compartir' %}">{% icono 'mas' %}Compartir</a>
         </div>
-        <a class="boton" href="{% url 'portal:catalogo' %}">{% icono 'buscar' %}Ver el catálogo</a>
     </section>
 </div>
 
-{% if prestamos_vencidos %}
-<div class="alerta-error" role="alert">{% icono 'alerta' %}<p>Tenés {{ prestamos_vencidos }} préstamo{{ prestamos_vencidos|pluralize }} vencido{{ prestamos_vencidos|pluralize }}. <a href="{% url 'portal:sin_devolver' %}">Ver mis préstamos</a></p></div>
-{% elif prestamos_sin_devolver %}
-<p class="texto-suave">Tenés {{ prestamos_sin_devolver }} libro{{ prestamos_sin_devolver|pluralize }} sin devolver. <a href="{% url 'portal:sin_devolver' %}">Ver mis préstamos</a></p>
-{% endif %}
+<p class="ayuda carreras-inicio">{% icono 'carrera' %}{% if persona.tipo == 'PROFESOR' %}Carreras que dictás{% else %}Tus carreras{% endif %}: {% for carrera in carreras %}{{ carrera.nombre }}{% if not forloop.last %} · {% endif %}{% endfor %}. Si falta una, avisá en la biblioteca.</p>
 {% endblock %}
