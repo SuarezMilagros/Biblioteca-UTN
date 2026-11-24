@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Exists, IntegerField, OuterRef, Q, Subquery
 from django.db.models.functions import Coalesce
@@ -29,6 +30,7 @@ from .models import (
 from .opiniones import OpinionNoPermitida
 from .opiniones import revisar as revisar_opinion
 from . import demanda, prestamos_por_persona, qr
+from .fotos import responder_foto
 from . import reservas as reglas_de_reservas
 from . import revision_de_material
 
@@ -85,7 +87,7 @@ def inicio(request):
         contexto['prestamos_vencidos'] = sin_devolver.filter(fecha_vencimiento__lt=hoy).count()
         contexto['proximos_vencimientos'] = sin_devolver.select_related('persona', 'ejemplar__libro').order_by(
             'fecha_vencimiento', 'pk'
-        )[:6]
+        )[:5]
     if usuario.has_perm('biblioteca.view_ejemplar'):
         activos = Ejemplar.objects.filter(activo=True)
         contexto['ejemplares_activos'] = activos.count()
@@ -176,9 +178,16 @@ class InformeDemandaView(PermissionRequiredMixin, ExportarCSVMixin, ListView):
         libros = demanda.informe_de_demanda(desde, hasta)
         return libros.filter(conviene_comprar=True) if self.solo_comprar() else libros
 
+    titulo_informe = 'Informe de demanda'
+
     def nombre_csv(self):
         desde, hasta, _ = self.periodo()
         return nombre_de_archivo('demanda', f'{desde:%Y%m%d}', f'{hasta:%Y%m%d}')
+
+    def detalle_informe(self):
+        desde, hasta, _ = self.periodo()
+        solo = ' · Solo los que conviene comprar' if self.solo_comprar() else ''
+        return f'Del {desde:%d/%m/%Y} al {hasta:%d/%m/%Y}{solo}'
 
     def fila_csv(self, libro):
         return [
@@ -220,9 +229,15 @@ class InformePrestamosPorPersonaView(PermissionRequiredMixin, ExportarCSVMixin, 
         desde, hasta, _ = self.periodo()
         return prestamos_por_persona.informe_por_persona(desde, hasta)
 
+    titulo_informe = 'Préstamos por persona'
+
     def nombre_csv(self):
         desde, hasta, _ = self.periodo()
         return nombre_de_archivo('prestamos-por-persona', f'{desde:%Y%m%d}', f'{hasta:%Y%m%d}')
+
+    def detalle_informe(self):
+        desde, hasta, _ = self.periodo()
+        return f'Préstamos que empezaron del {desde:%d/%m/%Y} al {hasta:%d/%m/%Y}'
 
     def fila_csv(self, persona):
         return [
@@ -514,8 +529,18 @@ class EjemplarListView(PermissionRequiredMixin, ExportarCSVMixin, BuscarAntesDeL
         # `get_queryset` ya trae `con_prestamo_activo` (con_estado_de_prestamo).
         return queryset.select_related('libro__autor', 'libro__editorial', 'libro__categoria')
 
+    titulo_informe = 'Ejemplares'
+
     def nombre_csv(self):
         return nombre_de_archivo('ejemplares', self.estado())
+
+    def detalle_informe(self):
+        partes = [{'activos': 'Activos', 'baja': 'Dados de baja', 'todos': 'Todos'}[self.estado()]]
+        if self.tipo():
+            partes.append(f'Tipo: {Ejemplar.Tipo(self.tipo()).label}')
+        if self.categoria():
+            partes.append(f'Categoría: {self.categoria().nombre}')
+        return ' · '.join(partes + [super().detalle_informe()])
 
     def fila_csv(self, ejemplar):
         libro = ejemplar.libro
@@ -702,13 +727,28 @@ class CarreraDetailView(PermissionRequiredMixin, DetailView):
     model = Carrera
     template_name = 'biblioteca/carrera_detail.html'
 
+    def tipo(self):
+        """Pestaña elegida: alumnos (por defecto) o profesores."""
+        return Persona.Tipo.PROFESOR if self.request.GET.get('tipo') == 'profesores' else Persona.Tipo.ALUMNO
+
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
         contexto['categorias'] = self.object.categorias.order_by('nombre')
-        contexto['cantidad_alumnos'] = self.object.personas.filter(tipo=Persona.Tipo.ALUMNO, activo=True).count()
-        contexto['cantidad_profesores'] = self.object.personas.filter(
-            tipo=Persona.Tipo.PROFESOR, activo=True
-        ).count()
+        activas = self.object.personas.filter(activo=True)
+        contexto['cantidad_alumnos'] = activas.filter(tipo=Persona.Tipo.ALUMNO).count()
+        contexto['cantidad_profesores'] = activas.filter(tipo=Persona.Tipo.PROFESOR).count()
+        if self.request.user.has_perm('biblioteca.view_persona'):
+            # Alumnos y profesores activos de la carrera, paginados (pedido del equipo, 24/11/2026).
+            personas = activas.filter(tipo=self.tipo()).select_related('cuenta').order_by('apellido', 'nombre', 'pk')
+            paginador = Paginator(personas, ELEMENTOS_POR_PAGINA)
+            pagina = paginador.get_page(self.request.GET.get('page'))
+            contexto.update({
+                'tipo': 'profesores' if self.tipo() == Persona.Tipo.PROFESOR else 'alumnos',
+                'personas': pagina.object_list,
+                'page_obj': pagina,
+                'paginator': paginador,
+                'is_paginated': pagina.has_other_pages(),
+            })
         return contexto
 
 
@@ -1128,8 +1168,18 @@ class PersonaListView(PermissionRequiredMixin, ExportarCSVMixin, ListView):
             sin_devolver=Count('prestamos', filter=Q(prestamos__fecha_devolucion__isnull=True))
         )
 
+    titulo_informe = 'Personas'
+
     def nombre_csv(self):
         return nombre_de_archivo('personas', self.estado())
+
+    def detalle_informe(self):
+        partes = [{'activas': 'Activas', 'baja': 'Dadas de baja', 'todas': 'Todas'}[self.estado()]]
+        if self.tipo():
+            partes.append('Alumnos' if self.tipo() == Persona.Tipo.ALUMNO else 'Profesores')
+        if self.carrera():
+            partes.append(f'Carrera: {self.carrera().nombre}')
+        return ' · '.join(partes + [super().detalle_informe()])
 
     def fila_csv(self, persona):
         return [
@@ -1176,19 +1226,6 @@ class PersonaListView(PermissionRequiredMixin, ExportarCSVMixin, ListView):
         contexto['carrera'] = self.carrera()
         contexto['carreras'] = Carrera.objects.all()
         return contexto
-
-
-def responder_foto(persona):
-    """La foto de perfil (privada) como imagen. Sin foto, 404."""
-    if not persona.foto:
-        raise Http404('Esta persona no tiene foto.')
-    try:
-        archivo = persona.foto.open('rb')
-    except FileNotFoundError:
-        raise Http404('No se encontró la foto.')
-    respuesta = FileResponse(archivo, content_type='image/jpeg')
-    respuesta['Cache-Control'] = 'private, max-age=86400'
-    return respuesta
 
 
 class PersonaFotoView(PermissionRequiredMixin, View):
@@ -1388,11 +1425,16 @@ class PrestamoListView(PermissionRequiredMixin, ExportarCSVMixin, ListView):
         'Fecha de préstamo', 'Vencimiento', 'Devolución', 'Estado', 'Días de atraso', 'Registrado por',
     ]
 
+    titulo_informe = 'Préstamos'
+
     def queryset_csv(self, queryset):
         return queryset.select_related('usuario_sistema')
 
     def nombre_csv(self):
         return nombre_de_archivo('prestamos', self.estado())
+
+    def detalle_informe(self):
+        return f'{ESTADOS_DE_PRESTAMO[self.estado()][0]} · {super().detalle_informe()}'
 
     def fila_csv(self, prestamo):
         hoy = timezone.localdate()

@@ -7,17 +7,21 @@ import smtplib
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model
-from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.models import Group
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
 from django.db.models import Q
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
-from django.views.generic import CreateView, ListView, UpdateView
+from django.views.generic import CreateView, ListView, TemplateView, UpdateView
+
+from biblioteca.fotos import MAXIMO_MB, FotoForm, guardar_foto, quitar_foto, responder_foto
 
 from .correo import enviar_correo_definicion
 from .forms import UsuarioForm
+from .models import PerfilDelPersonal
 from .roles import ADMINISTRATIVO, BIBLIOTECARIO, es_lector
 
 ROLES_DEL_SISTEMA = [ADMINISTRATIVO, BIBLIOTECARIO]
@@ -189,3 +193,67 @@ class ReenviarDefinicionView(PermissionRequiredMixin, View):
             else:
                 messages.success(request, 'Correo de definición reenviado.')
         return redirect('cuentas:usuario_update', pk=usuario.pk)
+
+
+# ---------- Mi perfil del personal (revisión de UX/UI, 24/11/2026) ----------
+
+class PersonalRequeridoMixin(LoginRequiredMixin):
+    """Solo cuentas del personal. Alumnos y profesores tienen su perfil en el portal."""
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated and es_lector(request.user):
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+
+def perfil_de(usuario):
+    perfil, _ = PerfilDelPersonal.objects.get_or_create(usuario=usuario)
+    return perfil
+
+
+class PerfilView(PersonalRequeridoMixin, TemplateView):
+    """Mi perfil: sus datos (los cambia un administrativo), su foto y el cambio de contraseña."""
+
+    template_name = 'cuentas/perfil.html'
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        contexto['perfil'] = PerfilDelPersonal.objects.filter(usuario=self.request.user).first()
+        contexto['form_foto'] = FotoForm()
+        contexto['maximo_mb'] = MAXIMO_MB
+        return contexto
+
+
+class FotoView(PersonalRequeridoMixin, View):
+    http_method_names = ['post']
+
+    def post(self, request):
+        form = FotoForm(request.POST, request.FILES)
+        if form.is_valid():
+            guardar_foto(perfil_de(request.user), form.cleaned_data['foto'])
+            messages.success(request, 'Actualizaste tu foto de perfil.')
+        else:
+            for error in form.errors.get('foto', []):
+                messages.error(request, error)
+        return redirect('cuentas:perfil')
+
+
+class QuitarFotoView(PersonalRequeridoMixin, View):
+    http_method_names = ['post']
+
+    def post(self, request):
+        perfil = PerfilDelPersonal.objects.filter(usuario=request.user).first()
+        if perfil:
+            quitar_foto(perfil)
+        messages.success(request, 'Quitaste tu foto de perfil.')
+        return redirect('cuentas:perfil')
+
+
+class MiFotoView(PersonalRequeridoMixin, View):
+    """Su propia foto. Nunca la de otra cuenta: sale del usuario que inició sesión."""
+
+    def get(self, request):
+        perfil = PerfilDelPersonal.objects.filter(usuario=request.user).first()
+        if perfil is None:
+            raise Http404('No tenés foto.')
+        return responder_foto(perfil)

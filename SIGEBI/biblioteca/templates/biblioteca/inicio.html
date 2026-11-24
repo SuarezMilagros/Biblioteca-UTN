@@ -13,6 +13,16 @@
     </div>
 </div>
 
+{% comment %}
+    Enlaces de salto: llevan directo a cada parte del panel, sin bajar buscando (sobre todo en el celular).
+    La flecha hacia abajo indica que se queda en esta página; el nombre para lectores de pantalla va en aria-label.
+{% endcomment %}
+<nav class="saltos" aria-label="Ir a una parte del panel">
+    <a class="salto" href="#resumen">{% icono 'bajar' %}Resumen</a>
+    {% if perms.biblioteca.view_prestamo %}<a class="salto" href="#titulo-vencimientos">{% icono 'bajar' %}Vencimientos</a>{% endif %}
+    <a class="salto" href="#titulo-accesos">{% icono 'bajar' %}Accesos rápidos</a>
+</nav>
+
 {% if perms.biblioteca.view_ejemplar %}
 <section class="tarjeta busqueda-rapida" aria-labelledby="titulo-busqueda-rapida">
     <div class="busqueda-rapida-texto">
@@ -30,45 +40,64 @@
 </section>
 {% endif %}
 
+<h2 class="sr-only" id="resumen">Resumen</h2>
 <div class="indicadores">
     {% if perms.biblioteca.view_prestamo %}
     <a class="indicador" href="{% url 'biblioteca:prestamo_list' %}">
-        <span class="indicador-cabeza">Préstamos sin devolver <span class="indicador-icono">{% icono 'prestamo' %}</span></span>
-        <span class="indicador-valor">{{ prestamos_sin_devolver }}</span>
-        <span class="indicador-detalle">Ejemplares que están fuera de la biblioteca</span>
+        <span class="indicador-icono">{% icono 'prestamo' %}</span>
+        <span class="indicador-texto">
+            <span class="indicador-cabeza">Préstamos sin devolver</span>
+            <span class="indicador-valor">{{ prestamos_sin_devolver }}</span>
+            <span class="indicador-detalle">Ejemplares que están fuera de la biblioteca</span>
+        </span>
     </a>
     <a class="indicador {% if prestamos_vencidos %}indicador-alerta{% else %}indicador-ok{% endif %}" href="{% url 'biblioteca:prestamo_list' %}?estado=vencidos">
-        <span class="indicador-cabeza">Préstamos vencidos <span class="indicador-icono">{% icono 'reloj' %}</span></span>
-        <span class="indicador-valor">{{ prestamos_vencidos }}</span>
-        <span class="indicador-detalle">{% if prestamos_vencidos %}Necesitan seguimiento{% else %}Todas las devoluciones al día{% endif %}</span>
+        <span class="indicador-icono">{% icono 'reloj' %}</span>
+        <span class="indicador-texto">
+            <span class="indicador-cabeza">Préstamos vencidos</span>
+            <span class="indicador-valor">{{ prestamos_vencidos }}</span>
+            <span class="indicador-detalle">{% if prestamos_vencidos %}Necesitan seguimiento{% else %}Todas las devoluciones al día{% endif %}</span>
+        </span>
     </a>
     {% endif %}
     {% if perms.biblioteca.view_ejemplar %}
     <a class="indicador" href="{% url 'biblioteca:ejemplar_list' %}">
-        <span class="indicador-cabeza">Ejemplares disponibles <span class="indicador-icono">{% icono 'ejemplar' %}</span></span>
-        <span class="indicador-valor">{{ ejemplares_disponibles }}</span>
-        <span class="indicador-detalle">de {{ ejemplares_activos }} ejemplar{{ ejemplares_activos|pluralize:"es" }} activo{{ ejemplares_activos|pluralize }}{% if libros_total is not None %} · {{ libros_total }} título{{ libros_total|pluralize }}{% endif %}</span>
+        <span class="indicador-icono">{% icono 'ejemplar' %}</span>
+        <span class="indicador-texto">
+            <span class="indicador-cabeza">Ejemplares disponibles</span>
+            <span class="indicador-valor">{{ ejemplares_disponibles }}</span>
+            <span class="indicador-detalle">de {{ ejemplares_activos }} ejemplar{{ ejemplares_activos|pluralize:"es" }} activo{{ ejemplares_activos|pluralize }}{% if libros_total is not None %} · {{ libros_total }} título{{ libros_total|pluralize }}{% endif %}</span>
+        </span>
     </a>
     {% endif %}
     {% if perms.biblioteca.view_reserva %}
     <a class="indicador {% if reservas_pendientes %}indicador-alerta{% else %}indicador-ok{% endif %}" href="{% url 'biblioteca:reserva_list' %}">
-        <span class="indicador-cabeza">Reservas pendientes <span class="indicador-icono">{% icono 'calendario' %}</span></span>
-        <span class="indicador-valor">{{ reservas_pendientes }}</span>
-        <span class="indicador-detalle">{% if reservas_pendientes %}Esperan una respuesta{% else %}Todas respondidas{% endif %} · {{ reservas_para_retirar }} para retirar</span>
+        <span class="indicador-icono">{% icono 'calendario' %}</span>
+        <span class="indicador-texto">
+            <span class="indicador-cabeza">Reservas pendientes</span>
+            <span class="indicador-valor">{{ reservas_pendientes }}</span>
+            <span class="indicador-detalle">{% if reservas_pendientes %}Esperan una respuesta{% else %}Todas respondidas{% endif %} · {{ reservas_para_retirar }} para retirar</span>
+        </span>
     </a>
     {% endif %}
     {% if perms.biblioteca.view_materialdigital %}
     <a class="indicador {% if material_para_revisar %}indicador-alerta{% else %}indicador-ok{% endif %}" href="{% url 'biblioteca:material_list' %}?estado=pendientes">
-        <span class="indicador-cabeza">Material para revisar <span class="indicador-icono">{% icono 'documento' %}</span></span>
-        <span class="indicador-valor">{{ material_para_revisar }}</span>
-        <span class="indicador-detalle">{% if material_para_revisar %}Compartido por alumnos y profesores{% else %}Todo revisado{% endif %}</span>
+        <span class="indicador-icono">{% icono 'documento' %}</span>
+        <span class="indicador-texto">
+            <span class="indicador-cabeza">Material para revisar</span>
+            <span class="indicador-valor">{{ material_para_revisar }}</span>
+            <span class="indicador-detalle">{% if material_para_revisar %}Compartido por alumnos y profesores{% else %}Todo revisado{% endif %}</span>
+        </span>
     </a>
     {% endif %}
     {% if perms.biblioteca.view_persona %}
     <a class="indicador" href="{% url 'biblioteca:persona_list' %}">
-        <span class="indicador-cabeza">Personas activas <span class="indicador-icono">{% icono 'personas' %}</span></span>
-        <span class="indicador-valor">{{ personas_activas }}</span>
-        <span class="indicador-detalle">Alumnos y profesores habilitados</span>
+        <span class="indicador-icono">{% icono 'personas' %}</span>
+        <span class="indicador-texto">
+            <span class="indicador-cabeza">Personas activas</span>
+            <span class="indicador-valor">{{ personas_activas }}</span>
+            <span class="indicador-detalle">Alumnos y profesores habilitados</span>
+        </span>
     </a>
     {% endif %}
 </div>
@@ -82,7 +111,7 @@
         </div>
         {% if proximos_vencimientos %}
         <div class="tabla-contenedor integrada">
-            <table class="tabla">
+            <table class="tabla tabla-compacta">
                 <thead>
                     <tr>
                         <th scope="col">Ejemplar</th>
@@ -97,7 +126,7 @@
                     <tr>
                         <td data-etiqueta="Ejemplar"><a href="{% url 'biblioteca:ejemplar_detail' prestamo.ejemplar_id %}" class="codigo">{{ prestamo.ejemplar.codigo_inventario }}</a><span class="secundario">{{ prestamo.ejemplar.libro.titulo }}</span></td>
                         <td data-etiqueta="Persona">{{ prestamo.persona }}</td>
-                        <td data-etiqueta="Vence">{{ prestamo.fecha_vencimiento|date:"d/m/Y" }}</td>
+                        <td data-etiqueta="Vence" data-prefijo="Vence">{{ prestamo.fecha_vencimiento|date:"d/m/Y" }}</td>
                         <td data-etiqueta="Estado">{% include 'biblioteca/_estado_prestamo.html' %}</td>
                         <td class="acciones">
                             {% if perms.biblioteca.change_prestamo %}<a href="{% url 'biblioteca:prestamo_devolver' prestamo.pk %}">{% icono 'devolver' %}Devolver</a>{% endif %}
@@ -125,7 +154,7 @@
             {% if perms.biblioteca.add_libro %}
             <a class="acceso" href="{% url 'biblioteca:libro_create' %}">{% icono 'libro' %}<span>Agregar un libro<small>Al catálogo, con su portada</small></span></a>
             {% endif %}
-            <a class="acceso" href="{% url 'biblioteca:informes' %}">{% icono 'informe' %}<span>Informes<small>Estadísticas y exportación CSV</small></span></a>
+            <a class="acceso" href="{% url 'biblioteca:informes' %}">{% icono 'informe' %}<span>Informes<small>Estadísticas y exportación en CSV o PDF</small></span></a>
             {% if perms.auth.view_user %}
             <a class="acceso" href="{% url 'cuentas:usuario_list' %}">{% icono 'cuentas' %}<span>Cuentas del personal<small>Altas y permisos</small></span></a>
             {% endif %}

@@ -20,7 +20,8 @@ from biblioteca.reservas import (
     HORAS_PARA_RETIRAR, MAXIMO_RESERVAS_ACTIVAS, ReservaNoPermitida, cancelar, motivos_para_no_reservar, reservar,
     vencer_reservas,
 )
-from biblioteca.views import abrir_pdf, responder_foto
+from biblioteca.fotos import responder_foto
+from biblioteca.views import abrir_pdf
 
 from .acceso import LectorRequeridoMixin
 

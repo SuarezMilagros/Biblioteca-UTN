@@ -7,6 +7,12 @@
 
 * { box-sizing: border-box; }
 
+/* Escala de espaciado (revisión de UX/UI, 24/11/2026). Un solo criterio para todo el sistema:
+   - entre botones de un mismo grupo: --espacio-botones (12 px), suficiente para no tocar el de al lado;
+   - entre acciones de una fila de tabla (Ver, Editar, Dar de baja): --espacio-acciones (8 px);
+   - entre bloques (tarjetas, avisos, tablas, formularios seguidos): --espacio-bloques (20 px). */
+:root { --espacio-botones: 0.75rem; --espacio-acciones: 0.5rem; --espacio-bloques: 1.25rem; }
+
 :root {
     /* Marca */
     --naranja: #F0441E;            /* acentos: barra activa, íconos, indicadores, foco */
@@ -273,7 +279,7 @@ a:hover { color: var(--naranja-hover); }
 }
 .subencabezado { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; margin: 2rem 0 0.9rem; }
 .subencabezado h2 { margin: 0; }
-.botones-encabezado { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.botones-encabezado { display: flex; flex-wrap: wrap; gap: var(--espacio-botones); }
 
 .volver {
     display: inline-flex; align-items: center; gap: 0.35rem;
@@ -331,11 +337,11 @@ a:hover { color: var(--naranja-hover); }
     font-size: 0.86rem; font-weight: 600;
     color: var(--naranja-texto); text-decoration: none;
 }
-.acciones a + a { margin-left: 0.15rem; }
+.acciones > a + a, .acciones > a + form, .acciones > form + a, .acciones > form + form { margin-left: var(--espacio-acciones); }
 .acciones a:hover, .accion:hover { background: var(--naranja-suave); color: var(--naranja-hover); }
 .acciones .icono { width: 16px; height: 16px; }
 /* Botón de un formulario POST con aspecto de acción de la tabla (por ejemplo, dar de baja material). S7-07 */
-.acciones form.en-linea { display: inline; margin: 0; }
+.acciones form.en-linea { display: inline; margin-block: 0; } /* solo arriba y abajo: el espacio a la izquierda lo da .acciones > a + form */
 /* Cantidad junto a un enlace del menú (por ejemplo, reservas pendientes). S8-03 */
 .nav-contador { margin-left: auto; min-width: 1.4rem; padding: 0 0.4rem; border-radius: 999px; background: var(--naranja-accion); color: #fff; font-size: 0.75rem; font-weight: 700; text-align: center; line-height: 1.4rem; }
 .acciones .enlace-boton { border: 0; background: none; font: inherit; cursor: pointer; }
@@ -403,7 +409,7 @@ a.indicador:hover { border-color: var(--naranja-borde); box-shadow: var(--sombra
 .busqueda-rapida form { flex: 2 1 360px; margin: 0; }
 
 /* Accesos rápidos */
-.accesos { display: grid; gap: 0.5rem; }
+.accesos { display: grid; gap: var(--espacio-botones); }
 .acceso {
     display: flex; align-items: center; gap: 0.75rem;
     padding: 0.7rem 0.8rem;
@@ -687,7 +693,7 @@ a.indicador:hover { border-color: var(--naranja-borde); box-shadow: var(--sombra
 .leyenda-obligatorios { font-size: 0.82rem; color: var(--texto-suave); }
 
 .acciones-formulario {
-    display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center;
+    display: flex; flex-wrap: wrap; gap: var(--espacio-botones); align-items: center;
     margin-top: 1.25rem;
 }
 .formulario.tarjeta .acciones-formulario, .tarjeta .formulario .acciones-formulario {
@@ -715,9 +721,9 @@ a.indicador:hover { border-color: var(--naranja-borde); box-shadow: var(--sombra
    Detalle de registros
    ===================================================================== */
 
-.detalle { display: grid; grid-template-columns: max-content 1fr; gap: 0.7rem 1.5rem; margin: 0; }
+.detalle { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.7rem 1.5rem; margin: 0; }
 .detalle dt { font-weight: 500; color: var(--texto-suave); font-size: 0.88rem; }
-.detalle dd { margin: 0; color: var(--texto-fuerte); font-weight: 500; }
+.detalle dd { margin: 0; color: var(--texto-fuerte); font-weight: 500; min-width: 0; overflow-wrap: anywhere; }
 
 .ficha { display: flex; align-items: center; gap: 1rem; }
 .ficha h1 { margin: 0 0 0.3rem; }
@@ -975,3 +981,61 @@ a.indicador:hover { border-color: var(--naranja-borde); box-shadow: var(--sombra
 .perfil-enlace:focus-visible { outline: none; box-shadow: var(--foco); }
 .nav-contador-suave { background: var(--gris-estado-claro); color: var(--gris-estado); }
 .tarjeta-pendientes { margin-bottom: 1.25rem; }
+
+/* Revisión de UX/UI (24/11/2026): separación entre bloques y formularios seguidos */
+.tarjeta > form + form, .tarjeta > form + .formulario-baja, .columna > form + form { margin-top: var(--espacio-botones); }
+.tarjeta > .botones-encabezado, .tarjeta > p + .boton, .tarjeta > p + .boton-secundario { margin-top: var(--espacio-botones); }
+.alerta-error, .alerta-aviso, .alerta-exito { margin-bottom: var(--espacio-bloques); }
+.dos-columnas + .dos-columnas, .dos-columnas + .tarjeta, .tarjeta + .dos-columnas,
+.grilla-informes + .tarjeta, .indicadores + .dos-columnas { margin-top: var(--espacio-bloques); }
+.tabla-contenedor + .ayuda, .tabla-contenedor + .paginacion { margin-top: 0.75rem; }
+
+/* Panel del personal más corto (revisión de UX/UI, 24/11/2026): indicadores compactos y enlaces de salto */
+.indicadores { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--espacio-botones); margin-bottom: var(--espacio-bloques); }
+.indicador { display: flex; align-items: center; gap: 0.85rem; padding: 0.85rem 1rem; }
+.indicador .indicador-icono { flex: none; width: 40px; height: 40px; }
+.indicador-texto { display: flex; flex-direction: column; min-width: 0; }
+.indicador-cabeza { display: block; font-size: 0.82rem; }
+.indicador-valor { margin-top: 0.1rem; font-size: 1.5rem; }
+.indicador-detalle { margin-top: 0.1rem; font-size: 0.76rem; }
+.busqueda-rapida { margin-bottom: var(--espacio-bloques); padding-top: 1rem; padding-bottom: 1rem; }
+.saltos { display: flex; flex-wrap: wrap; gap: var(--espacio-acciones); margin: -0.25rem 0 var(--espacio-bloques); }
+.salto {
+    display: inline-flex; align-items: center; gap: 0.35rem; min-height: 36px; padding: 0.35rem 0.85rem 0.35rem 0.65rem;
+    border: 1px solid var(--naranja-borde); border-radius: 999px; background: var(--naranja-suave);
+    color: var(--naranja-texto); font-size: 0.88rem; font-weight: 600; text-decoration: none;
+    transition: background-color 0.15s, border-color 0.15s;
+}
+.salto .icono { width: 16px; height: 16px; flex: none; }
+.salto:hover { background: #FFE3D8; border-color: var(--naranja); color: var(--naranja-hover); }
+.salto:focus-visible { outline: none; box-shadow: var(--foco); }
+/* En el celular las tres entran en un renglón: sin flecha y un poco más chicas (siguen midiendo 36 px de alto). */
+@media (max-width: 640px) {
+    .saltos { gap: 0.4rem; }
+    .salto { padding: 0.35rem 0.7rem; font-size: 0.84rem; }
+    .salto .icono { display: none; }
+}
+:target { scroll-margin-top: 84px; } /* que la cabecera fija no tape el título al saltar */
+@media (max-width: 900px) { .indicadores { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) {
+    /* En el celular, cada indicador es solo su nombre y su número: entran de a dos y el panel es más corto. */
+    .indicador { padding: 0.7rem 0.85rem; }
+    .indicador .indicador-icono, .indicador-detalle { display: none; }
+    .indicador-valor { font-size: 1.4rem; }
+    /* Tabla compacta (próximos vencimientos, personas de una carrera): cada fila en tres renglones, sin etiquetas
+       encima de cada dato; donde un número solo no se entiende, va un prefijo corto (data-prefijo: "Vence", "DNI"). */
+    .tabla-compacta tr { grid-template-columns: 1fr auto; align-items: center; padding: 0.5rem 0; }
+    .tabla-compacta td { padding: 0.1rem 1rem; }
+    .tabla-compacta td[data-etiqueta]::before { display: none; }
+    .tabla-compacta td:nth-child(3) { text-align: right; }
+    .tabla-compacta td[data-prefijo]::before { display: inline; content: attr(data-prefijo) " "; font: inherit; letter-spacing: normal; text-transform: none; color: var(--texto-suave); }
+    .tabla-compacta td.acciones { grid-column: auto; text-align: right; padding-top: 0.1rem; }
+    .tabla-compacta .acciones a:first-child { margin-left: 0; }
+}
+
+/* Descargas de Informes: una fila por opción, con CSV y PDF juntos (24/11/2026) */
+.descargas { list-style: none; margin: var(--espacio-bloques) 0 0; padding: 0; display: grid; gap: 0.5rem; }
+.descargas li { display: flex; align-items: center; gap: var(--espacio-acciones); flex-wrap: wrap; }
+.descargas li > span { flex: 1 1 auto; font-weight: 600; color: var(--texto-fuerte); font-size: 0.92rem; }
+.boton-chico { min-height: 34px; padding: 0.3rem 0.7rem; font-size: 0.84rem; }
+.boton-chico .icono { width: 16px; height: 16px; }
