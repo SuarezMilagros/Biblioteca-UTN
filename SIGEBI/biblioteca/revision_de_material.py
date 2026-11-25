@@ -4,12 +4,13 @@
 - Un bibliotecario lo abre y lo aprueba (se publica) o lo rechaza con un motivo.
 - En los dos casos se le avisa por correo a quien lo subió.
 """
-import smtplib
 
 from django.core.mail import send_mail
 from django.db import transaction
 from django.template.loader import render_to_string
 from django.utils import timezone
+
+from cuentas.correo import ERRORES_DE_ENVIO
 
 from .models import MaterialDigital
 
@@ -88,6 +89,6 @@ def avisar_por_correo(material):
             None,
             [usuario.email],
         )
-    except (smtplib.SMTPException, OSError):
+    except ERRORES_DE_ENVIO:
         return False
     return True

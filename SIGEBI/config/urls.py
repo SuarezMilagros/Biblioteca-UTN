@@ -1,10 +1,19 @@
 from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
+from django.views.static import serve
 
 from cuentas.forms import CorreoAuthenticationForm, LimitadoPasswordResetForm
+
+
+def archivo_publico(request, path):
+    """Portadas de los libros (MEDIA_ROOT). Son públicas. Las sirve Django también con DEBUG apagado, porque en
+    Railway no hay otro servidor delante: alcanza para la cantidad de visitas de la biblioteca (S8-09).
+    Los PDF del material digital y las fotos de perfil NO pasan por acá: están en MATERIAL_DIGITAL_ROOT y se
+    entregan solo a quien tiene permiso (biblioteca/almacenamiento.py)."""
+    return serve(request, path, document_root=settings.MEDIA_ROOT)
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -57,5 +66,6 @@ urlpatterns = [
     ),
     path('cuentas/', include('cuentas.urls')),
     path('portal/', include('portal.urls')),
+    path(f"{settings.MEDIA_URL.lstrip('/')}<path:path>", archivo_publico, name='archivo_publico'),
     path('', include('biblioteca.urls')),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]

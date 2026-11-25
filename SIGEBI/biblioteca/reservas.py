@@ -6,13 +6,14 @@ Un lector puede reservar un libro de sus carreras si:
 - no tiene ya una reserva activa de ese libro;
 - no tiene ya MAXIMO_RESERVAS_ACTIVAS reservas activas.
 """
-import smtplib
 from datetime import timedelta
 
 from django.core.mail import send_mail
 from django.db import IntegrityError, transaction
 from django.template.loader import render_to_string
 from django.utils import timezone
+
+from cuentas.correo import ERRORES_DE_ENVIO
 
 from .models import Ejemplar, Libro, Persona, Prestamo, Reserva
 
@@ -189,6 +190,6 @@ def avisar_por_correo(reserva):
             None,
             [cuenta.email],
         )
-    except (smtplib.SMTPException, OSError):
+    except ERRORES_DE_ENVIO:
         return False
     return True

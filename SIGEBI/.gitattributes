@@ -1,0 +1,2 @@
+# Los scripts de arranque se ejecutan en Linux (Railway): siempre con fin de línea LF, aunque se editen en Windows.
+*.sh text eol=lf

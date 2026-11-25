@@ -14,6 +14,7 @@ from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
+from config import entorno
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -37,11 +38,12 @@ DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() == 'true'
 
 # Hosts que atiende Django, separados por coma (ver SIGEBI/.env.example).
 # Vacío: con DJANGO_DEBUG=True Django atiende localhost y 127.0.0.1; con False no atiende ninguno.
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.getenv('DJANGO_ALLOWED_HOSTS', '').split(',')
-    if host.strip()
-]
+# En Railway se agrega solo la dirección pública del servicio (RAILWAY_PUBLIC_DOMAIN).
+ALLOWED_HOSTS = entorno.hosts_permitidos(os.environ)
+CSRF_TRUSTED_ORIGINS = entorno.origenes_confiables(ALLOWED_HOSTS)
+
+# HTTPS en el servidor publicado (DJANGO_HTTPS=True). Ver config/entorno.py.
+globals().update(entorno.ajustes_de_https(os.environ))
 
 
 # Application definition
@@ -64,6 +66,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Sirve los estilos, el JavaScript y las imágenes de static/ cuando DEBUG está apagado (en el servidor).
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -99,16 +103,8 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME', 'sigebi'),
-        'USER': os.getenv('DB_USER', 'sigebi_user'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST', 'localhost'),
-        'PORT': os.getenv('DB_PORT', '5432'),
-    }
-}
+# Con DATABASE_URL (Railway) o con DB_NAME, DB_USER, DB_PASSWORD, DB_HOST y DB_PORT (PC del equipo).
+DATABASES = {'default': entorno.base_de_datos(os.environ)}
 
 
 # Password validation
@@ -149,6 +145,11 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 # Carpeta a la que copia collectstatic los archivos para el servidor. No se versiona.
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    # WhiteNoise los sirve comprimidos (gzip). La versión en la dirección la pone {% estatico %} (interfaz).
+    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage'},
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -158,7 +159,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Configuracion donde se guardan las imagenes
 
 MEDIA_URL = 'media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# Portadas de los libros. En Railway, MEDIA_ROOT apunta al volumen (por ejemplo /data/media) para que no se
+# borren en cada publicación.
+MEDIA_ROOT = os.environ.get('MEDIA_ROOT') or str(BASE_DIR / 'media')
 
 # Material digital (Release 2, S7-07): carpeta que el servidor NO publica (ver biblioteca/almacenamiento.py).
 # En producción conviene que esté fuera de la carpeta del proyecto y que se incluya en las copias de seguridad.
@@ -182,35 +185,22 @@ PASSWORD_RESET_TIMEOUT = 3600
 # La sesión dura una jornada de trabajo (8 horas). Después hay que volver a ingresar.
 SESSION_COOKIE_AGE = 8 * 60 * 60
 
-# Correo (decisión D-C6). Todo se lee de SIGEBI/.env; ver SIGEBI/.env.example.
-# Sin EMAIL_HOST, el correo no se envía: se muestra en la consola donde corre runserver.
+# Correo (decisión D-C6). Todo se lee de SIGEBI/.env (o del panel de Railway); ver SIGEBI/.env.example.
+# Con BREVO_API_KEY se envía por la API de Brevo (Railway bloquea el SMTP); con EMAIL_HOST, por SMTP;
+# sin ninguna, se muestra en la consola donde corre runserver. Detalle en config/entorno.py.
 # Para comprobar la configuración: python manage.py probar_correo tu-correo@ejemplo.com
+globals().update(entorno.ajustes_de_correo(os.environ))
 
-
-def _variable(nombre, por_defecto=''):
-    """Lee una variable de entorno. Si falta o quedó vacía en el .env, usa el valor por defecto."""
-    return os.getenv(nombre, '').strip() or por_defecto
-
-
-def _variable_si_no(nombre, por_defecto):
-    return _variable(nombre, por_defecto).lower() in ('true', '1', 'si', 'sí')
-
-
-EMAIL_HOST = _variable('EMAIL_HOST')
-DEFAULT_FROM_EMAIL = _variable('DEFAULT_FROM_EMAIL', 'SIGEBI <no-responder@localhost>')
-if EMAIL_HOST:
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    try:
-        EMAIL_PORT = int(_variable('EMAIL_PORT', '587'))
-    except ValueError:
-        raise ImproperlyConfigured('EMAIL_PORT tiene que ser un número (por ejemplo, 587).')
-    EMAIL_HOST_USER = _variable('EMAIL_HOST_USER')
-    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-    EMAIL_USE_TLS = _variable_si_no('EMAIL_USE_TLS', 'True')
-    EMAIL_USE_SSL = _variable_si_no('EMAIL_USE_SSL', 'False')
-    if EMAIL_USE_TLS and EMAIL_USE_SSL:
-        raise ImproperlyConfigured('EMAIL_USE_TLS y EMAIL_USE_SSL no pueden estar las dos en True.')
-    # Si el servidor no responde, el envío se corta a los 10 segundos en lugar de colgar la pantalla.
-    EMAIL_TIMEOUT = 10
-else:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Registro de errores (S8-09). Todo va a la consola, que en Railway se ve en "Deploy Logs".
+# Con DEBUG apagado, Django no muestra en la consola los errores 500: acá se pide que sí, con su detalle.
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {'simple': {'format': '{levelname} {name}: {message}', 'style': '{'}},
+    'handlers': {'consola': {'class': 'logging.StreamHandler', 'formatter': 'simple'}},
+    'root': {'handlers': ['consola'], 'level': 'WARNING'},
+    'loggers': {
+        # Solo errores: las páginas no encontradas (404) ya aparecen en el registro de pedidos.
+        'django': {'handlers': ['consola'], 'level': 'ERROR', 'propagate': False},
+    },
+}

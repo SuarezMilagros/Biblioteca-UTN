@@ -11,7 +11,6 @@ Reglas:
 - Si el correo falla, el aviso no se registra: se vuelve a intentar la próxima vez.
 - Se puede ejecutar varias veces en el día, incluso dos a la vez, sin duplicar correos.
 """
-import smtplib
 from dataclasses import dataclass, field
 from datetime import timedelta
 
@@ -19,6 +18,8 @@ from django.core.mail import EmailMessage, get_connection
 from django.db import IntegrityError, transaction
 from django.template.loader import render_to_string
 from django.utils import timezone
+
+from cuentas.correo import ERRORES_DE_ENVIO
 
 from .models import AvisoPrestamo, Prestamo
 
@@ -91,7 +92,7 @@ def enviar_avisos(hoy=None, simular=False):
                     EmailMessage(asunto, cuerpo, None, [correo], connection=conexion).send()
             except IntegrityError:
                 continue
-            except (smtplib.SMTPException, OSError):
+            except ERRORES_DE_ENVIO:
                 resultado.fallidos.append(prestamo)
                 continue
             resultado.enviados[tipo].append(prestamo)
