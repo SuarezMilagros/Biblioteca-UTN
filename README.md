@@ -164,6 +164,9 @@ python manage.py probar_correo tu-correo@ejemplo.com
 El comando informa si el correo se envió o por qué falló, sin mostrar la contraseña.
 Los enlaces para definir o recuperar la contraseña vencen en una hora.
 
+En el servidor publicado (Railway) el SMTP está bloqueado: los correos salen por la API de **Brevo** con la
+variable `BREVO_API_KEY` (si está, se usa en lugar de `EMAIL_HOST`). Ver `docs/despliegue-railway.md`.
+
 ## 6. Cargar el inventario desde Excel (Sprint 6)
 
 El inventario que la biblioteca llevaba en Excel (una fila por ejemplar, con las columnas ID, NOMBRE, AUTOR,
@@ -226,6 +229,7 @@ Biblioteca-UTN/
 
 ## 9. Limitaciones conocidas
 
-- **HTTPS y despliegue:** la configuración está preparada para desarrollo. Para producción hay que servir el
-  sistema con HTTPS, `DJANGO_DEBUG=False`, `DJANGO_ALLOWED_HOSTS` con el dominio real y `collectstatic`.
+- **Publicación:** SIGEBI se publica en Railway con HTTPS, gunicorn y WhiteNoise; los pasos están en
+  `docs/despliegue-railway.md` (S8-09). Las portadas las sirve Django: alcanza para la biblioteca, pero con
+  mucho tráfico convendría un almacenamiento de archivos aparte.
 - **Sesión:** dura 8 horas; después hay que volver a ingresar.

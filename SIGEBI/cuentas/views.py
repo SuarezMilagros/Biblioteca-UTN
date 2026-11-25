@@ -3,8 +3,6 @@
 Cada vista exige su permiso de Django. Además, el Administrativo solo gestiona
 bibliotecarios (ver `puede_gestionar`).
 """
-import smtplib
-
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
@@ -19,13 +17,12 @@ from django.views.generic import CreateView, ListView, TemplateView, UpdateView
 
 from biblioteca.fotos import MAXIMO_MB, FotoForm, guardar_foto, quitar_foto, responder_foto
 
-from .correo import enviar_correo_definicion
+from .correo import ERRORES_DE_ENVIO, enviar_correo_definicion
 from .forms import UsuarioForm
 from .models import PerfilDelPersonal
 from .roles import ADMINISTRATIVO, BIBLIOTECARIO, es_lector
 
 ROLES_DEL_SISTEMA = [ADMINISTRATIVO, BIBLIOTECARIO]
-ERRORES_DE_ENVIO = (smtplib.SMTPException, OSError)
 
 
 def puede_gestionar(solicitante, usuario):

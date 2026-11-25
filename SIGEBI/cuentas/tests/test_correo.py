@@ -31,6 +31,8 @@ CODIGO = (
 VARIABLES_DE_CORREO = [
     'EMAIL_HOST', 'EMAIL_PORT', 'EMAIL_USE_TLS', 'EMAIL_USE_SSL',
     'EMAIL_HOST_USER', 'EMAIL_HOST_PASSWORD', 'DEFAULT_FROM_EMAIL',
+    # S8-09: con BREVO_API_KEY se usa Brevo; se vacía para que el .env de quien corre las pruebas no influya.
+    'BREVO_API_KEY',
 ]
 
 
