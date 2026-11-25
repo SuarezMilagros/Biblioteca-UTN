@@ -34,6 +34,34 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ---------- Botón «Volver arriba» ----------
+    // Aparece solo cuando se bajó más de VOLVER_ARRIBA_DESDE píxeles; arriba de todo, o sin JavaScript, no se ve.
+    // Al tocarlo sube (sin animación si el sistema pide reducir el movimiento) y deja el foco en el contenido,
+    // para que con el teclado o un lector de pantalla se siga desde el principio de la página.
+    const volverArriba = document.querySelector('[data-volver-arriba]');
+    if (volverArriba) {
+        const VOLVER_ARRIBA_DESDE = 400;
+        let pendiente = false;
+        const actualizarVolverArriba = () => {
+            pendiente = false;
+            volverArriba.classList.toggle('es-visible', window.scrollY > VOLVER_ARRIBA_DESDE);
+        };
+        volverArriba.hidden = false;
+        actualizarVolverArriba(); // por si el navegador abrió la página ya desplazada (por ejemplo, al volver atrás)
+        window.addEventListener('scroll', () => {
+            if (!pendiente) {
+                pendiente = true;
+                window.requestAnimationFrame(actualizarVolverArriba);
+            }
+        }, { passive: true });
+        volverArriba.addEventListener('click', () => {
+            const sinAnimacion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            window.scrollTo({ top: 0, behavior: sinAnimacion ? 'auto' : 'smooth' });
+            const contenido = document.getElementById('contenido');
+            if (contenido) contenido.focus({ preventScroll: true });
+        });
+    }
+
     // ---------- Etiquetas con QR (S8-05) ----------
     // Casilla "elegir todos": sin JavaScript queda oculta y se eligen de a uno.
     document.querySelectorAll('[data-seleccionar-todos]').forEach((todos) => {
