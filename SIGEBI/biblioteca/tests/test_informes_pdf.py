@@ -4,7 +4,9 @@ Cada listado que se exporta en CSV también se exporta en PDF, con las mismas co
 mismos filtros, todas las páginas). El PDF tiene título, qué incluye, fecha de generación, encabezado repetido
 en cada hoja y número de página. En Informes, cada descarga ofrece CSV y PDF juntos.
 """
+import random
 import re
+import string
 import zlib
 from datetime import timedelta
 
@@ -23,13 +25,22 @@ A4_VERTICAL = '/MediaBox [0 0 595.28 841.89]'
 
 
 def texto_del_pdf(contenido):
-    """El texto que dibuja el PDF (fpdf2 comprime cada hoja con zlib; las fuentes estándar usan Latin-1)."""
+    """El texto que dibuja el PDF (fpdf2 comprime cada hoja con zlib; las fuentes estándar usan Latin-1).
+
+    Cada flujo se lee con la cantidad exacta de bytes que declara su `/Length`. Antes se buscaba hasta
+    "endstream" y, si los datos comprimidos terminaban en el byte "\\r" (pasa en ~0,5 % de los PDF, según la hora
+    de generación), ese byte se perdía y el texto no aparecía: el test fallaba aunque el PDF estuviera bien.
+    """
     partes = [contenido.decode('latin-1')]
-    for flujo in re.findall(rb'stream\r?\n(.*?)\r?\nendstream', contenido, re.S):
-        try:
-            partes.append(zlib.decompress(flujo).decode('latin-1'))
-        except zlib.error:
-            pass
+    for encabezado in re.finditer(rb'<<(?:(?!>>).)*?/Length (\d+)(?:(?!>>).)*>>\s*stream\r?\n', contenido, re.S):
+        inicio = encabezado.end()
+        flujo = contenido[inicio:inicio + int(encabezado.group(1))]
+        if b'/FlateDecode' in encabezado.group(0):
+            try:
+                flujo = zlib.decompress(flujo)
+            except zlib.error as error:  # nunca en silencio: un flujo ilegible tiene que hacer fallar la prueba
+                raise AssertionError(f'Flujo comprimido ilegible en el byte {inicio}: {error}') from error
+        partes.append(flujo.decode('latin-1'))
     # Un mismo renglón puede escribirse en partes, por ejemplo "(Página 1 de ) Tj (3) Tj".
     return re.sub(r'\) Tj \(', '', '\n'.join(partes))
 
@@ -208,6 +219,45 @@ class BotonesDeExportarTests(InformesPDFTestCase):
         html = self.client.get(reverse('biblioteca:informes')).content.decode()
         self.assertIn(reverse('biblioteca:prestamo_list') + '?estado=todos&amp;formato=pdf', html)
         self.assertNotIn(reverse('biblioteca:persona_list') + '?', html)
+
+
+class LectorDePDFDeLasPruebasTests(SimpleTestCase):
+    """El lector que usan estas pruebas no puede depender del azar de la compresión."""
+
+    def flujo_que_termina_en_retorno(self):
+        azar = random.Random(0)  # siempre los mismos textos: la prueba es repetible
+        for _ in range(5000):
+            relleno = ''.join(azar.choices(string.ascii_letters, k=azar.randint(1, 40)))
+            texto = f'BT (No hay datos para este informe.) Tj ({relleno}) Tj ET'.encode('latin-1')
+            comprimido = zlib.compress(texto)
+            if comprimido.endswith(b'\r'):
+                return texto, comprimido
+        self.fail('No se encontró un flujo que termine en \\r')
+
+    def test_lee_un_flujo_comprimido_que_termina_en_retorno_de_carro(self):
+        texto, comprimido = self.flujo_que_termina_en_retorno()
+        pdf = (b'%PDF-1.3\n4 0 obj\n<<\n/Filter /FlateDecode\n/Length ' + str(len(comprimido)).encode()
+               + b'\n>>\nstream\n' + comprimido + b'\nendstream\nendobj\n%%EOF\n')
+        self.assertIn('No hay datos para este informe.', texto_del_pdf(pdf))
+
+    def test_un_flujo_roto_hace_fallar_la_prueba(self):
+        pdf = b'%PDF-1.3\n4 0 obj\n<<\n/Filter /FlateDecode\n/Length 5\n>>\nstream\nroto!\nendstream\nendobj\n'
+        with self.assertRaisesMessage(AssertionError, 'Flujo comprimido ilegible'):
+            texto_del_pdf(pdf)
+
+    def test_lee_los_pdf_de_verdad_aunque_terminen_en_retorno_de_carro(self):
+        azar = random.Random(0)
+        con_retorno = 0
+        for intento in range(20000):  # hasta probar 3 PDF cuyo flujo comprimido termina en \r
+            busqueda = ''.join(azar.choices(string.ascii_lowercase, k=azar.randint(1, 30)))
+            contenido = respuesta_pdf('x.pdf', 'Ejemplares', f'Búsqueda: «{busqueda}»', ['A'], []).content
+            with self.subTest(busqueda=busqueda):
+                self.assertIn('No hay datos para este informe.', texto_del_pdf(contenido))
+            if re.search(rb'\r\nendstream', contenido):
+                con_retorno += 1
+                if con_retorno == 3:
+                    break
+        self.assertEqual(con_retorno, 3, 'No se llegó a probar el caso del \\r')
 
 
 class ArmadoDelPDFTests(SimpleTestCase):
