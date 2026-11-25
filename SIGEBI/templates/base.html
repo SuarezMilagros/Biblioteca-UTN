@@ -7,7 +7,7 @@
     Si falta alguna (por ejemplo, en una prueba aislada), la cabecera se muestra igual, sin ese dato.
     Bloques: titulo, seccion (ubicación en la cabecera), contenido, extra_css, extra_js.
     JavaScript (static/js/main.js): data-confirmar, data-cerrar-menu, data-cerrar-mensaje,
-    data-mostrar-clave, data-vista-previa, data-buscador. Sin JavaScript todo sigue funcionando.
+    data-mostrar-clave, data-vista-previa, data-buscador, data-volver-arriba. Sin JavaScript todo sigue funcionando.
 {% endcomment %}<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -120,6 +120,9 @@
             <footer class="pie">SIGEBI · Biblioteca UTN FRT, Extensión Áulica Concepción</footer>
         </div>
     </div>
+
+    {# Botón flotante «Volver arriba»: oculto hasta que main.js detecta que se bajó por la página. #}
+    <button type="button" class="volver-arriba" data-volver-arriba hidden title="Volver arriba">{% icono 'subir' %}<span class="sr-only">Volver arriba</span></button>
 
     <dialog class="modal" id="modal-confirmar" aria-labelledby="modal-titulo">
         <div class="modal-cuerpo">
