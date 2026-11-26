@@ -526,7 +526,7 @@ capturan: la operación se completa igual y se avisa que el correo no salió. El
 | Portal (24/11/2026) | El portal se organiza en Explorar, Mi biblioteca y Mi perfil | Implementada |
 | Informes en PDF | Cada listado que se exporta en CSV también se exporta en PDF, con fpdf2 | Implementada |
 | Publicación | Railway (Trial) y Brevo para la demostración; pasar a Hobby antes de que venza el Trial | Implementada (25/11/2026) |
-| Evaluación económica | Se calcula al final, con las horas de las dos releases | En curso (S8-11) |
+| Evaluación económica | Sistema original = Release 1 y 2 (650 horas estimadas); mejora = asistente con IA (40 horas); valor hora de un desarrollador junior (Sysarmy 2026.1) | Hecha (S8-11); horas a confirmar con Trello |
 
 ### 8.3. Desviaciones técnicas
 
