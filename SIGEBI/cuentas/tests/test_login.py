@@ -25,6 +25,16 @@ class LoginPorCorreoTests(TestCase):
     def iniciar_sesion(self, correo, clave=CLAVE):
         return self.client.post(reverse('login'), {'username': correo, 'password': clave})
 
+    def test_la_nota_dice_para_quien_es_y_como_pedir_cuenta(self):
+        # Texto pedido por el equipo (26/11/2026).
+        respuesta = self.client.get(reverse('login'))
+        self.assertContains(
+            respuesta,
+            '<p class="acceso-nota">Para el personal de la biblioteca, estudiantes y docentes.\n'
+            '        Si aún no tenés cuenta, pedila en biblioteca.</p>',
+        )
+        self.assertNotContains(respuesta, 'Si sos estudiante o docente')
+
     def test_la_pantalla_pide_correo_electronico(self):
         respuesta = self.client.get(reverse('login'))
         self.assertContains(respuesta, 'Correo electrónico')

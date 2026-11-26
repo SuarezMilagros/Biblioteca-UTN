@@ -4,12 +4,13 @@
 - Mientras dura el bloqueo no se puede entrar, ni siquiera con la contraseña correcta.
 - Un correo inexistente se bloquea igual que uno registrado: el bloqueo no revela qué cuentas existen.
 - La recuperación de contraseña envía como máximo 3 correos por hora a una misma dirección.
+- Detrás del proxy de Railway (S8-09) la IP sale de X-Real-IP: los fallos de un visitante no bloquean a los demás.
 """
 from datetime import timedelta
 
 from django.contrib.auth import SESSION_KEY, get_user_model
 from django.core import mail
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -142,3 +143,58 @@ class IntentosEnElAdminTests(IntentosTestCase):
         respuesta = self.client.get(reverse('admin:cuentas_intentodeacceso_changelist'))
         self.assertContains(respuesta, CORREO)
         self.assertEqual(self.client.get(reverse('admin:cuentas_intentodeacceso_add')).status_code, 403)
+
+PROXY = '100.64.0.2'  # dirección del proxy de Railway: la misma para todos los visitantes
+
+
+@override_settings(CABECERA_IP_DEL_CLIENTE='HTTP_X_REAL_IP')
+class IpDetrasDelProxyTests(IntentosTestCase):
+    """En Railway todos los pedidos llegan desde el proxy; la IP del visitante viene en X-Real-IP."""
+
+    def ingresar_desde(self, visitante, correo=CORREO, clave=CLAVE):
+        return self.client.post(reverse('login'), {'username': correo, 'password': clave},
+                                REMOTE_ADDR=PROXY, HTTP_X_REAL_IP=visitante)
+
+    def test_registra_la_ip_del_visitante_y_no_la_del_proxy(self):
+        self.ingresar_desde('203.0.113.5', clave='clave-equivocada')
+        self.assertEqual(IntentoDeAcceso.objects.get().ip, '203.0.113.5')
+
+    def test_los_fallos_de_un_visitante_no_bloquean_a_otro(self):
+        for numero in range(intentos.INGRESO_MAXIMO_POR_IP):
+            self.ingresar_desde('203.0.113.5', correo=f'prueba{numero}@example.com', clave='x')
+        self.assertContains(self.ingresar_desde('203.0.113.5'), MENSAJE_BLOQUEO)
+        self.assertRedirects(self.ingresar_desde('198.51.100.7'), reverse('biblioteca:inicio'))
+
+    def test_los_pedidos_de_recuperacion_tambien_se_cuentan_por_visitante(self):
+        for numero in range(intentos.RECUPERACION_MAXIMO_POR_IP):
+            self.client.post(reverse('password_reset'), {'email': f'prueba{numero}@example.com'},
+                             REMOTE_ADDR=PROXY, HTTP_X_REAL_IP='203.0.113.5')
+        self.client.post(reverse('password_reset'), {'email': CORREO}, REMOTE_ADDR=PROXY, HTTP_X_REAL_IP='198.51.100.7')
+        self.assertEqual(len(mail.outbox), 1)  # el otro visitante sí recibe su correo
+        self.assertEqual(mail.outbox[0].to, [CORREO])
+
+    def test_acepta_ipv6(self):
+        self.ingresar_desde('2001:db8::1', clave='clave-equivocada')
+        self.assertEqual(IntentoDeAcceso.objects.get().ip, '2001:db8::1')
+
+    def test_un_valor_que_no_es_una_ip_se_ignora(self):
+        for valor in ('no-es-una-ip', '203.0.113.5, 198.51.100.7', '', '999.1.1.1'):
+            with self.subTest(valor=valor):
+                IntentoDeAcceso.objects.all().delete()
+                self.ingresar_desde(valor, clave='clave-equivocada')
+                self.assertEqual(IntentoDeAcceso.objects.get().ip, PROXY)
+
+
+class SinProxyDeConfianzaTests(IntentosTestCase):
+    """En una PC del equipo (sin proxy) la cabecera se ignora: cualquiera la podría inventar."""
+
+    def test_ignora_x_real_ip(self):
+        self.client.post(reverse('login'), {'username': CORREO, 'password': 'x'},
+                         REMOTE_ADDR='10.0.0.1', HTTP_X_REAL_IP='203.0.113.5')
+        self.assertEqual(IntentoDeAcceso.objects.get().ip, '10.0.0.1')
+
+    def test_inventar_la_cabecera_no_saltea_el_bloqueo_por_ip(self):
+        for numero in range(intentos.INGRESO_MAXIMO_POR_IP):
+            self.client.post(reverse('login'), {'username': f'prueba{numero}@example.com', 'password': 'x'},
+                             REMOTE_ADDR='10.0.0.9', HTTP_X_REAL_IP=f'203.0.113.{numero}')
+        self.assertContains(self.ingresar(ip='10.0.0.9'), MENSAJE_BLOQUEO)
