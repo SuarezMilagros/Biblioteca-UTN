@@ -567,7 +567,7 @@ inventario real, sin perder datos. `test_migraciones` falla si alguien cambia un
 
 ## 10. Pruebas
 
-La suite automática tiene **884 pruebas** (Django `TestCase` sobre PostgreSQL, no una base en memoria: así se
+La suite automática tiene **888 pruebas** (Django `TestCase` sobre PostgreSQL, no una base en memoria: así se
 verifican también las restricciones de la base). El detalle por módulo y el resultado están en
 [Evidencias de pruebas](evidencias-de-pruebas.md).
 

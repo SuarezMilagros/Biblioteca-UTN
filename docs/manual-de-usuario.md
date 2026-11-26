@@ -363,8 +363,8 @@ persona subió una foto en el portal, se ve en su ficha.
 ![Nueva persona](capturas/17-nueva-persona.png)
 
 Nombre, apellido, documento y tipo (Alumno o Profesor) son obligatorios; el legajo es opcional.
-El **documento** son **7 u 8 dígitos**, solo números: se puede escribir con puntos, pero se guarda sin
-ellos, y **no se puede repetir**. Marcá las **carreras** de la persona: son las que va a ver en el portal.
+El **documento** son **7 u 8 números**, sin puntos ni letras (el campo no deja escribir más de 8 caracteres), y
+**no se puede repetir**. Al prestar, en cambio, el documento se puede escribir con o sin puntos. Marcá las **carreras** de la persona: son las que va a ver en el portal.
 
 ### 10.1. Cuenta para el portal
 

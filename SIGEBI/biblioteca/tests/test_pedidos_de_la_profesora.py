@@ -6,6 +6,7 @@
 - Informe de préstamos por persona, con un rango de fechas elegido de hasta un mes.
 - Documento: solo números, de 7 u 8 dígitos.
 """
+import re
 from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
@@ -90,6 +91,31 @@ class TipoDeEjemplarTests(PedidosTestCase):
         respuesta = self.client.post(reverse('biblioteca:ejemplar_create'),
                                      {'codigo_inventario': 'PY-8', 'libro': self.python.pk, 'tipo': 'REVISTA'})
         self.assertIn('tipo', respuesta.context['form'].errors)
+
+    def test_el_formulario_muestra_el_tipo(self):
+        # Hallado en el QA del Sprint 8: el campo existía en el formulario pero no en la pantalla.
+        for url in (reverse('biblioteca:ejemplar_create'), reverse('biblioteca:ejemplar_update', args=[self.tesis.pk])):
+            with self.subTest(url=url):
+                html = self.client.get(url).content.decode()
+                self.assertIn('<select name="tipo"', html)
+                for nombre in ('Original', 'Copia', 'Tesis'):
+                    self.assertIn(f'>{nombre}</option>', html)
+
+    def test_al_editar_una_copia_desde_la_pantalla_sigue_siendo_copia(self):
+        # Envía solo los campos que la pantalla muestra, como lo haría el navegador. Sin el campo en la
+        # plantilla, el tipo no viajaba y la copia quedaba guardada como original.
+        url = reverse('biblioteca:ejemplar_update', args=[self.py_copia.pk])
+        respuesta = self.client.get(url)
+        html = respuesta.content.decode()
+        formulario = html[html.index('<form method="post" class="formulario'):]
+        formulario = formulario[:formulario.index('</form>')]
+        nombres = set(re.findall(r'name="([a-z_]+)"', formulario)) - {'csrfmiddlewaretoken'}
+        form = respuesta.context['form']
+        datos = {nombre: form[nombre].value() or '' for nombre in nombres}
+        self.assertEqual(datos.get('tipo'), 'COPIA')
+        self.client.post(url, datos)
+        self.py_copia.refresh_from_db()
+        self.assertEqual(self.py_copia.tipo, 'COPIA')
 
     def test_se_ve_en_la_ficha_la_lista_y_el_libro(self):
         self.assertContains(self.client.get(reverse('biblioteca:ejemplar_detail', args=[self.tesis.pk])), '<dd>Tesis</dd>', html=True)
