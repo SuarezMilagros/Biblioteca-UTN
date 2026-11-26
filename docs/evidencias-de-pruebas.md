@@ -17,15 +17,15 @@ internet: el correo se simula y los archivos se guardan en carpetas temporales.
 
 ## 2. Resultado de referencia
 
-Ejecución de verificación al preparar la documentación de la Release 2 (25/11/2026), con Python 3.13,
-Django 5.2.18 y PostgreSQL 16, sobre el código de `main` después del PR #43:
+Ejecución de verificación del QA del Sprint 8 (26/11/2026), con Python 3.13, Django 5.2.18 y PostgreSQL 16,
+sobre el código de `main` después del PR #45 más la corrección del campo Tipo (sección 7.2):
 
 ```
-Found 884 test(s).
+Found 888 test(s).
 Creating test database for alias 'default'...
 System check identified no issues (0 silenced).
 ----------------------------------------------------------------------
-Ran 884 tests in 91.006s
+Ran 888 tests in 109.930s
 
 OK
 Destroying test database for alias 'default'...
@@ -38,13 +38,14 @@ Destroying test database for alias 'default'...
 | Cierre de la Release 1 (Sprint 6) | 336 |
 | Límite de intentos (PR #20) | 352 |
 | Cierre del desarrollo del Sprint 7 (PR #28) | 480 |
-| Versión actual (PR #43) | 884 |
+| Documentación de la Release 2 (PR #43 a #45) | 884 |
+| Versión actual (QA del Sprint 8, corrección del campo Tipo) | 888 |
 
 > Cada integrante del equipo debe ejecutar la suite en su equipo y registrar su propio resultado (sección 7).
 
 ## 3. Pruebas por módulo
 
-### 3.1. Aplicación `biblioteca` (614 pruebas)
+### 3.1. Aplicación `biblioteca` (618 pruebas)
 
 | Archivo | Pruebas | Release | Qué verifica |
 |---|---|---|---|
@@ -70,7 +71,8 @@ Destroying test database for alias 'default'...
 | `test_avisos.py` | 26 | 2 | «Vence pronto» y «venció», una sola vez por préstamo y tipo, solo a cuentas activas, ejecución repetida y simultánea. |
 | `test_qr.py` | 21 | 2 | QR con la dirección de la ficha, hojas de etiquetas, aviso de dirección local, el lector no abre la ficha. |
 | `test_demanda.py` | 18 | 2 | Período, cantidades por libro, marca «Conviene comprar más», exportación y permisos. |
-| `test_pedidos_de_la_profesora.py` | 28 | 2 | Menú, tipo de ejemplar, filtros, préstamos por persona y documento de 7 u 8 dígitos. |
+| `test_pedidos_de_la_profesora.py` | 30 | 2 | Menú, tipo de ejemplar (también en la pantalla de alta y edición), filtros, préstamos por persona y documento de 7 u 8 dígitos. |
+| `test_formularios_completos.py` | 2 | 2 | Cada pantalla de alta o edición muestra todos los campos de su formulario (agregada en el QA del Sprint 8). |
 | `test_revision_ux.py` | 23 | 2 | Revisión de UX/UI: ficha de la carrera con sus personas, personas por carrera, enlaces de salto del inicio. |
 | `test_informes_pdf.py` | 27 | 2 | Cada informe en PDF con las mismas columnas y filas que el CSV, anchos de columna, permisos. |
 | `test_volver_arriba_y_menu.py` | 12 | 2 | Botón «Volver arriba» y menú lateral sin barra de desplazamiento. |
@@ -164,6 +166,8 @@ las pruebas de su módulo:
 | Avisos: enviar a cuentas desactivadas | `test_avisos` (26) | Detectado: 1 falla |
 | Demanda: marcar un libro con tantas reservas sin ejemplar como ejemplares | `test_demanda` (18) | Detectado: 1 falla |
 | **Control:** agregar un comentario (no cambia nada) | `test_reservas_lector` (24) | Sin fallas, como se esperaba |
+| Ejemplar: sacar el campo Tipo de la pantalla (QA del Sprint 8) | `test_pedidos_de_la_profesora` (30) y `test_formularios_completos` (2) | Detectado: 3 y 2 fallas |
+| Ejemplar: ignorar el tipo elegido (QA del Sprint 8) | `test_pedidos_de_la_profesora` (30) | Detectado: 2 fallas |
 
 Las 16 modificaciones de reglas fueron detectadas y el control no produjo fallas. Se probó también quitar la línea
 que deja el material compartido como pendiente: las pruebas no fallaron, pero ese cambio no altera el sistema,
@@ -207,16 +211,51 @@ desplazamiento horizontal.
 | Subir una imagen de portada real desde el navegador | Equipo | Hecha; informada por el equipo el 04/11/2026 |
 | Instalación desde cero siguiendo el README | Equipo | Hecha; informada por el equipo el 05/11/2026 |
 
-### 7.2. Release 2 (S7-09 y S8-08)
+### 7.2. Release 2: QA del Sprint 8 (S8-08)
+
+El 26/11/2026 se recorrió completa la guía de pruebas del Sprint 8 sobre el código de `main` después del PR #45.
+El recorrido lo ejecutó la herramienta de IA con un navegador automatizado (Chromium con Playwright), sobre una base
+nueva con los datos de prueba. Cada paso de la guía se convirtió en controles que comparan lo que muestra la pantalla
+con lo que la guía dice que tiene que pasar, incluidos los textos exactos de los mensajes. Los correos se leyeron
+en la consola del servidor.
+
+| Paso de la guía | Controles | Resultado |
+|---|---|---|
+| 0. Suite completa | 1 | `Ran 884 tests` OK, sobre `main` sin cambios |
+| 1. Datos de prueba: dos lectores con cuenta, libro y ejemplar | 9 | **1 falla:** el formulario Nuevo ejemplar no mostraba el campo **Tipo** (ver abajo) |
+| 2. Reservas: reserva, confirmación, ejemplar apartado, retiro, devolución, rechazo, liberar y máximo de 2 | 20 | OK, con los mensajes y los correos de la guía |
+| 3. Material compartido: declaración obligatoria, PDF falso rechazado, revisión, aprobación, rechazo con motivo, descarga | 13 | OK |
+| 4. Opiniones: sin préstamo no se opina, moderación, "Alumna P.", "Lectura verificada", edición vuelve a revisión | 8 | OK |
+| 5. Código QR | 7 | OK. El QR de la ficha se leyó con un decodificador (zxing-cpp) y da la dirección de la ficha; con sesión del personal la abre, sin sesión pide ingresar y un lector recibe "Acceso no permitido". Etiquetas para imprimir sin menú y una por ejemplar elegido |
+| 6. Avisos por correo | 4 | OK: la simulación no envía; el envío real manda 1 aviso "vence pronto"; la segunda corrida, 0 |
+| 7. Informe de demanda | 6 | OK: "Libro QA Sprint 8" primero, con 3 reservas sin ejemplar, 1 ejemplar activo y "Conviene comprar más"; filtro, CSV, PDF y aviso de fechas invertidas. (Un control mal planteado esperaba otro total de reservas; la pantalla coincide con la guía) |
+| 8. Pedidos de la profesora e informes en PDF | 12 | OK: documento de hasta 8 caracteres y mensaje exacto, filtros por carrera, tipo y categoría, préstamos por persona, tres exportaciones PDF, foto de perfil y botón Volver arriba |
+| 9. Errores a propósito (las 4 filas de la guía) | 4 | Las 4 hicieron fallar sus pruebas, y el código quedó como estaba |
+| 10. Vista de celular (390 px) | 11 | OK: ninguna pantalla se desplaza hacia los costados |
+
+**Falla encontrada y corregida: el campo Tipo del ejemplar no estaba en la pantalla.** Se agregó en el pedido de la
+profesora del 18/11/2026 (PR #36) al modelo y al formulario, pero no a la plantilla `ejemplar_form.html`. Las pruebas
+enviaban el dato directamente y no lo detectaron. Consecuencias:
+
+- desde la pantalla no se podía cargar una copia o una tesis: todo ejemplar nuevo quedaba como original;
+- **al editar una copia o una tesis desde la pantalla, se guardaba como original**, porque el dato no viajaba.
+
+Corrección: el campo se agregó a la plantilla. Se sumaron dos pruebas que envían solo lo que la pantalla muestra, como
+lo hace el navegador, y una prueba general (`test_formularios_completos`) que recorre todas las pantallas de alta y
+edición y controla que muestren todos los campos de su formulario. Se comprobó que las tres detectan el error, y en el
+navegador se cargó una copia, se editó y siguió siendo copia. Con la corrección, la suite da **888 pruebas OK**.
+
+> **Para revisar en los datos:** si en alguna base (incluido el sitio publicado) se editó una copia o una tesis desde
+> la pantalla antes de esta corrección, quedó como original. Conviene revisar el tipo de esos ejemplares.
+
+**Pendiente del equipo:**
 
 | Verificación | Responsable | Resultado |
 |---|---|---|
-| Suite en el equipo de Emmanuel | Emmanuel | 823 pruebas OK (24/11/2026) y 835 pruebas OK (24/11/2026), informadas al integrar los PR #39 y #40 |
-| Suite completa en el equipo de cada integrante, con la versión final | Cada integrante | _A completar_ |
-| Recorrido con un alumno, un profesor y un bibliotecario (Sprint 7) | Ana y Mariano | _A completar_ |
-| Recorrido: reserva, confirmación, retiro y devolución | Ana y Mariano | _A completar_ |
-| Recorrido: material compartido, carga, aprobación y descarga | Ana y Mariano | _A completar_ |
-| Recorrido: opinión y moderación | Ana y Mariano | _A completar_ |
-| Escanear un QR impreso con un celular | Ana y Mariano | _A completar_ |
+| Suite en el equipo de Emmanuel | Emmanuel | 823 pruebas OK y 835 pruebas OK (24/11/2026), informadas al integrar los PR #39 y #40 |
+| Suite completa con la versión final en el equipo de cada integrante | Cada integrante | _A completar_ |
+| Recorrido del Sprint 7 con un profesor (S7-09) | Equipo | _A completar_ (el recorrido del Sprint 8 usó dos alumnos) |
+| Escanear un QR **impreso** con la cámara de un celular | Equipo | _A completar_ (el recorrido automatizado leyó el QR desde la pantalla, no desde papel) |
+| Recorrido con personas en el sistema publicado (Railway) | Equipo | _A completar_ |
 
 > Para registrar un resultado: quién lo hizo, la fecha, si salió bien y, si algo falló, en qué paso y qué pasó.
