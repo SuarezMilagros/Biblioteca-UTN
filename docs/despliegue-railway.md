@@ -21,6 +21,8 @@ GitHub (rama main) ──► Railway: servicio "SIGEBI" ──► https://sigebi
   administración (si no existe) y, si se pide, carga los datos de prueba.
 - **Por qué Brevo:** Railway bloquea el envío por SMTP (Gmail) en los planes Trial, Free y Hobby. Brevo envía
   por HTTPS, que no está bloqueado.
+- **Límite de intentos:** detrás del proxy de Railway, SIGEBI toma la IP del visitante de `X-Real-IP` (el proxy
+  la reemplaza en cada pedido); así los intentos fallidos de una persona no bloquean a las demás.
 
 ## Costos y límites (noviembre de 2026)
 
@@ -34,40 +36,41 @@ GitHub (rama main) ──► Railway: servicio "SIGEBI" ──► https://sigebi
 
 ## Paso 0. Requisito: el código en `main`
 
-Este despliegue necesita los cambios del ZIP `sigebi-despliegue-railway.zip` ya integrados en `main`
-(gunicorn, WhiteNoise, Brevo, `preparar_sitio` e `iniciar_servidor.sh`).
+Este despliegue necesita en `main` los cambios del S8-09 (gunicorn, WhiteNoise, Brevo, `preparar_sitio` e
+`iniciar_servidor.sh`). Railway publica siempre desde `main`.
+
+> **Publicado el 25/11/2026** en `https://biblioteca-utn-production.up.railway.app` (cuenta de Milagros, plan
+> Trial). Esta guía quedó escrita en el orden que funcionó, con los tropiezos de ese día en «Problemas frecuentes».
 
 ## Paso 1. Brevo (correo)
 
-1. Crear una cuenta gratis en **https://www.brevo.com** (con el correo de la biblioteca o del equipo).
-   Completar el perfil que pide al entrar (nombre, organización: «Biblioteca UTN FRT Concepción»).
-2. **Remitente:** menú del perfil (arriba a la derecha) › **Senders, Domains & Dedicated IPs** › **Senders** ›
-   **Add a sender**.
-   - From name: `SIGEBI`
-   - From email: el Gmail de SIGEBI (el mismo de `DEFAULT_FROM_EMAIL` en sus `.env`).
+1. Crear una cuenta gratis en **https://www.brevo.com** y completar el perfil que pide al entrar
+   (organización: «Biblioteca UTN FRT Concepción»).
+2. **Remitente:** Configuración (engranaje, abajo a la izquierda) › **Remitentes, dominios e IP dedicadas** ›
+   **Remitentes** › **Añadir remitente**.
+   - Nombre: `SIGEBI` · Email: el Gmail de SIGEBI.
    - Brevo manda un código de 6 dígitos a ese Gmail: ingresarlo para verificarlo.
-   - **Aviso:** Brevo no permite autenticar dominios gratuitos como gmail.com, así que al enviar reemplaza la
-     dirección por una suya (del tipo `…@…t-sender-sib.com`). El nombre «SIGEBI» se mantiene. Para la
-     demostración alcanza; para que salga con una dirección propia hace falta un dominio.
-3. **Clave de la API:** menú del perfil › **SMTP & API** › pestaña **API Keys** › **Generate a new API key**.
-   Nombre: `sigebi-railway`. **Copiarla en ese momento** (después no se vuelve a mostrar) y guardarla solo
-   hasta pegarla en Railway (Paso 4).
+   - Brevo no permite autenticar dominios gratuitos como gmail.com: al enviar reemplaza la dirección por una
+     suya (del tipo `…@…t-sender-sib.com`). El nombre «SIGEBI» se mantiene. Es normal.
+3. **Clave de la API:** Configuración › **SMTP y API** › pestaña **Claves API** (*no* la pestaña SMTP) ›
+   **Generar una nueva clave API**, nombre `sigebi-railway`.
+   - **Tiene que empezar con `xkeysib-`.** Si empieza con `xsmtpsib-` es la clave SMTP: no sirve (Railway
+     bloquea el SMTP).
+   - Copiarla en ese momento (no se vuelve a mostrar) y guardarla solo hasta pegarla en Railway.
+4. Si al probar Brevo rechaza la clave aunque sea `xkeysib-`: perfil › **Seguridad** › **IP autorizadas** ›
+   desactivar el bloqueo de IP desconocidas (la IP de Railway cambia, no conviene cargar una fija).
 
-## Paso 2. Railway: proyecto, base de datos y servicio
+## Paso 2. Railway: proyecto y base de datos
 
-1. Entrar a **https://railway.com** con la cuenta de GitHub. Si Railway indica que la prueba está limitada
-   («Limited Trial»), seguir sus indicaciones para verificar la cuenta.
-2. **New Project** › **Deploy from GitHub repo** › elegir `SuarezMilagros/Biblioteca-UTN`.
-   - Si el repositorio no aparece, hay que darle acceso a Railway en GitHub. Como el repositorio es de
-     Milagros, GitHub le pide a ella que apruebe la instalación de la app de Railway: **Milagros tiene que
-     aceptar** ese pedido (le llega por mail o en GitHub › Settings › Applications).
-   - El primer intento de publicación va a fallar: todavía falta la configuración. Es normal.
-3. **Base de datos:** en el proyecto, **+ Create** (o **New**) › **Database** › **PostgreSQL**. Se crea un
-   servicio «Postgres». No hace falta tocar nada.
+1. Entrar a **https://railway.com** con la cuenta de GitHub **de quien es dueño del repositorio** (Milagros):
+   así autoriza el acceso en el momento. Con otra cuenta, GitHub le pide a la dueña que apruebe la app.
+2. **New Project** › **Deploy from GitHub repo** › `SuarezMilagros/Biblioteca-UTN`. El primer intento falla
+   («Build failed»): todavía falta la configuración. Es normal.
+3. **+ Create** › **Database** › **PostgreSQL**. Aparece el servicio «Postgres»: no se toca.
 
-## Paso 3. Configuración del servicio SIGEBI
+## Paso 3. Configuración del servicio SIGEBI (antes de las variables)
 
-Hacer clic en el servicio del repositorio (no en Postgres) › **Settings**:
+Clic en el servicio del repositorio (no en Postgres) › **Settings**:
 
 | Sección | Campo | Valor |
 |---|---|---|
@@ -75,82 +78,97 @@ Hacer clic en el servicio del repositorio (no en Postgres) › **Settings**:
 | Source | Branch | `main` |
 | Deploy | **Pre-deploy Command** | `python manage.py preparar_sitio` |
 | Deploy | **Custom Start Command** | `sh iniciar_servidor.sh` |
-| Deploy | Restart Policy | On Failure (el que viene) |
+| Networking | **Generate Domain** | puerto **`8080`** |
 
-**Volumen** (para que las portadas, los PDF y las fotos no se borren en cada publicación): en el lienzo del
-proyecto, clic derecho sobre el servicio SIGEBI › **Attach Volume** (o `Ctrl + K` › «Volume»).
-**Mount path: `/data`**.
+- **Generar la dirección ahora**, antes de publicar: SIGEBI la lee al arrancar (`RAILWAY_PUBLIC_DOMAIN`). Si se
+  genera después, la página da «Solicitud incorrecta (400)» hasta la próxima publicación (ver Problemas).
+- **Volumen:** clic derecho sobre el servicio en el lienzo › **Attach Volume** › Mount path **`/data`**.
+
+Railway junta los cambios en un aviso «Apply N changes» arriba a la izquierda: todavía **no** tocar Deploy.
 
 ## Paso 4. Variables del servicio SIGEBI
 
-Servicio SIGEBI › **Variables** › **Raw Editor**. Pegar esto y **completar** lo que está entre `<...>`:
+Servicio SIGEBI › **Variables** › **Raw Editor**. Cada línea es `NOMBRE="valor"`:
 
 ```
-DATABASE_URL=${{Postgres.DATABASE_URL}}
-DJANGO_SECRET_KEY=<clave secreta nueva, ver abajo>
-DJANGO_DEBUG=False
-DJANGO_HTTPS=True
-MEDIA_ROOT=/data/media
-MATERIAL_DIGITAL_ROOT=/data/privado
-BREVO_API_KEY=<la clave de Brevo del Paso 1>
-DEFAULT_FROM_EMAIL=SIGEBI <el-gmail-de-sigebi@gmail.com>
-SIGEBI_ADMIN_CORREO=<correo para entrar como administración>
-SIGEBI_ADMIN_CLAVE=<contraseña de al menos 8 caracteres, no solo números ni muy común>
-SIGEBI_DATOS_DEMO=True
+DATABASE_URL="${{Postgres.DATABASE_URL}}"
+DJANGO_SECRET_KEY="(clave secreta nueva)"
+DJANGO_DEBUG="False"
+DJANGO_HTTPS="True"
+DJANGO_ALLOWED_HOSTS="biblioteca-utn-production.up.railway.app"
+MEDIA_ROOT="/data/media"
+MATERIAL_DIGITAL_ROOT="/data/privado"
+BREVO_API_KEY="(clave de la API de Brevo, empieza con xkeysib-)"
+DEFAULT_FROM_EMAIL="SIGEBI <el-gmail-verificado-en-brevo@gmail.com>"
+SIGEBI_ADMIN_CORREO="(correo para entrar como administración)"
+SIGEBI_ADMIN_CLAVE="(contraseña: 8 o más caracteres, con letras y números)"
+SIGEBI_DATOS_DEMO="True"
 ```
 
-- `DATABASE_URL=${{Postgres.DATABASE_URL}}` se escribe **tal cual**: Railway lo reemplaza por la conexión a la
-  base del Paso 2 (si el servicio de la base tiene otro nombre, usar ese nombre en lugar de `Postgres`).
-- **Clave secreta nueva** (no usar la del `.env` de nadie). En una PC del equipo, con el entorno virtual activo:
+**Reglas (todos los errores del primer día fueron por esto):**
+- Reemplazar **todo** el texto entre paréntesis por el dato real, **sin dejar `( )` ni `< >`**.
+  La única que lleva `< >` es `DEFAULT_FROM_EMAIL`, porque es su formato: `SIGEBI <correo>`.
+- `DATABASE_URL` va **tal cual**: Railway reemplaza `${{Postgres.DATABASE_URL}}` por la conexión a la base.
+- `DJANGO_ALLOWED_HOSTS`: la dirección generada en el Paso 3, sin `https://` ni `/` al final.
+- **Clave secreta:** una nueva, sin símbolos (los `#` o `$` pueden cortarse en el editor). En una PC del equipo:
   ```
-  python -c "from django.core.management.utils import get_random_secret_key as k; print(k())"
+  python -c "import secrets; print(secrets.token_urlsafe(50))"
   ```
-  copiar el resultado y pegarlo en `DJANGO_SECRET_KEY`.
-- `DJANGO_ALLOWED_HOSTS` no hace falta: la dirección pública de Railway se agrega sola.
-- `SIGEBI_DATOS_DEMO=True` carga libros, ejemplares, personas y préstamos ficticios para mostrar el sistema.
-  Si van a cargar el inventario real, ponerla en `False` (o borrarla) antes.
+- `SIGEBI_ADMIN_CLAVE` es la contraseña **exacta** de la cuenta que se crea la primera vez (si quedan `< >`,
+  la contraseña los incluye). Después no se usa más: `preparar_sitio` nunca cambia una cuenta existente.
+- `SIGEBI_DATOS_DEMO="True"` carga datos ficticios para mostrar el sistema; para el inventario real, `False`.
 
-Guardar (**Update Variables** / **Deploy**). Railway vuelve a publicar.
+**Update Variables** y recién ahí **Deploy** en el aviso «Apply N changes». No usar «Redeploy» sobre una
+publicación vieja con cambios pendientes: se publicaría sin ellos.
 
-## Paso 5. Dirección pública
+## Paso 5. Comprobar
 
-Servicio SIGEBI › **Settings** › **Networking** › **Generate Domain**. Si pide un puerto, poner el que aparece
-en **Deploy Logs** en la línea `Listening at: http://0.0.0.0:XXXX` (normalmente `8080`).
+1. **Deployments** › la publicación nueva (la de arriba) tiene que quedar **Active**. En **Deploy Logs**
+   (no Build Logs) se ve: `Cuenta de administración creada: ...`, `Sitio preparado.`, `Mounting volume on ...`,
+   `130 static files copied` y `Listening at: http://0.0.0.0:8080`. Las líneas de gunicorn aparecen en rojo
+   porque van al canal de errores, pero dicen `[INFO]`: son normales.
+2. Abrir la dirección: pantalla de ingreso con candado. Entrar con `SIGEBI_ADMIN_CORREO` y `SIGEBI_ADMIN_CLAVE`.
+3. **Correo**, desde la **Console** del servicio (pestaña Console: una terminal dentro del servidor). Ahí
+   `python` solo no existe: siempre con la ruta del entorno de Railway:
+   ```
+   /app/.venv/bin/python manage.py probar_correo tu-correo@gmail.com
+   ```
+   Tiene que decir `Correo de prueba enviado a ...` y llegar el mail (mirar Spam y Promociones).
+4. **Archivos:** subir una portada, **Redeploy** desde Deployments, y comprobar que la portada sigue.
 
-Queda una dirección del tipo `https://sigebi-production.up.railway.app`.
+## Paso 6. Después del primer ingreso
 
-## Paso 6. Comprobar
+1. En SIGEBI, **Cambiar contraseña**.
+2. En Railway › Variables, **borrar `SIGEBI_ADMIN_CLAVE`** y Deploy.
+3. **Para la profesora:** **Cuentas › Nueva cuenta** (Bibliotecario o Administrativo). Le llega el mail para
+   definir su contraseña.
+4. **Antes de que venza el Trial (30 días):** pasar a **Hobby** si el sitio tiene que seguir publicado.
 
-1. **Deployments** › la última publicación tiene que quedar en verde (**Active / Success**).
-   En **Deploy Logs** se ve, en orden:
-   - `Cuenta de administración creada: ...` y `Sitio preparado.` (del Pre-deploy)
-   - `... static files copied ...` y `Listening at: http://0.0.0.0:...` (del arranque)
-2. Abrir la dirección: tiene que aparecer la pantalla de ingreso de SIGEBI, con candado (HTTPS).
-3. Entrar con `SIGEBI_ADMIN_CORREO` y `SIGEBI_ADMIN_CLAVE`.
-4. **Correo:** en SIGEBI, **Cuentas › Nueva cuenta**, crear una cuenta de bibliotecario con un correo propio.
-   Tiene que llegar el mail «definí tu contraseña» (mirar también en Spam). Otra forma: servicio SIGEBI › menú
-   «⋯» › consola (si está disponible) y `python manage.py probar_correo tu-correo@ejemplo.com`.
-5. **Archivos:** subir una portada a un libro y volver a publicar (Deployments › Redeploy): la portada sigue.
+## Comandos útiles en la Console de Railway
 
-## Paso 7. Después del primer ingreso
-
-1. En SIGEBI, **Cambiar contraseña** de la cuenta de administración.
-2. En Railway › Variables, **borrar `SIGEBI_ADMIN_CLAVE`** (ya no hace falta; la cuenta existente no se toca).
-3. **Para la profesora:** crearle una cuenta desde **Cuentas › Nueva cuenta** (rol Bibliotecario o
-   Administrativo). Le llega el mail para definir su contraseña.
+```
+/app/.venv/bin/python manage.py changepassword correo@ejemplo.com   # nueva contraseña para una cuenta
+/app/.venv/bin/python manage.py probar_correo correo@ejemplo.com    # prueba el envío por Brevo
+/app/.venv/bin/python -c "import os; k=os.environ.get('BREVO_API_KEY',''); print(k[:8], len(k))"   # forma de la clave, sin mostrarla
+```
 
 ## Problemas frecuentes
 
 | Qué se ve | Causa | Qué hacer |
 |---|---|---|
-| Deploy Logs: `Falta DJANGO_SECRET_KEY` | No se cargó la variable | Paso 4 |
-| Pre-deploy: `SIGEBI_ADMIN_CLAVE no sirve: ...` | La contraseña es muy corta, muy común o solo números | Elegir otra y volver a publicar |
-| Pre-deploy: `connection ... failed` / `could not translate host name` | `DATABASE_URL` mal escrita o el servicio de la base se llama distinto | Paso 4: `${{Postgres.DATABASE_URL}}` con el nombre real |
-| `Bad Request (400)` al abrir la dirección | La dirección no está en los hosts permitidos (por ejemplo, un dominio propio) | Agregarla en `DJANGO_ALLOWED_HOSTS` |
-| La página se ve sin estilos | No corrió `collectstatic` | Revisar que el Start Command sea `sh iniciar_servidor.sh` |
-| «No se pudo enviar el correo» | Clave de Brevo mal copiada o remitente sin verificar | Paso 1; en Deploy Logs aparece el detalle |
-| Las portadas desaparecen al publicar | No hay volumen o el Mount path no es `/data` | Paso 3 |
-| `Root Directory` / `manage.py not found` | Falta `/SIGEBI` como Root Directory | Paso 3 |
+| «Build failed» y en Build Logs aparece la raíz (`SIGEBI/`, `docs/`, `README.md`) | Falta el Root Directory | Paso 3: `/SIGEBI` |
+| Pre-deploy: `Falta DJANGO_SECRET_KEY` | Variables no cargadas en este servicio, sin aplicar, o la clave vacía por símbolos | Paso 4: revisar en el servicio SIGEBI (no en Postgres), clave sin símbolos, Deploy |
+| Pre-deploy: `SIGEBI_ADMIN_CORREO no es un correo válido: "<...>"` | Quedaron los `< >` | Dejar solo el correo |
+| Pre-deploy: `SIGEBI_ADMIN_CLAVE no sirve: ...` | Contraseña corta, común o solo números | Elegir otra |
+| Pre-deploy: `could not translate host name` | `DATABASE_URL` mal escrita o la base se llama distinto | `${{Postgres.DATABASE_URL}}` con el nombre real del servicio |
+| «Solicitud incorrecta (400)» al abrir la dirección | La dirección se generó después de publicar y no está en los hosts | `DJANGO_ALLOWED_HOSTS` con la dirección, y Deploy |
+| «El correo o la contraseña no son correctos» con la cuenta de administración | La contraseña quedó distinta (por ejemplo, con `< >`) | Console: `changepassword` (ver Comandos útiles) |
+| «Hubo demasiados intentos fallidos...» | 5 intentos fallidos con ese correo | Esperar 15 minutos |
+| `probar_correo`: «Brevo rechazó la clave» | Clave SMTP (`xsmtpsib-`) en lugar de la API (`xkeysib-`), con `< >`, o IP bloqueada | Paso 1.3 y 1.4; corregir la variable y Deploy |
+| Console: `python: command not found` | En el servidor Python está en el entorno de Railway | Usar `/app/.venv/bin/python` |
+| La página se ve sin estilos | No corrió `collectstatic` | Start Command: `sh iniciar_servidor.sh` |
+| Las portadas desaparecen al publicar | Sin volumen o Mount path distinto de `/data` | Paso 3 |
+| Errores rojos en la consola del navegador (`/writing`, `/site_integration`) | Son de una extensión del navegador, no de SIGEBI | Ignorarlos |
 
 ## Avisos automáticos de préstamos (opcional)
 

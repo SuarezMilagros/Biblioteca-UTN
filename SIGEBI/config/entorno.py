@@ -88,6 +88,9 @@ def ajustes_de_https(variables):
         'CSRF_COOKIE_SECURE': True,
         # El navegador recuerda por un día que este sitio va siempre por HTTPS.
         'SECURE_HSTS_SECONDS': 86400,
+        # IP real del visitante para el límite de intentos: el proxy de Railway la pone en X-Real-IP y reemplaza
+        # la que mande el visitante (ver cuentas/intentos.py).
+        'CABECERA_IP_DEL_CLIENTE': 'HTTP_X_REAL_IP',
         # No se pide HTTPS para todos los subdominios ni la lista de precarga de los navegadores: el dominio
         # (por ejemplo, up.railway.app) es del proveedor, no de SIGEBI. check --deploy los avisa igual.
         'SILENCED_SYSTEM_CHECKS': ['security.W005', 'security.W021'],

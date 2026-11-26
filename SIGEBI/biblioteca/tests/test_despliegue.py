@@ -55,6 +55,7 @@ print(json.dumps({
     "proxy": getattr(s, "SECURE_PROXY_SSL_HEADER", None), "redirigir": getattr(s, "SECURE_SSL_REDIRECT", False),
     "cookie_sesion": getattr(s, "SESSION_COOKIE_SECURE", False), "cookie_csrf": getattr(s, "CSRF_COOKIE_SECURE", False),
     "hsts": getattr(s, "SECURE_HSTS_SECONDS", 0), "base": s.DATABASES["default"],
+    "cabecera_ip": getattr(s, "CABECERA_IP_DEL_CLIENTE", None),
     "middleware": s.MIDDLEWARE[:2], "estaticos": s.STORAGES["staticfiles"]["BACKEND"],
     "media": str(s.MEDIA_ROOT), "privado": s.MATERIAL_DIGITAL_ROOT, "correo": s.EMAIL_BACKEND,
     "anymail": getattr(s, "ANYMAIL", None), "remitente": s.DEFAULT_FROM_EMAIL,
@@ -132,6 +133,7 @@ class EntornoTests(SimpleTestCase):
         self.assertEqual(ajustes['SECURE_PROXY_SSL_HEADER'], ('HTTP_X_FORWARDED_PROTO', 'https'))
         self.assertTrue(ajustes['SECURE_SSL_REDIRECT'] and ajustes['SESSION_COOKIE_SECURE'] and ajustes['CSRF_COOKIE_SECURE'])
         self.assertEqual(ajustes['SECURE_HSTS_SECONDS'], 86400)
+        self.assertEqual(ajustes['CABECERA_IP_DEL_CLIENTE'], 'HTTP_X_REAL_IP')
 
     def test_con_clave_de_brevo_se_usa_brevo_aunque_haya_smtp(self):
         ajustes = entorno.ajustes_de_correo({'BREVO_API_KEY': ' xkeysib-1 ', 'EMAIL_HOST': 'smtp.gmail.com'})
@@ -164,6 +166,7 @@ class AjustesEnRailwayTests(SimpleTestCase):
         self.assertEqual(r['proxy'], ['HTTP_X_FORWARDED_PROTO', 'https'])
         self.assertTrue(r['redirigir'] and r['cookie_sesion'] and r['cookie_csrf'])
         self.assertEqual(r['hsts'], 86400)
+        self.assertEqual(r['cabecera_ip'], 'HTTP_X_REAL_IP')  # IP real del visitante para el límite de intentos
 
     def test_usa_la_base_de_railway(self):
         base = self.railway['base']
@@ -190,6 +193,7 @@ class AjustesEnRailwayTests(SimpleTestCase):
         local = self.local
         self.assertTrue(local['debug'])
         self.assertIsNone(local['proxy'])
+        self.assertIsNone(local['cabecera_ip'])
         self.assertFalse(local['redirigir'] or local['cookie_sesion'])
         self.assertEqual(local['hosts'], [])
         self.assertEqual((local['base']['NAME'], local['base']['HOST']), ('sigebi', 'localhost'))
