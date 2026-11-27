@@ -116,7 +116,8 @@ SIGEBI_DATOS_DEMO="True"
   ```
 - `SIGEBI_ADMIN_CLAVE` es la contraseña **exacta** de la cuenta que se crea la primera vez (si quedan `< >`,
   la contraseña los incluye). Después no se usa más: `preparar_sitio` nunca cambia una cuenta existente.
-- `SIGEBI_DATOS_DEMO="True"` carga datos ficticios para mostrar el sistema; para el inventario real, `False`.
+- `SIGEBI_DATOS_DEMO="True"` carga datos ficticios para mostrar el sistema; para el inventario real, `False`
+  (ver [Cargar el inventario real](#cargar-el-inventario-real)).
 
 **Update Variables** y recién ahí **Deploy** en el aviso «Apply N changes». No usar «Redeploy» sobre una
 publicación vieja con cambios pendientes: se publicaría sin ellos.
@@ -144,11 +145,42 @@ publicación vieja con cambios pendientes: se publicaría sin ellos.
    definir su contraseña.
 4. **Antes de que venza el Trial (30 días):** pasar a **Hobby** si el sitio tiene que seguir publicado.
 
+## Cargar el inventario real
+
+El sitio se publicó con datos de prueba (`SIGEBI_DATOS_DEMO="True"`). Para dejarlo con el inventario real de la
+biblioteca (S8-12), en este orden:
+
+1. **Apagar los datos de prueba:** Railway › servicio SIGEBI › **Variables** › `SIGEBI_DATOS_DEMO` = `False`
+   › **Deploy**. Si queda en `True`, cada publicación los vuelve a cargar (y el comando del paso 2 no corre).
+2. **Quitar los datos de prueba**, desde la **Console** del servicio. Primero en modo prueba, que no borra nada y
+   muestra qué quitaría y qué queda:
+   ```
+   /app/.venv/bin/python manage.py quitar_datos_prueba
+   ```
+   Si lo que «quedaría» está bien (lo que el equipo cargó a mano y no es de prueba), quitarlos:
+   ```
+   /app/.venv/bin/python manage.py quitar_datos_prueba --confirmar
+   ```
+   Quita solo lo que reconoce como de prueba: los libros y ejemplares de prueba (ADM-001, PRG-001…), las 4 personas
+   de prueba con sus cuentas del portal, la cuenta `bibliotecario_prueba`, y los préstamos, reservas y opiniones
+   hechos con ellos. Nunca toca la cuenta de administración ni las del personal. Si algo depende de esos datos y no
+   lo puede quitar (por ejemplo, material digital que subió una cuenta de prueba), no quita nada y lo informa.
+3. **Importar el Excel** desde el navegador, con la cuenta de administración: **Ejemplares › Importar desde Excel**,
+   elegir `BibliotecaAnexo.xlsx` y **Revisar el archivo**. Tiene que decir 318 filas leídas, **311 ejemplares
+   nuevos**, 261 libros y 7 filas rechazadas (las que el equipo decidió no cargar). Recién ahí, **Guardar**.
+   En **Deploy Logs** queda `Inventario importado por ...` con el resultado.
+4. **Después, a mano (S8-12):** registrar los préstamos de los 7 ejemplares que figuraban prestados (la pantalla los
+   lista con enlace a cada uno), corregir en **Autores** los nombres mal separados y, si se identifican, cargar los
+   7 ejemplares rechazados desde **Nuevo ejemplar**.
+
+Se puede repetir la importación sin duplicar: los ejemplares cuyo código ya existe se omiten.
+
 ## Comandos útiles en la Console de Railway
 
 ```
 /app/.venv/bin/python manage.py changepassword correo@ejemplo.com   # nueva contraseña para una cuenta
 /app/.venv/bin/python manage.py probar_correo correo@ejemplo.com    # prueba el envío por Brevo
+/app/.venv/bin/python manage.py quitar_datos_prueba                 # qué datos de prueba quitaría (con --confirmar, los quita)
 /app/.venv/bin/python -c "import os; k=os.environ.get('BREVO_API_KEY',''); print(k[:8], len(k))"   # forma de la clave, sin mostrarla
 ```
 
@@ -168,6 +200,8 @@ publicación vieja con cambios pendientes: se publicaría sin ellos.
 | Console: `python: command not found` | En el servidor Python está en el entorno de Railway | Usar `/app/.venv/bin/python` |
 | La página se ve sin estilos | No corrió `collectstatic` | Start Command: `sh iniciar_servidor.sh` |
 | Las portadas desaparecen al publicar | Sin volumen o Mount path distinto de `/data` | Paso 3 |
+| `quitar_datos_prueba`: «SIGEBI_DATOS_DEMO está activada» | La variable sigue en `True` | Ponerla en `False`, Deploy y repetir |
+| `quitar_datos_prueba`: «No se quitó nada: hay registros que dependen…» | Algo hecho con los datos de prueba que el comando no borra (por ejemplo, material digital de una cuenta de prueba) | Quitar a mano lo que lista y repetir |
 | Errores rojos en la consola del navegador (`/writing`, `/site_integration`) | Son de una extensión del navegador, no de SIGEBI | Ignorarlos |
 
 ## Avisos automáticos de préstamos (opcional)

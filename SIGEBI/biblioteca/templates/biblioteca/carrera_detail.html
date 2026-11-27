@@ -70,4 +70,8 @@
 {% else %}
 <p class="texto-suave">Ninguna categoría está asignada a esta carrera. Se asignan desde la pantalla <a href="{% url 'biblioteca:categoria_list' %}">Categorías</a>.</p>
 {% endif %}
+
+{% if eliminacion %}
+<div class="zona-acciones">{% include 'componentes/zona_eliminar.html' %}</div>
+{% endif %}
 {% endblock %}

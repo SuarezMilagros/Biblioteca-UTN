@@ -150,6 +150,19 @@ El detalle muestra los datos del libro, la imagen de portada (si se cargó) y su
 el estado de cada uno: **Disponible**, **Prestado**, **Apartado** (por una reserva) o **Dado de baja**.
 Desde acá podés **Agregar ejemplar** e **Imprimir etiquetas** con el QR de todos sus ejemplares (sección 5).
 
+**Dar de baja o eliminar un libro.** Debajo de los ejemplares están las dos opciones:
+
+![Dar de baja o eliminar un libro](capturas/52-libro-baja-eliminar.png)
+
+- **Dar de baja el libro:** elegí el motivo (perdido, dañado, descarte u otro) y confirmá. Se dan de baja **todos
+  sus ejemplares activos** con ese motivo: ninguno se puede prestar y **el libro deja de verse en el portal**. Se
+  conserva su historial. No se puede si algún ejemplar está prestado o si hay reservas pendientes o confirmadas:
+  primero registrá las devoluciones y resolvé las reservas. Para volver atrás, **Reactivar libro** habilita los
+  ejemplares de esa baja (los que ya estaban dados de baja antes, por ejemplo perdidos, siguen igual).
+- **Eliminar:** borra el libro con sus ejemplares y su portada, y **no se puede deshacer**. Solo se puede si
+  ningún ejemplar se prestó ni se reservó y el libro no tiene opiniones; si no, la pantalla dice por qué y
+  sugiere darlo de baja. Sirve para corregir un libro cargado por error.
+
 ![Nuevo libro](capturas/06-nuevo-libro.png)
 
 Para cargar un libro completá título, autor, editorial y categoría (obligatorios, marcados con `*`).
@@ -168,9 +181,13 @@ indica cuál quedó elegida. Si no es la correcta, abrí la lista y elegí otra.
 ![Autores](capturas/07-autores.png)
 
 Las tres secciones funcionan igual: un listado con el botón **Nuevo** y la opción **Editar** en cada fila.
-Estos registros no se eliminan desde las pantallas. Además, la base de datos impide borrar un autor, una
-editorial o una categoría que esté en uso por algún libro. Las categorías tienen además sus **carreras**
-(sección 11).
+Las categorías tienen además sus **carreras** (sección 11).
+
+**Eliminar:** al pie de la pantalla **Editar** está la opción **Eliminar**. Solo se puede eliminar un autor, una
+editorial o una categoría que **ningún libro usa**; si no, la pantalla dice cuántos libros lo usan. Para
+eliminarlo, primero asigná esos libros a otro (por ejemplo, al corregir un autor cargado dos veces).
+
+![Autor en uso: no se puede eliminar](capturas/53-autor-en-uso.png)
 
 ---
 
@@ -199,6 +216,25 @@ por su **código de inventario** (la numeración escrita en el ejemplar).
 
 El detalle del ejemplar muestra sus datos y su estado, el botón **Prestar** (si está disponible), el
 **código QR**, la opción para **darlo de baja** y el **historial de préstamos**.
+
+### 4.1. Importar el inventario desde Excel
+
+Para cargar de una vez el inventario que la biblioteca llevaba en Excel (una fila por ejemplar):
+
+1. En **Ejemplares**, tocá **Importar desde Excel**.
+2. Elegí el archivo `.xlsx` y tocá **Revisar el archivo**. **Todavía no se guarda nada:** se muestra cuántos
+   ejemplares se cargarían, qué filas se rechazan y por qué, cuáles figuraban como prestados y los autores nuevos.
+3. Si está bien, tocá **Guardar N ejemplares**. Si no, corregí el Excel y elegí el archivo de nuevo.
+
+![Revisión del inventario antes de guardar](capturas/39-importar-inventario.png)
+
+- Se puede repetir: los ejemplares que ya están cargados se omiten, no se duplican.
+- Los ejemplares sin numeración reciben un código provisorio **SN-** (por ejemplo, `SN-0045`), que se cambia
+  desde el ejemplar cuando tenga su número.
+- Los que figuraban **prestados** se cargan disponibles: registrá el préstamo con la persona y las fechas reales.
+  Después de guardar, cada código de esa lista abre el ejemplar.
+- Revisá en **Autores** los nombres que hayan quedado mal separados (la lista **Autores nuevos** ayuda).
+- La opción la tienen quienes pueden crear libros y ejemplares.
 
 ---
 
@@ -387,6 +423,12 @@ del portal también se desactiva**, pero se conserva su historial. Antes de hace
 **confirmar**; con **Cancelar** no cambia nada. **No se puede dar de baja a una persona con préstamos sin
 devolver.** Para volver a habilitarla, usá **Reactivar**: la cuenta del portal se reactiva también.
 
+### 10.3. Eliminar una persona
+
+En la ficha, **Eliminar** borra la persona y su cuenta del portal, y **no se puede deshacer**. Solo se puede si
+**nunca tuvo préstamos, reservas ni opiniones** y no compartió material: sirve para corregir una persona cargada
+por error. Si tiene historial, la pantalla dice qué tiene y sugiere **darla de baja**, que conserva el historial.
+
 ---
 
 ## 11. Carreras y categorías
@@ -400,8 +442,9 @@ carreras de su **categoría**.
   tiene cada una y cuántas personas.
 - Si hay **categorías sin carrera**, aparece un aviso amarillo: los libros de esas categorías no los ve nadie en
   el portal hasta que se les asigne una carrera.
-- **Nueva carrera** y **Editar carrera** permiten cargar o corregir el nombre y el nivel. Una carrera con datos
-  asociados no se puede borrar.
+- **Nueva carrera** y **Editar carrera** permiten cargar o corregir el nombre y el nivel.
+- **Eliminar** (al pie del detalle de la carrera): solo si no tiene personas, categorías ni material digital.
+  Si tiene, la pantalla dice cuántos; primero quitá la carrera de esas personas y categorías.
 
 ![Detalle de una carrera](capturas/29-carrera-detalle.png)
 
@@ -606,6 +649,11 @@ Las tablas se muestran como tarjetas, sin desplazamiento horizontal.
 | No tiene ninguna carrera asignada. | Se quiso crear la cuenta del portal de una persona sin carreras. | Editar la persona y marcar sus carreras. |
 | Ya existe una persona con ese documento. / Ya existe una cuenta con ese correo. | Dato repetido. | Buscar el registro existente. |
 | Acceso no permitido. | La cuenta no tiene permiso para esa sección. | Pedir el acceso a un Administrativo. |
+| No se puede eliminar «…»: tiene … | La persona, el libro, el autor, la editorial, la categoría o la carrera tiene historial o está en uso. | Darlo de baja (personas y libros) o reasignar primero lo que lo usa. |
+| No se puede dar de baja «…»: … ejemplar prestado … | El libro tiene ejemplares prestados o reservas activas. | Registrar las devoluciones y resolver las reservas. |
+| Solo se aceptan archivos de Excel .xlsx. | Al importar el inventario se eligió otro tipo de archivo (por ejemplo, un `.xls` viejo). | Abrirlo en Excel y guardarlo como `.xlsx`. |
+| Faltan columnas en el encabezado. | El Excel no tiene alguna de las columnas ID, NOMBRE, AUTOR, CATEGORÍA, EDITORIAL o NUMERACIÓN. | Agregar la columna o corregir su título. |
+| No hay un archivo revisado para guardar. | Se tocó **Guardar** después de cerrar la sesión o desde otra pestaña. | Elegir el archivo y revisarlo de nuevo. |
 
 ---
 

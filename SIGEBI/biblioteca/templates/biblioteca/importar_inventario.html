@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% load interfaz %}
+{% comment %}
+    Importación del inventario en Excel desde el navegador (S8-12). Tres estados:
+    - sin `resultado`: el formulario para elegir el archivo;
+    - con `resultado` y sin `guardado`: la revisión (modo prueba, no se guardó nada) con el botón Guardar;
+    - con `guardado`: lo que se guardó y qué queda por hacer a mano.
+{% endcomment %}
+
+{% block titulo %}Importar inventario · SIGEBI{% endblock %}
+{% block seccion %}Catálogo / Ejemplares / <strong>Importar inventario</strong>{% endblock %}
+
+{% block contenido %}
+<a class="volver" href="{% url 'biblioteca:ejemplar_list' %}">{% icono 'volver' %}Volver a ejemplares</a>
+<div class="encabezado-seccion">
+    <div>
+        <p class="sobretitulo">Ejemplares</p>
+        <h1>Importar inventario</h1>
+        <p class="bajada">Carga el inventario que la biblioteca llevaba en Excel: una fila por ejemplar.</p>
+    </div>
+</div>
+
+{% if not resultado %}
+<form method="post" enctype="multipart/form-data" class="formulario tarjeta formulario-angosto">
+    {% csrf_token %}
+    {% include 'componentes/formulario.html' %}
+    <p class="ayuda">El Excel tiene que tener las columnas ID, NOMBRE, AUTOR, CATEGORÍA, EDITORIAL y NUMERACIÓN
+        (y, si están, ISBN, OBSERVACIONES, FECHA DE INVENTARIO y Estado), en cualquier orden.</p>
+    <p class="ayuda">Primero se <strong>revisa</strong>: se muestra qué se va a cargar y no se guarda nada.
+        Recién después elegís si guardar. Se puede repetir: los ejemplares cuyo código ya existe se omiten.</p>
+    <div class="acciones-formulario">
+        <button type="submit" class="boton">{% icono 'subir' %}Revisar el archivo</button>
+        <a class="boton-secundario" href="{% url 'biblioteca:ejemplar_list' %}">Cancelar</a>
+    </div>
+</form>
+{% else %}
+
+{% if guardado %}
+<div class="alerta-exito" role="status">{% icono 'exito' %}<p><strong>Inventario guardado.</strong>
+    Se cargaron {{ resultado.ejemplares_nuevos }} ejemplar{{ resultado.ejemplares_nuevos|pluralize:"es" }} nuevo{{ resultado.ejemplares_nuevos|pluralize }} de «{{ nombre }}».</p></div>
+{% else %}
+<div class="alerta-aviso" role="status">{% icono 'alerta' %}<p><strong>Revisión: todavía no se guardó nada.</strong>
+    Esto es lo que pasaría al guardar «{{ nombre }}» (hoja «{{ hoja }}»).</p></div>
+{% endif %}
+
+<section class="tarjeta" aria-labelledby="titulo-resumen-importacion">
+    <div class="tarjeta-titulo"><h2 id="titulo-resumen-importacion">Resumen</h2></div>
+    <div class="cifras">
+        <div class="cifra"><strong>{{ resultado.filas_leidas }}</strong><span>Filas leídas</span></div>
+        <div class="cifra"><strong>{{ resultado.ejemplares_nuevos }}</strong><span>Ejemplares nuevos</span></div>
+        <div class="cifra"><strong>{{ resultado.rechazadas|length }}</strong><span>Filas rechazadas</span></div>
+    </div>
+    <ul class="lista-simple">
+        <li>Nuevos en el catálogo: {{ resultado.nuevos.libro }} libro{{ resultado.nuevos.libro|pluralize }}, {{ resultado.nuevos.autor }} autor{{ resultado.nuevos.autor|pluralize:"es" }}, {{ resultado.nuevos.editorial }} editorial{{ resultado.nuevos.editorial|pluralize:"es" }} y {{ resultado.nuevos.categoria }} categoría{{ resultado.nuevos.categoria|pluralize }}.</li>
+        <li>Con código provisorio <code>SN-</code> (no tenían numeración): {{ resultado.provisorios }}. Se cambia desde el ejemplar cuando tenga su número.</li>
+        <li>Ya estaban cargados (se omiten): {{ resultado.omitidas|length }}.</li>
+        {% if resultado.categorias_clasificadas %}<li>Categorías con carreras asignadas: {{ resultado.categorias_clasificadas|join:", " }}.</li>{% endif %}
+    </ul>
+</section>
+
+{% if resultado.rechazadas %}
+<section class="tarjeta" aria-labelledby="titulo-rechazadas">
+    <div class="tarjeta-titulo"><h2 id="titulo-rechazadas">Filas rechazadas ({{ resultado.rechazadas|length }})</h2></div>
+    <p class="texto-suave">No se cargan. Si se identifican esos ejemplares, se corrigen en el Excel y se vuelve a importar, o se registran a mano desde <strong>Nuevo ejemplar</strong>.</p>
+    <div class="tabla-contenedor">
+        <table class="tabla tabla-compacta">
+            <thead><tr><th scope="col" class="numero">Fila</th><th scope="col" class="numero">ID</th><th scope="col">Motivo</th></tr></thead>
+            <tbody>
+            {% for numero, id_inventario, motivo in resultado.rechazadas %}
+                <tr><td data-etiqueta="Fila" class="numero">{{ numero }}</td><td data-etiqueta="ID" class="numero">{{ id_inventario|default:"-" }}</td><td data-etiqueta="Motivo">{{ motivo }}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if resultado.prestados %}
+<section class="tarjeta" aria-labelledby="titulo-prestados">
+    <div class="tarjeta-titulo"><h2 id="titulo-prestados">Figuraban como prestados ({{ resultado.prestados|length }})</h2></div>
+    <p class="texto-suave">Se cargan disponibles, porque el Excel no dice a quién ni desde cuándo. Si siguen prestados, registrá el préstamo en SIGEBI con la persona y las fechas reales.</p>
+    <div class="tabla-contenedor">
+        <table class="tabla tabla-compacta">
+            <thead><tr><th scope="col" class="numero">Fila</th><th scope="col">Código</th></tr></thead>
+            <tbody>
+            {% for numero, codigo in resultado.prestados %}
+                <tr><td data-etiqueta="Fila" class="numero">{{ numero }}</td><td data-etiqueta="Código">{% if guardado %}<a href="{% url 'biblioteca:ejemplar_list' %}?q={{ codigo|urlencode }}">{{ codigo }}</a>{% else %}{{ codigo }}{% endif %}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if resultado.avisos or resultado.autores_nuevos %}
+<section class="tarjeta" aria-labelledby="titulo-para-revisar">
+    <div class="tarjeta-titulo"><h2 id="titulo-para-revisar">Para revisar</h2></div>
+    {% if resultado.autores_nuevos %}
+    <details class="anteriores">
+        <summary>Autores nuevos ({{ resultado.autores_nuevos|length }}): revisá cómo se separaron nombre y apellido</summary>
+        <div class="tabla-contenedor">
+            <table class="tabla tabla-compacta">
+                <thead><tr><th scope="col" class="numero">Fila</th><th scope="col">Apellido</th><th scope="col">Nombre</th></tr></thead>
+                <tbody>
+                {% for numero, nombre_autor, apellido in resultado.autores_nuevos %}
+                    <tr><td data-etiqueta="Fila" class="numero">{{ numero }}</td><td data-etiqueta="Apellido">{{ apellido }}</td><td data-etiqueta="Nombre">{{ nombre_autor|default:"-" }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="ayuda">Si alguno quedó mal separado, se corrige después desde <strong>Autores</strong>.</p>
+    </details>
+    {% endif %}
+    {% if resultado.avisos %}
+    <details class="anteriores">
+        <summary>Avisos ({{ resultado.avisos|length }})</summary>
+        <div class="tabla-contenedor">
+            <table class="tabla tabla-compacta">
+                <thead><tr><th scope="col" class="numero">Fila</th><th scope="col">Código</th><th scope="col">Aviso</th></tr></thead>
+                <tbody>
+                {% for numero, codigo, aviso in resultado.avisos %}
+                    <tr><td data-etiqueta="Fila" class="numero">{{ numero }}</td><td data-etiqueta="Código">{{ codigo }}</td><td data-etiqueta="Aviso">{{ aviso }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </details>
+    {% endif %}
+</section>
+{% endif %}
+
+<div class="acciones-formulario">
+{% if guardado %}
+    <a class="boton" href="{% url 'biblioteca:ejemplar_list' %}?todos=1">{% icono 'ejemplar' %}Ver los ejemplares</a>
+    <a class="boton-secundario" href="{% url 'biblioteca:categoria_list' %}">Revisar las carreras de las categorías</a>
+{% else %}
+    {% if resultado.ejemplares_nuevos %}
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="huella" value="{{ huella }}">
+        <button type="submit" name="guardar" value="1" class="boton">{% icono 'exito' %}Guardar {{ resultado.ejemplares_nuevos }} ejemplar{{ resultado.ejemplares_nuevos|pluralize:"es" }}</button>
+    </form>
+    {% else %}
+    <p class="texto-suave">No hay ejemplares nuevos para guardar.</p>
+    {% endif %}
+    <a class="boton-secundario" href="{% url 'biblioteca:importar_inventario' %}">Elegir otro archivo</a>
+{% endif %}
+</div>
+{% endif %}
+{% endblock %}

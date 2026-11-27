@@ -882,6 +882,9 @@ a.indicador:hover { border-color: var(--naranja-borde); box-shadow: var(--sombra
 
 .marca-fila { display: flex; align-items: center; padding-right: 0.75rem; }
 .formulario-angosto { max-width: 640px; }
+/* Secciones de baja y eliminación debajo de una ficha o de un formulario (D-R2-30) */
+.zona-acciones { max-width: 640px; margin-top: 1.5rem; display: grid; gap: 1.25rem; }
+.zona-acciones > .tarjeta + .tarjeta { margin-top: 0; }
 .tabla-contenedor.integrada { box-shadow: none; }
 .grilla-informes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }
 .grilla-informes > .tarjeta + .tarjeta { margin-top: 0; }

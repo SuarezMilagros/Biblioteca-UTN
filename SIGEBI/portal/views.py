@@ -72,7 +72,7 @@ class InicioView(LectorRequeridoMixin, TemplateView):
             'persona': self.persona,
             'carreras': carreras,
             # Un libro pertenece a las carreras de su categoría (D-R2-6).
-            'cantidad_libros': Libro.objects.de_las_carreras(carreras).count(),
+            'cantidad_libros': Libro.objects.de_las_carreras(carreras).sin_dar_de_baja().count(),
             'prestamos_sin_devolver': len(activos),
             'vencidos': [prestamo for prestamo in activos if prestamo.dias_restantes < 0],
             'vencen_pronto': [p for p in activos if 0 <= p.dias_restantes <= self.DIAS_PARA_AVISAR],
@@ -133,6 +133,7 @@ class LibrosDeSusCarrerasMixin(LectorRequeridoMixin):
     def libros_visibles(self):
         return (
             Libro.objects.de_las_carreras(self.persona.carreras.all())
+            .sin_dar_de_baja()  # D-R2-30: un libro dado de baja no se muestra
             .con_disponibilidad()
             .con_opiniones()
             .select_related('autor', 'editorial', 'categoria')
