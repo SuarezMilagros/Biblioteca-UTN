@@ -1,0 +1,20 @@
+{% comment %}
+    Sección «Eliminar» de una ficha o de un formulario de edición (D-R2-30). Requiere `eliminacion`
+    (ver contexto_para_eliminar en biblioteca/views.py). Si el registro tiene historial o está en uso, explica por qué
+    no se puede eliminar en lugar de mostrar el botón; la vista lo vuelve a controlar al eliminar.
+{% endcomment %}
+{% load interfaz %}
+<section class="tarjeta zona-baja" aria-labelledby="titulo-eliminar">
+    <div class="tarjeta-titulo"><h2 id="titulo-eliminar">Eliminar</h2></div>
+    {% if eliminacion.impedimentos %}
+    <p class="ayuda">No se puede eliminar: tiene {{ eliminacion.impedimentos }}. {{ eliminacion.sugerencia }}</p>
+    {% else %}
+    <p class="ayuda">{{ eliminacion.detalle }} No se puede deshacer.</p>
+    <form method="post" action="{{ eliminacion.url }}" class="formulario-baja"
+          data-confirmar="Se va a eliminar «{{ eliminacion.nombre }}». {{ eliminacion.detalle }} No se puede deshacer."
+          data-confirmar-titulo="¿Eliminar definitivamente?" data-confirmar-boton="Eliminar">
+        {% csrf_token %}
+        <button type="submit" class="boton-peligro">{% icono 'baja' %}Eliminar</button>
+    </form>
+    {% endif %}
+</section>

@@ -357,3 +357,31 @@ class MaterialCompartidoForm(MaterialDigitalForm):
         super().__init__(*args, **kwargs)
         self.fields['carrera'].queryset = persona.carreras.all()
         self.fields['carrera'].empty_label = None if persona.carreras.count() == 1 else '---------'
+
+
+IMPORTACION_MAXIMO_MB = 2
+
+
+class ImportarInventarioForm(forms.Form):
+    """Archivo del inventario en Excel para importarlo desde el navegador (S8-12).
+
+    Acá solo se controla la extensión y el tamaño: si el contenido no es un Excel válido o le faltan columnas,
+    lo informa la lectura de biblioteca/importacion.py, con los mismos mensajes que el comando.
+    """
+
+    archivo = forms.FileField(
+        label=f'Archivo de Excel (.xlsx, hasta {IMPORTACION_MAXIMO_MB} MB)',
+        widget=forms.FileInput(attrs={
+            'accept': '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        }),
+    )
+
+    def clean_archivo(self):
+        archivo = self.cleaned_data['archivo']
+        if not archivo.name.lower().endswith('.xlsx'):
+            raise forms.ValidationError(
+                'Solo se aceptan archivos de Excel .xlsx. Si es un .xls viejo, abrilo en Excel y guardalo como .xlsx.'
+            )
+        if archivo.size > IMPORTACION_MAXIMO_MB * 1024 * 1024:
+            raise forms.ValidationError(f'El archivo pesa más de {IMPORTACION_MAXIMO_MB} MB.')
+        return archivo

@@ -202,5 +202,7 @@ LOGGING = {
     'loggers': {
         # Solo errores: las páginas no encontradas (404) ya aparecen en el registro de pedidos.
         'django': {'handlers': ['consola'], 'level': 'ERROR', 'propagate': False},
+        # Quién importó el inventario desde el navegador y con qué resultado (S8-12).
+        'biblioteca': {'handlers': ['consola'], 'level': 'INFO', 'propagate': False},
     },
 }

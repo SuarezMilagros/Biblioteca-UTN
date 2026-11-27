@@ -14,11 +14,13 @@ urlpatterns = [
     path('categorias/', views.CategoriaListView.as_view(), name='categoria_list'),
     path('categorias/nueva/', views.CategoriaCreateView.as_view(), name='categoria_create'),
     path('categorias/<int:pk>/editar/', views.CategoriaUpdateView.as_view(), name='categoria_update'),
+    path('categorias/<int:pk>/eliminar/', views.CategoriaEliminarView.as_view(), name='categoria_eliminar'),
 
     path('carreras/', views.CarreraListView.as_view(), name='carrera_list'),
     path('carreras/nueva/', views.CarreraCreateView.as_view(), name='carrera_create'),
     path('carreras/<int:pk>/', views.CarreraDetailView.as_view(), name='carrera_detail'),
     path('carreras/<int:pk>/editar/', views.CarreraUpdateView.as_view(), name='carrera_update'),
+    path('carreras/<int:pk>/eliminar/', views.CarreraEliminarView.as_view(), name='carrera_eliminar'),
 
     path('material/', views.MaterialDigitalListView.as_view(), name='material_list'),
     path('material/nuevo/', views.MaterialDigitalCreateView.as_view(), name='material_create'),
@@ -33,18 +35,24 @@ urlpatterns = [
     path('autores/', views.AutorListView.as_view(), name='autor_list'),
     path('autores/nuevo/', views.AutorCreateView.as_view(), name='autor_create'),
     path('autores/<int:pk>/editar/', views.AutorUpdateView.as_view(), name='autor_update'),
+    path('autores/<int:pk>/eliminar/', views.AutorEliminarView.as_view(), name='autor_eliminar'),
 
     path('editoriales/', views.EditorialListView.as_view(), name='editorial_list'),
     path('editoriales/nueva/', views.EditorialCreateView.as_view(), name='editorial_create'),
     path('editoriales/<int:pk>/editar/', views.EditorialUpdateView.as_view(), name='editorial_update'),
+    path('editoriales/<int:pk>/eliminar/', views.EditorialEliminarView.as_view(), name='editorial_eliminar'),
 
     path('libros/', views.LibroListView.as_view(), name='libro_list'),
     path('libros/nuevo/', views.LibroCreateView.as_view(), name='libro_create'),
     path('libros/<int:pk>/', views.LibroDetailView.as_view(), name='libro_detail'),
     path('libros/<int:pk>/editar/', views.LibroUpdateView.as_view(), name='libro_update'),
+    path('libros/<int:pk>/baja/', views.LibroBajaView.as_view(), name='libro_baja'),
+    path('libros/<int:pk>/reactivar/', views.LibroReactivarView.as_view(), name='libro_reactivar'),
+    path('libros/<int:pk>/eliminar/', views.LibroEliminarView.as_view(), name='libro_eliminar'),
 
     path('ejemplares/', views.EjemplarListView.as_view(), name='ejemplar_list'),
     path('ejemplares/nuevo/', views.EjemplarCreateView.as_view(), name='ejemplar_create'),
+    path('ejemplares/importar/', views.ImportarInventarioView.as_view(), name='importar_inventario'),
     path('ejemplares/etiquetas/', views.EjemplarEtiquetasView.as_view(), name='ejemplar_etiquetas'),
     path('ejemplares/<int:pk>/', views.EjemplarDetailView.as_view(), name='ejemplar_detail'),
     path('ejemplares/<int:pk>/editar/', views.EjemplarUpdateView.as_view(), name='ejemplar_update'),
@@ -61,6 +69,7 @@ urlpatterns = [
     path('personas/<int:pk>/cuenta/reenviar/', views.PersonaCuentaReenviarView.as_view(), name='persona_cuenta_reenviar'),
     path('personas/<int:pk>/baja/', views.PersonaBajaView.as_view(), name='persona_baja'),
     path('personas/<int:pk>/reactivar/', views.PersonaReactivarView.as_view(), name='persona_reactivar'),
+    path('personas/<int:pk>/eliminar/', views.PersonaEliminarView.as_view(), name='persona_eliminar'),
 
     path('prestamos/', views.PrestamoListView.as_view(), name='prestamo_list'),
 

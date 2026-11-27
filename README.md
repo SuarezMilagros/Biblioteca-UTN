@@ -145,7 +145,7 @@ El superusuario crea las cuentas del personal desde **Cuentas** (ver el manual d
 python manage.py test
 ```
 
-Resultado esperado: **895 pruebas, OK** (tarda unos minutos). El detalle está en
+Resultado esperado: **926 pruebas, OK** (tarda unos minutos). El detalle está en
 [Evidencias de pruebas](docs/evidencias-de-pruebas.md).
 
 ## 4. Roles
@@ -215,6 +215,12 @@ python manage.py importar_inventario ruta/al/inventario.xlsx --guardar
 
 Conviene probarlo primero en una base de prueba (otra base en el `.env`) antes de la base definitiva.
 
+**Desde el navegador (S8-12):** **Ejemplares › Importar desde Excel** hace lo mismo que el comando, en dos pasos:
+**Revisar el archivo** (modo prueba, no guarda nada) y **Guardar**. Es la forma de cargarlo en el sitio publicado,
+porque la consola de Railway no permite subir archivos. La ven quienes pueden crear libros y ejemplares
+(Bibliotecario, Administrativo y la cuenta de administración). Los pasos para el sitio publicado, incluido quitar
+antes los datos de prueba, están en [Publicación en Railway](docs/despliegue-railway.md#cargar-el-inventario-real).
+
 ## 7. Avisos automáticos por correo (S8-06)
 
 Los correos "tu préstamo vence pronto" (2 días antes o menos) y "tu préstamo venció" los envía un comando:
@@ -241,6 +247,7 @@ En el servidor se programa **una vez por día**:
 | `python manage.py probar_correo destino@ejemplo.com` | Comprueba la configuración del correo (sección 5). |
 | `python manage.py importar_inventario archivo.xlsx [--guardar]` | Carga el inventario en Excel (sección 6). |
 | `python manage.py cargar_datos_prueba` | Datos ficticios de prueba (sección 2.5). |
+| `python manage.py quitar_datos_prueba [--confirmar]` | Quita esos datos ficticios (sin `--confirmar`, solo muestra qué quitaría). Antes de cargar el inventario real en el sitio publicado. |
 | `python manage.py preparar_sitio` | Solo en el servidor: migraciones, cuenta de administración y datos de prueba antes de cada publicación. |
 
 ## 9. Cambios de la Release 2

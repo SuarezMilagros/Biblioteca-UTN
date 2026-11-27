@@ -21,10 +21,16 @@ MODELOS_OPERATIVOS = [
     'carrera', 'materialdigital', 'reserva', 'opinion',
 ]
 ACCIONES_OPERATIVAS = ['view', 'add', 'change']
+# Eliminar (D-R2-30, 27/11/2026): solo lo que no tiene historial ni está en uso (reglas en biblioteca/eliminacion.py).
+# Ejemplares, préstamos, reservas, opiniones y material no se eliminan: se dan de baja o cambian de estado.
+MODELOS_QUE_SE_ELIMINAN = ['persona', 'libro', 'autor', 'editorial', 'categoria', 'carrera']
 
 
 def _permisos_operativos():
-    return [f'{accion}_{modelo}' for modelo in MODELOS_OPERATIVOS for accion in ACCIONES_OPERATIVAS]
+    return (
+        [f'{accion}_{modelo}' for modelo in MODELOS_OPERATIVOS for accion in ACCIONES_OPERATIVAS]
+        + [f'delete_{modelo}' for modelo in MODELOS_QUE_SE_ELIMINAN]
+    )
 
 
 PERMISOS_POR_ROL = {

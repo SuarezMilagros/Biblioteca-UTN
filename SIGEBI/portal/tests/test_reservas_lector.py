@@ -101,9 +101,16 @@ class ReservarTests(ReservasTestCase):
         self.assertEqual(self.activas(), ['Python'])
 
     def test_sin_ejemplares_activos_no_puede(self):
-        self.python.ejemplares.update(activo=False, motivo_baja='PERDIDO', fecha_baja=timezone.localdate())
+        # Un libro sin ejemplares todavía se ve, pero no se puede reservar.
+        self.python.ejemplares.all().delete()
         respuesta = self.reservar(self.python)
         self.assertContains(respuesta, 'no tiene ejemplares de este libro')
+        self.assertFalse(Reserva.objects.exists())
+
+    def test_un_libro_dado_de_baja_no_se_ve_ni_se_reserva(self):
+        # D-R2-30: con todos sus ejemplares dados de baja, el libro está dado de baja y no se muestra en el portal.
+        self.python.ejemplares.update(activo=False, motivo_baja='PERDIDO', fecha_baja=timezone.localdate())
+        self.assertEqual(self.client.post(reverse('portal:reservar', args=[self.python.pk])).status_code, 404)
         self.assertFalse(Reserva.objects.exists())
 
     def test_un_libro_de_otra_carrera_responde_404(self):

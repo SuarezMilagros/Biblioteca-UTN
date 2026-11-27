@@ -312,17 +312,22 @@ def _marcar_repetidos(filas):
 
 
 def leer_planilla(ruta, hoja=None):
-    """Lee el Excel y devuelve (nombre de la hoja, filas). No toca la base de datos."""
+    """Lee el Excel y devuelve (nombre de la hoja, filas). No toca la base de datos.
+
+    `ruta` es la ruta del archivo (comando importar_inventario) o un archivo ya abierto, con su `name`
+    (pantalla de importación, S8-12).
+    """
     from openpyxl import load_workbook
     from openpyxl.utils.exceptions import InvalidFileException
     from zipfile import BadZipFile
 
+    nombre = getattr(ruta, 'name', ruta)
     try:
         libro = load_workbook(ruta, read_only=True, data_only=True)
     except FileNotFoundError:
-        raise ErrorDePlanilla(f'No existe el archivo "{ruta}".')
+        raise ErrorDePlanilla(f'No existe el archivo "{nombre}".')
     except (InvalidFileException, BadZipFile, KeyError, OSError):
-        raise ErrorDePlanilla(f'"{ruta}" no es un archivo de Excel (.xlsx) válido.')
+        raise ErrorDePlanilla(f'"{nombre}" no es un archivo de Excel (.xlsx) válido.')
     try:
         if hoja is None:
             planilla = libro.worksheets[0]

@@ -124,6 +124,14 @@ class LibroQuerySet(models.QuerySet):
             cantidad_opiniones=Coalesce(models.Subquery(cantidad, output_field=models.IntegerField()), 0),
         )
 
+    def sin_dar_de_baja(self):
+        """Excluye los libros dados de baja (D-R2-30): los que tienen ejemplares y ninguno activo.
+
+        Un libro recién cargado, todavía sin ejemplares, no está dado de baja.
+        """
+        ejemplares = Ejemplar.objects.filter(libro=models.OuterRef('pk'))
+        return self.filter(~models.Exists(ejemplares) | models.Exists(ejemplares.filter(activo=True)))
+
     def de_las_carreras(self, carreras):
         """Libros cuya categoría corresponde a alguna de esas carreras (D-R2-6), sin repetir."""
         return self.filter(categoria__in=Categoria.objects.filter(carreras__in=carreras))

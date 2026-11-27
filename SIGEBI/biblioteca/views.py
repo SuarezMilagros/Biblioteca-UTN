@@ -1,9 +1,15 @@
+import base64
+import hashlib
+import io
+import logging
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
+from django.db.models import ProtectedError
 from django.db.models import Count, Exists, IntegerField, OuterRef, Q, Subquery
 from django.db.models.functions import Coalesce
 from django.http import FileResponse, Http404
@@ -14,8 +20,8 @@ from django.views import View
 from django.views.generic import CreateView, DetailView, FormView, ListView, TemplateView, UpdateView
 
 from .forms import (
-    MENSAJE_EJEMPLAR_DADO_DE_BAJA, AutorForm, CarreraForm, CategoriaForm, DevolucionForm, EditorialForm,
-    EjemplarBajaForm, EjemplarForm, LibroForm, MaterialDigitalForm, PersonaForm, PrestamoForm,
+    IMPORTACION_MAXIMO_MB, MENSAJE_EJEMPLAR_DADO_DE_BAJA, AutorForm, CarreraForm, CategoriaForm, DevolucionForm, EditorialForm,
+    EjemplarBajaForm, EjemplarForm, ImportarInventarioForm, LibroForm, MaterialDigitalForm, PersonaForm, PrestamoForm,
 )
 from cuentas.correo import enviar_correo_definicion
 from cuentas.forms import CuentaLectorForm
@@ -23,16 +29,19 @@ from cuentas.lectores import crear_cuenta_de_lector, requisitos_para_cuenta
 from cuentas.roles import es_lector
 from cuentas.views import ERRORES_DE_ENVIO
 
+from .importacion import ErrorDePlanilla, importar, leer_planilla
 from .informes import ExportarCSVMixin, nombre_de_archivo
 from .models import (
     Autor, Carrera, Categoria, Editorial, Ejemplar, Libro, MaterialDigital, Opinion, Persona, Prestamo, Reserva,
 )
 from .opiniones import OpinionNoPermitida
 from .opiniones import revisar as revisar_opinion
-from . import demanda, prestamos_por_persona, qr
+from . import demanda, eliminacion, prestamos_por_persona, qr
 from .fotos import responder_foto
 from . import reservas as reglas_de_reservas
 from . import revision_de_material
+
+logger = logging.getLogger(__name__)
 
 ELEMENTOS_POR_PAGINA = 20
 MENSAJE_DATO_REPETIDO = 'Ya existe un registro con esos datos. Revisá los valores e intentá de nuevo.'
@@ -279,6 +288,131 @@ class GuardarRegistroMixin:
         return respuesta
 
 
+# ---------- Eliminar (D-R2-30): solo lo que no tiene historial ni está en uso ----------
+
+# Por cada tipo de registro: modelo, por qué no se puede eliminar, cómo se elimina, adónde se vuelve y qué se le
+# sugiere a quien no puede eliminarlo. Las reglas están en biblioteca/eliminacion.py.
+REGLAS_PARA_ELIMINAR = {
+    'persona': {
+        'modelo': Persona, 'impedimentos': eliminacion.impedimentos_persona, 'eliminar': eliminacion.eliminar_persona,
+        'lista': 'biblioteca:persona_list', 'vuelta': 'biblioteca:persona_detail',
+        'detalle': 'Se elimina la persona y, si tiene, su cuenta del portal.',
+        'sugerencia': 'Podés darla de baja: no recibe préstamos nuevos y conserva su historial.',
+    },
+    'libro': {
+        'modelo': Libro, 'impedimentos': eliminacion.impedimentos_libro, 'eliminar': eliminacion.eliminar_libro,
+        'lista': 'biblioteca:libro_list', 'vuelta': 'biblioteca:libro_detail',
+        'detalle': 'Se elimina el libro con todos sus ejemplares y su portada.',
+        'sugerencia': 'Podés darlo de baja: deja de prestarse y de verse en el portal, y conserva su historial.',
+    },
+    'autor': {
+        'modelo': Autor, 'impedimentos': eliminacion.impedimentos_por_libros, 'eliminar': Autor.delete,
+        'lista': 'biblioteca:autor_list', 'vuelta': 'biblioteca:autor_update',
+        'detalle': 'Se elimina el autor.',
+        'sugerencia': 'Para eliminarlo, primero asigná esos libros a otro autor.',
+    },
+    'editorial': {
+        'modelo': Editorial, 'impedimentos': eliminacion.impedimentos_por_libros, 'eliminar': Editorial.delete,
+        'lista': 'biblioteca:editorial_list', 'vuelta': 'biblioteca:editorial_update',
+        'detalle': 'Se elimina la editorial.',
+        'sugerencia': 'Para eliminarla, primero asigná esos libros a otra editorial.',
+    },
+    'categoria': {
+        'modelo': Categoria, 'impedimentos': eliminacion.impedimentos_por_libros, 'eliminar': Categoria.delete,
+        'lista': 'biblioteca:categoria_list', 'vuelta': 'biblioteca:categoria_update',
+        'detalle': 'Se elimina la categoría (y su relación con las carreras).',
+        'sugerencia': 'Para eliminarla, primero asigná esos libros a otra categoría.',
+    },
+    'carrera': {
+        'modelo': Carrera, 'impedimentos': eliminacion.impedimentos_carrera, 'eliminar': Carrera.delete,
+        'lista': 'biblioteca:carrera_list', 'vuelta': 'biblioteca:carrera_detail',
+        'detalle': 'Se elimina la carrera.',
+        'sugerencia': 'Para eliminarla, primero quitala de esas personas y categorías, y pasá el material a otra carrera.',
+    },
+}
+
+
+def contexto_para_eliminar(usuario, clave, objeto):
+    """Lo que muestra la sección «Eliminar» de una ficha o de un formulario de edición (None si no tiene permiso)."""
+    if not usuario.has_perm(f'biblioteca.delete_{clave}'):
+        return None
+    regla = REGLAS_PARA_ELIMINAR[clave]
+    return {
+        'url': reverse(f'biblioteca:{clave}_eliminar', args=[objeto.pk]),
+        'nombre': str(objeto),
+        'impedimentos': eliminacion.texto_de_impedimentos(regla['impedimentos'](objeto)),
+        'detalle': regla['detalle'],
+        'sugerencia': regla['sugerencia'],
+    }
+
+
+class ConEliminacionMixin:
+    """Agrega la sección «Eliminar» a una ficha o a un formulario de edición."""
+
+    clave_para_eliminar = ''
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        contexto['eliminacion'] = contexto_para_eliminar(self.request.user, self.clave_para_eliminar, self.object)
+        return contexto
+
+
+class EliminarView(PermissionRequiredMixin, View):
+    """Elimina un registro si no tiene historial ni está en uso. Si no, vuelve a la ficha y explica por qué."""
+
+    clave = ''
+    http_method_names = ['post']
+
+    def get_permission_required(self):
+        return [f'biblioteca.delete_{self.clave}']
+
+    def post(self, request, pk):
+        regla = REGLAS_PARA_ELIMINAR[self.clave]
+        objeto = get_object_or_404(regla['modelo'], pk=pk)
+        nombre = str(objeto)
+        impedimentos = regla['impedimentos'](objeto)
+        if not impedimentos:
+            try:
+                with transaction.atomic():
+                    regla['eliminar'](objeto)
+            except (ProtectedError, IntegrityError):
+                # Alguien lo empezó a usar entre que se abrió la pantalla y se confirmó: la base lo protege.
+                impedimentos = regla['impedimentos'](objeto) or ['datos que dependen de este registro']
+            else:
+                messages.success(request, f'Se eliminó «{nombre}».')
+                return redirect(regla['lista'])
+        messages.error(
+            request,
+            f'No se puede eliminar «{nombre}»: tiene {eliminacion.texto_de_impedimentos(impedimentos)}. '
+            + regla['sugerencia'],
+        )
+        return redirect(regla['vuelta'], pk=objeto.pk)
+
+
+class PersonaEliminarView(EliminarView):
+    clave = 'persona'
+
+
+class LibroEliminarView(EliminarView):
+    clave = 'libro'
+
+
+class AutorEliminarView(EliminarView):
+    clave = 'autor'
+
+
+class EditorialEliminarView(EliminarView):
+    clave = 'editorial'
+
+
+class CategoriaEliminarView(EliminarView):
+    clave = 'categoria'
+
+
+class CarreraEliminarView(EliminarView):
+    clave = 'carrera'
+
+
 # ---------- Categorías, autores y editoriales ----------
 
 def categorias_sin_carrera():
@@ -318,7 +452,8 @@ class CategoriaCreateView(PermissionRequiredMixin, GuardarRegistroMixin, CreateV
     mensaje_exito = 'Categoría "{obj}" registrada.'
 
 
-class CategoriaUpdateView(PermissionRequiredMixin, GuardarRegistroMixin, UpdateView):
+class CategoriaUpdateView(PermissionRequiredMixin, ConEliminacionMixin, GuardarRegistroMixin, UpdateView):
+    clave_para_eliminar = 'categoria'
     permission_required = 'biblioteca.change_categoria'
     model = Categoria
     form_class = CategoriaForm
@@ -344,7 +479,8 @@ class AutorCreateView(PermissionRequiredMixin, GuardarRegistroMixin, CreateView)
     mensaje_exito = 'Autor "{obj}" registrado.'
 
 
-class AutorUpdateView(PermissionRequiredMixin, GuardarRegistroMixin, UpdateView):
+class AutorUpdateView(PermissionRequiredMixin, ConEliminacionMixin, GuardarRegistroMixin, UpdateView):
+    clave_para_eliminar = 'autor'
     permission_required = 'biblioteca.change_autor'
     model = Autor
     form_class = AutorForm
@@ -370,7 +506,8 @@ class EditorialCreateView(PermissionRequiredMixin, GuardarRegistroMixin, CreateV
     mensaje_exito = 'Editorial "{obj}" registrada.'
 
 
-class EditorialUpdateView(PermissionRequiredMixin, GuardarRegistroMixin, UpdateView):
+class EditorialUpdateView(PermissionRequiredMixin, ConEliminacionMixin, GuardarRegistroMixin, UpdateView):
+    clave_para_eliminar = 'editorial'
     permission_required = 'biblioteca.change_editorial'
     model = Editorial
     form_class = EditorialForm
@@ -417,15 +554,68 @@ class LibroListView(PermissionRequiredMixin, BuscarAntesDeListarMixin, ListView)
         return contexto
 
 
-class LibroDetailView(PermissionRequiredMixin, DetailView):
+class LibroDetailView(PermissionRequiredMixin, ConEliminacionMixin, DetailView):
     permission_required = 'biblioteca.view_libro'
     model = Libro
     template_name = 'biblioteca/libro_detail.html'
+    clave_para_eliminar = 'libro'
 
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
         contexto['ejemplares'] = self.object.ejemplares.con_estado_de_prestamo().order_by('codigo_inventario')
+        # Baja del libro (D-R2-30): todos sus ejemplares a la vez.
+        contexto['dado_de_baja'] = eliminacion.libro_dado_de_baja(self.object)
+        if not contexto['dado_de_baja']:
+            contexto['impedimentos_baja'] = eliminacion.texto_de_impedimentos(
+                eliminacion.impedimentos_baja_libro(self.object))
+            contexto['form_baja'] = EjemplarBajaForm()
         return contexto
+
+
+class LibroBajaView(PermissionRequiredMixin, View):
+    """Da de baja el libro: todos sus ejemplares activos, con el mismo motivo (D-R2-30). Conserva su historial."""
+
+    permission_required = ('biblioteca.change_libro', 'biblioteca.change_ejemplar')
+    http_method_names = ['post']
+
+    def post(self, request, pk):
+        libro = get_object_or_404(Libro, pk=pk)
+        form = EjemplarBajaForm(request.POST)
+        with transaction.atomic():
+            # Se bloquean los ejemplares: nadie puede prestar uno mientras se da de baja el libro.
+            list(Ejemplar.objects.select_for_update().filter(libro=libro))
+            impedimentos = eliminacion.impedimentos_baja_libro(libro)
+            if impedimentos:
+                messages.error(
+                    request, f'No se puede dar de baja «{libro}»: {eliminacion.texto_de_impedimentos(impedimentos)}. '
+                    'Registrá las devoluciones y resolvé las reservas primero.'
+                )
+            elif not form.is_valid():
+                messages.error(request, 'Elegí el motivo de la baja.')
+            else:
+                cantidad = eliminacion.dar_de_baja_libro(libro, form.cleaned_data['motivo_baja'])
+                messages.success(
+                    request, f'«{libro}» quedó dado de baja: {eliminacion.cantidad(cantidad, "ejemplar", "ejemplares")} '
+                    'dado' + ('s' if cantidad != 1 else '') + ' de baja. Ya no se ve en el portal.'
+                )
+        return redirect('biblioteca:libro_detail', pk=libro.pk)
+
+
+class LibroReactivarView(PermissionRequiredMixin, View):
+    permission_required = ('biblioteca.change_libro', 'biblioteca.change_ejemplar')
+    http_method_names = ['post']
+
+    def post(self, request, pk):
+        libro = get_object_or_404(Libro, pk=pk)
+        if not eliminacion.libro_dado_de_baja(libro):
+            messages.info(request, f'«{libro}» no está dado de baja.')
+        else:
+            cantidad = eliminacion.reactivar_libro(libro)
+            messages.success(
+                request, f'«{libro}» volvió a estar activo: {eliminacion.cantidad(cantidad, "ejemplar", "ejemplares")} '
+                'habilitado' + ('s' if cantidad != 1 else '') + '.'
+            )
+        return redirect('biblioteca:libro_detail', pk=libro.pk)
 
 
 class LibroCreateView(PermissionRequiredMixin, GuardarRegistroMixin, CreateView):
@@ -700,6 +890,78 @@ class EjemplarUpdateView(PermissionRequiredMixin, GuardarRegistroMixin, UpdateVi
         return reverse('biblioteca:ejemplar_detail', args=[self.object.pk])
 
 
+# ---------- Importación del inventario en Excel (S8-12) ----------
+
+CLAVE_DE_IMPORTACION = 'importacion_de_inventario'
+
+
+def planilla_en_memoria(contenido, nombre):
+    """El Excel subido, como archivo en memoria: no se guarda en el servidor."""
+    archivo = io.BytesIO(contenido)
+    archivo.name = nombre
+    return archivo
+
+
+class ImportarInventarioView(PermissionRequiredMixin, View):
+    """Importa el inventario en Excel desde el navegador, con las mismas reglas que `importar_inventario` (S8-12).
+
+    1. **Revisar:** se elige el archivo y se importa en modo prueba (no se guarda nada). Se muestra el resumen:
+       ejemplares nuevos, filas rechazadas, prestados, avisos y autores nuevos.
+    2. **Guardar:** si el resumen está bien, se importa el mismo archivo y se guarda.
+
+    Entre los dos pasos, el archivo queda solo en la sesión de quien lo subió, junto con su huella (SHA-256): se guarda
+    exactamente el archivo que se revisó. En el sitio publicado es la forma de cargar el Excel, porque la consola de
+    Railway no permite subir archivos. Se puede repetir: los ejemplares cuyo código ya existe se omiten.
+    """
+
+    permission_required = ('biblioteca.add_libro', 'biblioteca.add_ejemplar')
+    template_name = 'biblioteca/importar_inventario.html'
+
+    def get(self, request):
+        return self.mostrar(form=ImportarInventarioForm())
+
+    def post(self, request):
+        if 'guardar' in request.POST:
+            return self.guardar(request)
+        form = ImportarInventarioForm(request.POST, request.FILES)
+        if not form.is_valid():
+            return self.mostrar(form=form)
+        archivo = form.cleaned_data['archivo']
+        contenido = archivo.read()
+        try:
+            hoja, filas = leer_planilla(planilla_en_memoria(contenido, archivo.name))
+        except ErrorDePlanilla as error:
+            form.add_error('archivo', str(error))
+            return self.mostrar(form=form)
+        huella = hashlib.sha256(contenido).hexdigest()
+        request.session[CLAVE_DE_IMPORTACION] = {
+            'nombre': archivo.name, 'huella': huella, 'contenido': base64.b64encode(contenido).decode('ascii'),
+        }
+        return self.mostrar(resultado=importar(filas, guardar=False), nombre=archivo.name, hoja=hoja, huella=huella)
+
+    def guardar(self, request):
+        pendiente = request.session.get(CLAVE_DE_IMPORTACION)
+        if not pendiente or pendiente.get('huella') != request.POST.get('huella'):
+            messages.error(request, 'No hay un archivo revisado para guardar (o es otro archivo). '
+                                    'Elegí el archivo y revisalo de nuevo.')
+            return redirect('biblioteca:importar_inventario')
+        contenido = base64.b64decode(pendiente['contenido'])
+        hoja, filas = leer_planilla(planilla_en_memoria(contenido, pendiente['nombre']))
+        resultado = importar(filas, guardar=True)
+        del request.session[CLAVE_DE_IMPORTACION]
+        logger.info(
+            'Inventario importado por %s desde "%s": %s ejemplares nuevos, %s omitidos, %s filas rechazadas.',
+            request.user.get_username(), pendiente['nombre'], resultado.ejemplares_nuevos,
+            len(resultado.omitidas), len(resultado.rechazadas),
+        )
+        return self.mostrar(resultado=resultado, nombre=pendiente['nombre'], hoja=hoja, guardado=True)
+
+    def mostrar(self, form=None, resultado=None, **contexto):
+        return render(self.request, self.template_name, {
+            'form': form, 'resultado': resultado, 'maximo_mb': IMPORTACION_MAXIMO_MB, **contexto,
+        })
+
+
 # ---------- Carreras (Release 2, S7-02) ----------
 
 class CarreraListView(PermissionRequiredMixin, ListView):
@@ -722,7 +984,8 @@ class CarreraListView(PermissionRequiredMixin, ListView):
         return contexto
 
 
-class CarreraDetailView(PermissionRequiredMixin, DetailView):
+class CarreraDetailView(PermissionRequiredMixin, ConEliminacionMixin, DetailView):
+    clave_para_eliminar = 'carrera'
     permission_required = 'biblioteca.view_carrera'
     model = Carrera
     template_name = 'biblioteca/carrera_detail.html'
@@ -1237,7 +1500,8 @@ class PersonaFotoView(PermissionRequiredMixin, View):
         return responder_foto(get_object_or_404(Persona, pk=pk))
 
 
-class PersonaDetailView(PermissionRequiredMixin, DetailView):
+class PersonaDetailView(PermissionRequiredMixin, ConEliminacionMixin, DetailView):
+    clave_para_eliminar = 'persona'
     permission_required = 'biblioteca.view_persona'
     model = Persona
     template_name = 'biblioteca/persona_detail.html'

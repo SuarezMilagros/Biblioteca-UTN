@@ -20,6 +20,7 @@
                 <div>
                     <p class="sobretitulo">{{ object.categoria }}</p>
                     <h1>{{ object.titulo }}</h1>
+                    {% if dado_de_baja %}<p><span class="badge badge-baja">Dado de baja</span> Ningún ejemplar se presta y el libro no se ve en el portal.</p>{% endif %}
                     <p class="bajada">{{ object.autor }} · {{ object.editorial }}</p>
                 </div>
                 <div class="botones-encabezado">
@@ -82,4 +83,39 @@
 {% else %}
 {% include 'componentes/vacio.html' with icono='ejemplar' titulo='Este libro todavía no tiene ejemplares registrados.' texto='Cada copia física se registra como un ejemplar con su código de inventario.' %}
 {% endif %}
+
+<div class="zona-acciones">
+{% if perms.biblioteca.change_libro and perms.biblioteca.change_ejemplar %}
+{% if dado_de_baja %}
+<section class="tarjeta" aria-labelledby="titulo-reactivar-libro">
+    <div class="tarjeta-titulo"><h2 id="titulo-reactivar-libro">Volver a habilitar el libro</h2></div>
+    <p class="texto-suave">Se reactivan los ejemplares que se dieron de baja con el libro (la última baja). Si alguno ya estaba dado de baja antes, por ejemplo por perdido, sigue igual.</p>
+    <form method="post" action="{% url 'biblioteca:libro_reactivar' object.pk %}" class="formulario-baja">
+        {% csrf_token %}
+        <button type="submit" class="boton-secundario">{% icono 'reactivar' %}Reactivar libro</button>
+    </form>
+</section>
+{% elif ejemplares %}
+<section class="tarjeta zona-baja" aria-labelledby="titulo-baja-libro">
+    <div class="tarjeta-titulo"><h2 id="titulo-baja-libro">Dar de baja el libro</h2></div>
+    {% if impedimentos_baja %}
+    <p class="ayuda">No se puede dar de baja: tiene {{ impedimentos_baja }}. Registrá las devoluciones y resolvé las reservas primero.</p>
+    {% else %}
+    <form method="post" action="{% url 'biblioteca:libro_baja' object.pk %}" class="formulario formulario-baja"
+          data-confirmar="Se dan de baja todos los ejemplares activos de «{{ object.titulo }}» y el libro deja de verse en el portal. Se conserva su historial y se puede reactivar."
+          data-confirmar-titulo="¿Dar de baja el libro?" data-confirmar-boton="Dar de baja">
+        {% csrf_token %}
+        <div class="campo">
+            <label for="{{ form_baja.motivo_baja.id_for_label }}">{{ form_baja.motivo_baja.label }}</label>
+            {{ form_baja.motivo_baja }}
+            <small class="ayuda">Se dan de baja todos sus ejemplares activos con este motivo. Ninguno se puede prestar y el libro no se ve en el portal. Se conserva su historial.</small>
+        </div>
+        <button type="submit" class="boton-peligro">{% icono 'baja' %}Dar de baja el libro</button>
+    </form>
+    {% endif %}
+</section>
+{% endif %}
+{% endif %}
+{% if eliminacion %}{% include 'componentes/zona_eliminar.html' %}{% endif %}
+</div>
 {% endblock %}

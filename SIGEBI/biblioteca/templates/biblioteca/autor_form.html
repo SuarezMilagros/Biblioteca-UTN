@@ -22,4 +22,7 @@
         <a class="boton-secundario" href="{% url 'biblioteca:autor_list' %}">Cancelar</a>
     </div>
 </form>
+{% if object and eliminacion %}
+<div class="zona-acciones">{% include 'componentes/zona_eliminar.html' %}</div>
+{% endif %}
 {% endblock %}

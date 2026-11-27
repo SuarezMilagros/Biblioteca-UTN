@@ -17,15 +17,16 @@ internet: el correo se simula y los archivos se guardan en carpetas temporales.
 
 ## 2. Resultado de referencia
 
-Ejecución de verificación de las páginas de error propias (27/11/2026), con Python 3.13, Django 5.2.18 y
-PostgreSQL 16, sobre el código de `main` después del PR #46 más las páginas de error (`test_paginas_de_error`):
+Ejecución de verificación de eliminar y dar de baja (27/11/2026), con Python 3.13, Django 5.2.18 y PostgreSQL 16,
+sobre el código del PR #47 (páginas de error), la importación del inventario desde el navegador y eliminar y dar de
+baja (`test_eliminar_y_dar_de_baja`):
 
 ```
-Found 895 test(s).
+Found 926 test(s).
 Creating test database for alias 'default'...
 System check identified no issues (0 silenced).
 ----------------------------------------------------------------------
-Ran 895 tests in 84.756s
+Ran 926 tests in 84.882s
 
 OK
 Destroying test database for alias 'default'...
@@ -40,13 +41,15 @@ Destroying test database for alias 'default'...
 | Cierre del desarrollo del Sprint 7 (PR #28) | 480 |
 | Documentación de la Release 2 (PR #43 a #45) | 884 |
 | QA del Sprint 8, corrección del campo Tipo (PR #46) | 888 |
-| Versión actual (páginas de error propias, 27/11/2026) | 895 |
+| Páginas de error propias (PR #47) | 895 |
+| Importación del inventario desde el navegador (S8-12) | 910 |
+| Versión actual (eliminar y dar de baja, 27/11/2026) | 926 |
 
 > Cada integrante del equipo debe ejecutar la suite en su equipo y registrar su propio resultado (sección 7).
 
 ## 3. Pruebas por módulo
 
-### 3.1. Aplicación `biblioteca` (625 pruebas)
+### 3.1. Aplicación `biblioteca` (655 pruebas)
 
 | Archivo | Pruebas | Release | Qué verifica |
 |---|---|---|---|
@@ -75,6 +78,9 @@ Destroying test database for alias 'default'...
 | `test_pedidos_de_la_profesora.py` | 30 | 2 | Menú, tipo de ejemplar (también en la pantalla de alta y edición), filtros, préstamos por persona y documento de 7 u 8 dígitos. |
 | `test_formularios_completos.py` | 2 | 2 | Cada pantalla de alta o edición muestra todos los campos de su formulario (agregada en el QA del Sprint 8). |
 | `test_paginas_de_error.py` | 7 | 2 | Páginas propias en español: no encontrado (sin sesión, personal y libro de otra carrera en el portal), página vencida (CSRF) y error del servidor, que no depende de la base ni de los estáticos. |
+| `test_importar_desde_la_pantalla.py` | 10 | 2 | Importar el inventario desde el navegador: revisar sin guardar, guardar el mismo archivo revisado (huella), no duplicar, archivos inválidos o grandes, permisos y registro (S8-12). |
+| `test_eliminar_y_dar_de_baja.py` | 15 | 2 | Eliminar solo sin historial (personas con su cuenta, libros con ejemplares y portada, autores, editoriales, categorías y carreras), la base protege si aparece historial entre medio, baja y reactivación del libro, el libro dado de baja no se ve en el portal, permisos (D-R2-30). |
+| `test_quitar_datos_prueba.py` | 5 | 2 | Quitar los datos de prueba del sitio publicado: modo prueba, solo lo de prueba (con sus préstamos, reservas, opiniones, cuentas y portadas), nada si algo depende de ellos, y no corre con `SIGEBI_DATOS_DEMO` activada. |
 | `test_revision_ux.py` | 23 | 2 | Revisión de UX/UI: ficha de la carrera con sus personas, personas por carrera, enlaces de salto del inicio. |
 | `test_informes_pdf.py` | 27 | 2 | Cada informe en PDF con las mismas columnas y filas que el CSV, anchos de columna, permisos. |
 | `test_volver_arriba_y_menu.py` | 12 | 2 | Botón «Volver arriba» y menú lateral sin barra de desplazamiento. |
@@ -98,7 +104,7 @@ Destroying test database for alias 'default'...
 | `test_cuentas_lectores.py` | 24 | 2 | Cuenta del portal desde la ficha de la persona: requisitos, correo único, baja y reactivación. |
 | `test_perfil_del_personal.py` | 18 | 2 | Mi perfil del personal y foto privada. |
 
-### 3.3. Aplicación `portal` (113 pruebas, Release 2)
+### 3.3. Aplicación `portal` (114 pruebas, Release 2)
 
 | Archivo | Pruebas | Qué verifica |
 |---|---|---|
@@ -106,7 +112,7 @@ Destroying test database for alias 'default'...
 | `test_catalogo.py` | 22 | Solo libros de sus carreras, «no encontrado» para los de otra carrera, búsqueda, filtros y disponibilidad. |
 | `test_perfil.py` | 13 | Datos de solo lectura y préstamos propios. |
 | `test_perfil_en_partes_y_foto.py` | 26 | Perfil en partes, foto de perfil privada y redirección del ingreso. |
-| `test_reservas_lector.py` | 24 | Reservar solo libros de sus carreras, máximo 2 reservas, no con vencidos, cancelar. |
+| `test_reservas_lector.py` | 25 | Reservar solo libros de sus carreras, máximo 2 reservas, no con vencidos, cancelar; un libro dado de baja no se ve ni se reserva. |
 | `test_inicio_y_contadores.py` | 12 | Inicio del portal con lo pendiente y contadores del menú. |
 
 ### 3.4. Aplicación `interfaz` (4 pruebas)
@@ -175,10 +181,37 @@ las pruebas de su módulo:
 | Página 404: sin la opción de ir al ingreso cuando no hay sesión | `test_paginas_de_error` (7) | Detectado: 1 falla |
 | Página 500: heredar de `base.html`, usar los estilos estáticos o mostrar el detalle del error | `test_paginas_de_error` (7) | Detectado: 1 falla en cada caso |
 | **Control:** cambiar un comentario de `404.html` | `test_paginas_de_error` (7) | Sin fallas, como se esperaba |
+| Importar desde el navegador: «Revisar» guarda (27/11/2026) | `test_importar_desde_la_pantalla` (10) | Detectado: 3 fallas |
+| Importar: guardar sin comparar la huella, o sin limpiar la sesión | `test_importar_desde_la_pantalla` (10) | Detectado: 1 falla en cada caso |
+| Importar: el botón Guardar sin la huella del archivo revisado | `test_importar_desde_la_pantalla` (10) | Detectado: 1 falla (sobrevivía en la primera corrida; se agregó la comprobación) |
+| Importar: alcanza con permiso de ver ejemplares | `test_importar_desde_la_pantalla` (10) | Detectado: 1 falla |
+| Importar: aceptar `.xls`, sin límite de tamaño, sin registro, sin la tabla de filas rechazadas | `test_importar_desde_la_pantalla` (10) | Detectado: 1 falla en cada caso |
+| Quitar datos de prueba: correr con `SIGEBI_DATOS_DEMO` activada, o borrar en modo prueba | `test_quitar_datos_prueba` (5) | Detectado: 1 falla en cada caso |
+| Quitar datos de prueba: borrar categorías que usa el inventario real, o también cuentas del personal | `test_quitar_datos_prueba` (5) | Detectado: 3 errores en cada caso |
+| Quitar datos de prueba: dejar las portadas en el disco, o no quitar las reservas | `test_quitar_datos_prueba` (5) | Detectado: 1 falla y 1 error |
+| **Control:** cambiar un comentario de `quitar_datos_prueba` | Las 3 de importación (42) | Sin fallas, como se esperaba |
+| Eliminar: no contar los préstamos de la persona, o no borrar su cuenta del portal (27/11/2026) | `test_eliminar_y_dar_de_baja` (15) | Detectado: 1 falla en cada caso |
+| Eliminar: no contar las opiniones del libro, o no borrar la portada | `test_eliminar_y_dar_de_baja` (15) | Detectado: 1 falla en cada caso |
+| Eliminar: autor, editorial o categoría con libros; carrera sin contar sus personas | `test_eliminar_y_dar_de_baja` (15) | Detectado: 3 y 1 fallas |
+| Baja del libro: ignorar ejemplares prestados o reservas activas; reactivar también los dados de baja antes | `test_eliminar_y_dar_de_baja` (15) | Detectado: 1 falla en cada caso |
+| Portal: mostrar los libros dados de baja | `test_eliminar_y_dar_de_baja` y `portal/test_reservas_lector` (40) | Detectado: 2 fallas |
+| Eliminar: sin capturar la protección de la base | `test_eliminar_y_dar_de_baja` (15) | Detectado: 1 error |
+| Roles: sin permiso de eliminar, o también eliminar ejemplares | `test_eliminar_y_dar_de_baja` (15) | Detectado: 14 fallas y 1 error; 1 falla |
+| Pantalla: mostrar el botón aunque no se pueda; baja del libro sin mostrar por qué no se puede | `test_eliminar_y_dar_de_baja` (15) | Detectado: 6 y 1 fallas |
+| **Control:** cambiar un comentario de `eliminacion.py` | `test_eliminar_y_dar_de_baja` y `portal/test_reservas_lector` (40) | Sin fallas, como se esperaba |
 
 Las 16 modificaciones de reglas fueron detectadas y el control no produjo fallas. Se probó también quitar la línea
 que deja el material compartido como pendiente: las pruebas no fallaron, pero ese cambio no altera el sistema,
 porque pendiente ya es el estado por defecto del modelo.
+
+En la importación desde el navegador y `quitar_datos_prueba` (27/11/2026) se introdujeron 15 errores a propósito: en la
+primera corrida sobrevivió uno (el botón Guardar sin la huella), se agregó la comprobación a la prueba y en la segunda
+corrida los 15 fueron detectados; el control no produjo fallas.
+
+En eliminar y dar de baja se introdujeron 16 errores a propósito: 15 fueron detectados y el control no produjo
+fallas. El que no se detectó, eliminar sin revisar antes los impedimentos, es **equivalente**: la base protege
+cada relación (`PROTECT`), así que el borrado se rechaza igual y la vista muestra el mismo mensaje. La revisión
+previa sirve para explicar en la pantalla por qué no se puede, antes de intentarlo.
 
 ## 5. Pruebas manuales en el navegador
 

@@ -351,6 +351,8 @@ persona o la categoría: si se borra la persona, se borra su vínculo con la car
 | La baja de la persona desactiva su cuenta; la reactivación la reactiva | `PersonaBajaView`, `PersonaReactivarView` | — | `test_cuentas_lectores` |
 | Un lector no entra a ninguna pantalla del personal ni al Admin (D-R2-9) | permisos por grupo (Lector no tiene ninguno) | — | `portal/test_acceso` (recorre todas las rutas) |
 | Una carrera con datos no se borra | — | `PROTECT` | `test_carreras` |
+| Se elimina solo lo que no tiene historial ni está en uso: personas, libros, autores, editoriales, categorías y carreras (D-R2-30) | `eliminacion.impedimentos_*`, `EliminarView` | `PROTECT` en cada relación (si aparece un préstamo entre medio, la base rechaza el borrado) | `test_eliminar_y_dar_de_baja` |
+| Baja de un libro: todos sus ejemplares activos con el mismo motivo; no con ejemplares prestados ni reservas activas; el libro dado de baja no se ve en el portal (D-R2-30) | `eliminacion.dar_de_baja_libro`, `LibroQuerySet.sin_dar_de_baja()` | `ejemplar_baja_coherente` | `test_eliminar_y_dar_de_baja`, `portal/test_reservas_lector` |
 | Material: PDF real (empieza con `%PDF-`) de hasta 20 MB (D-R2-13) | `validar_pdf` en `forms.py` | — | `test_material_digital` |
 | Material de lectores: pendiente hasta que un bibliotecario lo aprueba; rechazo con motivo (D-R2-7) | `revision_de_material.py` | `material_revision_coherente` | `test_material_compartido` |
 | Reserva: solo libros de sus carreras con ejemplares; no con vencidos ni dado de baja; máximo 2 activas (D-R2-15) | `reservas.motivos_para_no_reservar` | `una_reserva_activa_por_libro` | `test_reservas_lector` |
@@ -395,6 +397,7 @@ Un acceso sin permiso responde **403** con la página "Acceso no permitido".
 |---|---|---|---|---|
 | Catálogo, carreras, personas, préstamos, devoluciones, reservas, opiniones, material, informes | Sí | Sí | Sí | No |
 | Crear cuentas del portal desde la ficha de la persona | Sí | Sí | Sí | No |
+| Eliminar personas, libros, autores, editoriales, categorías y carreras sin historial; dar de baja un libro (D-R2-30) | Sí | Sí | Sí | No |
 | Ver listado de cuentas del personal | Sí | Sí | No | No |
 | Crear o editar Bibliotecarios | Sí | Sí | No | No |
 | Crear o editar Administrativos | Sí | No | No | No |
@@ -402,7 +405,9 @@ Un acceso sin permiso responde **403** con la página "Acceso no permitido".
 | Cambiar la contraseña propia y Mi perfil | Sí | Sí | Sí | Sí |
 | Panel de administración de Django (`/admin/`) | Sí | No | No | No |
 
-Las cuentas no se borran: se desactivan. Nadie puede cambiar su propio rol ni desactivarse a sí mismo.
+Las cuentas del personal no se borran: se desactivan. Nadie puede cambiar su propio rol ni desactivarse a sí mismo.
+La cuenta del portal de una persona sí se elimina junto con ella, cuando la persona se elimina (D-R2-30).
+Ejemplares, préstamos, reservas, opiniones y material digital no se eliminan: se dan de baja o cambian de estado.
 
 ### 6.3. Seguridad por carrera (Release 2)
 
@@ -533,6 +538,7 @@ capturan: la operación se completa igual y se avisa que el correo no salió. El
 | D-R2-27 | Avisos por correo "vence pronto" (2 días antes) y "venció", una vez por préstamo, solo a personas con cuenta | Implementada |
 | D-R2-28 | Informe de demanda con préstamos y reservas de un período | Implementada |
 | D-R2-29 | Opiniones: una por persona y libro, de quien lo tuvo prestado, publicadas al aprobarlas | Implementada |
+| D-R2-30 | Eliminar solo lo que no tiene historial ni está en uso (personas con su cuenta del portal, libros con sus ejemplares, autores, editoriales, categorías y carreras); lo que tiene historial se da de baja. Baja de un libro = baja de todos sus ejemplares; no se ve en el portal (pedido del equipo, 27/11/2026) | Implementada |
 | Profesora (18/11/2026) | Tipo de ejemplar (original, copia o tesis), documento de 7 u 8 dígitos, préstamos por persona, perfil en partes y foto | Implementados |
 | Portal (24/11/2026) | El portal se organiza en Explorar, Mi biblioteca y Mi perfil | Implementada |
 | Informes en PDF | Cada listado que se exporta en CSV también se exporta en PDF, con fpdf2 | Implementada |
@@ -578,7 +584,7 @@ inventario real, sin perder datos. `test_migraciones` falla si alguien cambia un
 
 ## 10. Pruebas
 
-La suite automática tiene **895 pruebas** (Django `TestCase` sobre PostgreSQL, no una base en memoria: así se
+La suite automática tiene **926 pruebas** (Django `TestCase` sobre PostgreSQL, no una base en memoria: así se
 verifican también las restricciones de la base). El detalle por módulo y el resultado están en
 [Evidencias de pruebas](evidencias-de-pruebas.md).
 
@@ -620,6 +626,40 @@ dos numeraciones y el ID 227 repetido) y 7 ejemplares que figuraban prestados. U
 **Decisión del equipo (05/11/2026):** las 7 filas rechazadas **se quitan del Excel** y no se cargan. Si más
 adelante se identifican esos ejemplares en la biblioteca, se registran a mano desde **Ejemplares → Nuevo ejemplar**.
 La revisión de nombre y apellido de los autores se corrige, cuando haga falta, desde la pantalla **Autores**.
+
+### 11.1. Importación desde el navegador y datos de prueba (S8-12, 27/11/2026)
+
+En el sitio publicado no hay forma de llevar el Excel al servidor: la consola de Railway no permite subir archivos.
+Por eso la misma importación tiene una pantalla, **Ejemplares › Importar desde Excel**
+(`ImportarInventarioView`, `biblioteca:importar_inventario`):
+
+- **Permisos:** `add_libro` y `add_ejemplar` (Bibliotecario, Administrativo y superusuario). El botón solo se
+  muestra a quien los tiene.
+- **Dos pasos, como el comando:** *Revisar* ejecuta `importar(..., guardar=False)` y muestra el resumen (filas
+  leídas, ejemplares nuevos, provisorios, omitidos, rechazados con su motivo, prestados, avisos y autores nuevos);
+  *Guardar* ejecuta `importar(..., guardar=True)`. No hay lógica de importación nueva: se reutilizan `leer_planilla`
+  (que ahora acepta un archivo abierto además de una ruta) e `importar`.
+- **Se guarda el archivo revisado:** entre los dos pasos el Excel queda en la **sesión** de quien lo subió (en
+  base64, con su huella SHA-256), no en el disco. *Guardar* exige la misma huella y la sesión se limpia al
+  guardar, así que no se guarda otro archivo ni el mismo dos veces. Límite: 2 MB (el inventario real pesa 46 KB)
+  y extensión `.xlsx`; si el contenido no es un Excel o le faltan columnas, se muestra el mismo mensaje que el comando.
+- **Registro:** cada importación guardada deja una línea `INFO` (logger `biblioteca`) con la cuenta, el archivo
+  y el resultado; en Railway se ve en *Deploy Logs*.
+
+El comando **`quitar_datos_prueba`** deja el sitio publicado sin los datos ficticios de `cargar_datos_prueba` antes
+de importar el inventario. Los reconoce por los mismos datos fijos de ese comando (códigos ADM-001…, documentos,
+la cuenta `bibliotecario_prueba`) y quita también lo que se hizo con ellos (préstamos, avisos, reservas, opiniones,
+cuentas del portal de las personas de prueba, portadas). Autores, editoriales y categorías de prueba se quitan solo
+si ningún libro los usa (por ejemplo, «Informática» también está en el inventario real y queda). Trabaja en una
+transacción: sin `--confirmar` hace todo y lo deshace (como la importación); si encuentra un registro protegido que no
+le corresponde borrar, no quita nada. No corre si `SIGEBI_DATOS_DEMO` sigue activada. Pruebas:
+`test_importar_desde_la_pantalla` (10) y `test_quitar_datos_prueba` (5).
+
+**Ensayo con el Excel real (27/11/2026):** base nueva con `preparar_sitio` y datos de prueba, como el sitio publicado;
+`quitar_datos_prueba --confirmar` dejó 0 libros, ejemplares, personas y préstamos, con la cuenta de administración
+intacta; la pantalla importó `BibliotecaAnexo.xlsx` con el mismo resultado que el comando en el Sprint 6: 311 ejemplares,
+261 libros, 225 autores, 67 editoriales, 11 categorías, 206 códigos provisorios, 7 filas rechazadas y 7 prestados.
+Una segunda revisión del mismo archivo dio 0 ejemplares nuevos y 311 omitidos.
 
 ## 12. Catálogo grande (Sprint 6, S6-11)
 
