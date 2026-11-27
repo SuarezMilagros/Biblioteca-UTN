@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% load interfaz %}
+{% comment %}
+    Página que muestra Django cuando un formulario llega sin su código de seguridad (CSRF) válido. Pasa, por
+    ejemplo, si el formulario quedó abierto mucho tiempo, si la sesión se cerró en otra pestaña o si el navegador
+    bloquea las cookies. Reemplaza la página en inglés de Django ("CSRF verification failed").
+{% endcomment %}
+
+{% block titulo %}La página venció · SIGEBI{% endblock %}
+{% block seccion %}<strong>La página venció</strong>{% endblock %}
+
+{% block contenido %}
+<section class="tarjeta pantalla-mensaje">
+    <span class="vacio-icono icono-alerta">{% icono 'reloj' %}</span>
+    <h1>La página venció</h1>
+    <p class="bajada">Por seguridad, el formulario dejó de ser válido y no se guardó nada.</p>
+    <p class="texto-suave">Pasa si la página estuvo abierta mucho tiempo o si se cerró la sesión. Volvé a la página anterior, recargala y repetí la operación. Si sigue pasando, revisá que el navegador acepte cookies.</p>
+    <div class="botones-encabezado">
+        {% if user.is_authenticated %}
+        <a class="boton" href="{% url url_inicio|default:'biblioteca:inicio' %}">{% icono 'inicio' %}Volver al inicio</a>
+        {% else %}
+        <a class="boton" href="{% url 'login' %}">{% icono 'inicio' %}Ir al ingreso</a>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

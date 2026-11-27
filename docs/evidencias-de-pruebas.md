@@ -17,15 +17,15 @@ internet: el correo se simula y los archivos se guardan en carpetas temporales.
 
 ## 2. Resultado de referencia
 
-Ejecución de verificación del QA del Sprint 8 (26/11/2026), con Python 3.13, Django 5.2.18 y PostgreSQL 16,
-sobre el código de `main` después del PR #45 más la corrección del campo Tipo (sección 7.2):
+Ejecución de verificación de las páginas de error propias (27/11/2026), con Python 3.13, Django 5.2.18 y
+PostgreSQL 16, sobre el código de `main` después del PR #46 más las páginas de error (`test_paginas_de_error`):
 
 ```
-Found 888 test(s).
+Found 895 test(s).
 Creating test database for alias 'default'...
 System check identified no issues (0 silenced).
 ----------------------------------------------------------------------
-Ran 888 tests in 109.930s
+Ran 895 tests in 84.756s
 
 OK
 Destroying test database for alias 'default'...
@@ -39,13 +39,14 @@ Destroying test database for alias 'default'...
 | Límite de intentos (PR #20) | 352 |
 | Cierre del desarrollo del Sprint 7 (PR #28) | 480 |
 | Documentación de la Release 2 (PR #43 a #45) | 884 |
-| Versión actual (QA del Sprint 8, corrección del campo Tipo) | 888 |
+| QA del Sprint 8, corrección del campo Tipo (PR #46) | 888 |
+| Versión actual (páginas de error propias, 27/11/2026) | 895 |
 
 > Cada integrante del equipo debe ejecutar la suite en su equipo y registrar su propio resultado (sección 7).
 
 ## 3. Pruebas por módulo
 
-### 3.1. Aplicación `biblioteca` (618 pruebas)
+### 3.1. Aplicación `biblioteca` (625 pruebas)
 
 | Archivo | Pruebas | Release | Qué verifica |
 |---|---|---|---|
@@ -73,6 +74,7 @@ Destroying test database for alias 'default'...
 | `test_demanda.py` | 18 | 2 | Período, cantidades por libro, marca «Conviene comprar más», exportación y permisos. |
 | `test_pedidos_de_la_profesora.py` | 30 | 2 | Menú, tipo de ejemplar (también en la pantalla de alta y edición), filtros, préstamos por persona y documento de 7 u 8 dígitos. |
 | `test_formularios_completos.py` | 2 | 2 | Cada pantalla de alta o edición muestra todos los campos de su formulario (agregada en el QA del Sprint 8). |
+| `test_paginas_de_error.py` | 7 | 2 | Páginas propias en español: no encontrado (sin sesión, personal y libro de otra carrera en el portal), página vencida (CSRF) y error del servidor, que no depende de la base ni de los estáticos. |
 | `test_revision_ux.py` | 23 | 2 | Revisión de UX/UI: ficha de la carrera con sus personas, personas por carrera, enlaces de salto del inicio. |
 | `test_informes_pdf.py` | 27 | 2 | Cada informe en PDF con las mismas columnas y filas que el CSV, anchos de columna, permisos. |
 | `test_volver_arriba_y_menu.py` | 12 | 2 | Botón «Volver arriba» y menú lateral sin barra de desplazamiento. |
@@ -168,6 +170,11 @@ las pruebas de su módulo:
 | **Control:** agregar un comentario (no cambia nada) | `test_reservas_lector` (24) | Sin fallas, como se esperaba |
 | Ejemplar: sacar el campo Tipo de la pantalla (QA del Sprint 8) | `test_pedidos_de_la_profesora` (30) y `test_formularios_completos` (2) | Detectado: 3 y 2 fallas |
 | Ejemplar: ignorar el tipo elegido (QA del Sprint 8) | `test_pedidos_de_la_profesora` (30) | Detectado: 2 fallas |
+| Páginas de error: quitar `404.html`, `403_csrf.html` o `500.html` (27/11/2026) | `test_paginas_de_error` (7) | Detectado: 3, 1 y 2 fallas |
+| Página 404: el botón siempre lleva al inicio del personal, también al lector | `test_paginas_de_error` (7) | Detectado: 1 falla |
+| Página 404: sin la opción de ir al ingreso cuando no hay sesión | `test_paginas_de_error` (7) | Detectado: 1 falla |
+| Página 500: heredar de `base.html`, usar los estilos estáticos o mostrar el detalle del error | `test_paginas_de_error` (7) | Detectado: 1 falla en cada caso |
+| **Control:** cambiar un comentario de `404.html` | `test_paginas_de_error` (7) | Sin fallas, como se esperaba |
 
 Las 16 modificaciones de reglas fueron detectadas y el control no produjo fallas. Se probó también quitar la línea
 que deja el material compartido como pendiente: las pruebas no fallaron, pero ese cambio no altera el sistema,

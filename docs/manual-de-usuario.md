@@ -568,6 +568,16 @@ Si intentás entrar a una sección para la que tu cuenta no tiene permiso (por e
 que escribe la dirección de Cuentas, o un alumno que escribe una dirección del personal), el sistema muestra
 **Acceso no permitido** y un botón para volver al inicio.
 
+Otras dos pantallas que pueden aparecer, también con un botón para volver al inicio:
+
+- **No encontramos esta página:** la dirección no existe o está mal escrita (por ejemplo, un enlace viejo o un
+  ejemplar que ya no está).
+- **La página venció:** un formulario quedó abierto mucho tiempo o se cerró la sesión, y no se guardó nada. Volvé a la
+  página anterior, recargala y repetí la operación.
+
+Si alguna vez aparece **Algo salió mal**, ocurrió un error inesperado: queda registrado en el servidor. Probá de nuevo
+en unos minutos y, si se repite, anotá qué estabas haciendo y avisale a quien administra el sistema.
+
 ---
 
 ## 19. Uso desde el teléfono
@@ -735,5 +745,6 @@ El portal se adapta al celular: el menú se abre con el botón **☰** y las tab
 | Ya tenés una reserva activa de este libro. | Ver el estado en **Reservas**. |
 | La biblioteca no tiene ejemplares de este libro para prestar. | Consultar en la biblioteca. |
 | Solo pueden opinar quienes tuvieron este libro prestado. | Se puede opinar después de haberlo tenido prestado. |
-| No encontrado (al abrir un libro o un material) | Es de otra carrera. Si te falta una carrera, avisá en la biblioteca. |
+| No encontramos esta página (al abrir un libro o un material) | La dirección está mal escrita o el contenido es de otra carrera. Si te falta una carrera, avisá en la biblioteca. |
+| La página venció | El formulario estuvo abierto mucho tiempo o se cerró la sesión, y no se guardó nada. Volvé atrás, recargá la página y repetí lo que estabas haciendo. |
 | Acceso no permitido | Esa dirección es del sistema del personal. |
