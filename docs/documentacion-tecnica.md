@@ -433,6 +433,17 @@ Las cuentas no se borran: se desactivan. Nadie puede cambiar su propio rol ni de
 - **En el servidor publicado** (`DJANGO_HTTPS=True`, `config/entorno.py`): redirección a HTTPS, cookies de sesión
   y CSRF seguras, HSTS de un día, orígenes de confianza para CSRF y `DEBUG` apagado. Los errores se registran en
   los logs del servidor, sin mostrarle detalles al visitante.
+- **Páginas de error propias, en español y con el diseño de SIGEBI** (`templates/`, 27/11/2026). Reemplazan las de
+  Django, que con `DEBUG` apagado se muestran en inglés:
+    - `403.html` **Acceso no permitido**: una cuenta sin permiso para la pantalla.
+    - `404.html` **No encontramos esta página**: una dirección que no existe o, en el portal, un libro o material de
+      otra carrera. El texto es el mismo en los dos casos, para no revelar que el contenido existe (D-R2-12). Con
+      sesión, el botón vuelve al inicio del personal o del portal; sin sesión, lleva al ingreso.
+    - `403_csrf.html` **La página venció**: un formulario sin código de seguridad válido, por ejemplo porque estuvo
+      abierto mucho tiempo o se cerró la sesión. Explica que no se guardó nada y cómo repetir la operación.
+    - `500.html` **Algo salió mal**: un error inesperado. Es una página independiente, sin `base.html`, sin etiquetas
+      y sin archivos estáticos, para que se muestre aunque el error venga de la base, la sesión o los estilos. El
+      detalle queda solo en el registro del servidor.
 - **CSV seguro:** las celdas que empiezan con `=`, `+`, `-` o `@` se exportan precedidas de `'` para que Excel no
   las ejecute como fórmula.
 - El panel de administración de Django está limitado a superusuarios (`config/admin.py`).
@@ -567,7 +578,7 @@ inventario real, sin perder datos. `test_migraciones` falla si alguien cambia un
 
 ## 10. Pruebas
 
-La suite automática tiene **888 pruebas** (Django `TestCase` sobre PostgreSQL, no una base en memoria: así se
+La suite automática tiene **895 pruebas** (Django `TestCase` sobre PostgreSQL, no una base en memoria: así se
 verifican también las restricciones de la base). El detalle por módulo y el resultado están en
 [Evidencias de pruebas](evidencias-de-pruebas.md).
 

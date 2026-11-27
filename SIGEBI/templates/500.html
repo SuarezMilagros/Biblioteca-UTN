@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+{% comment %}
+    Página de error del servidor (500). Django la muestra sin datos de la sesión ni de la base, porque el error
+    puede venir justamente de ahí. Por eso no hereda de base.html, no usa etiquetas propias ni archivos estáticos:
+    todo el estilo está en la página. El detalle del error queda en el registro del servidor (LOGGING).
+{% endcomment %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error del servidor · SIGEBI</title>
+    <style>
+        body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+               padding: 1.5rem; box-sizing: border-box; background: #F5F6F8; color: #343A40;
+               font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; line-height: 1.5; }
+        .tarjeta { max-width: 480px; width: 100%; background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 10px;
+                   padding: 2rem 1.75rem; text-align: center; box-shadow: 0 8px 24px rgba(16, 24, 40, 0.08); }
+        .marca { display: inline-flex; align-items: center; gap: 0.6rem; margin-bottom: 1.5rem; color: #1F2429; }
+        .marca-logo { width: 40px; height: 40px; border-radius: 9px; background: #F0441E; display: inline-flex;
+                      align-items: center; justify-content: center; }
+        .marca strong { font-size: 1.1rem; letter-spacing: 0.04em; }
+        h1 { font-size: 1.4rem; margin: 0 0 0.5rem; color: #1F2429; }
+        p { margin: 0 0 0.75rem; }
+        .suave { color: #5F6672; font-size: 0.92rem; }
+        .boton { display: inline-block; margin-top: 0.75rem; padding: 0.6rem 1.1rem; border-radius: 7px;
+                 background: #D43812; color: #FFFFFF; text-decoration: none; font-weight: 600; }
+        .boton:hover { background: #B93010; }
+        .boton:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(240, 68, 30, 0.35); }
+    </style>
+</head>
+<body>
+    <main class="tarjeta">
+        <div class="marca">
+            <span class="marca-logo" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10 5 7 4.5 3 5v13c4-.5 7 0 9 1.5 2-1.5 5-2 9-1.5V5c-4-.5-7 0-9 1.5z"/><path d="M12 6.5v13"/></svg>
+            </span>
+            <strong>SIGEBI</strong>
+        </div>
+        <h1>Algo salió mal</h1>
+        <p>Ocurrió un error inesperado y no se pudo completar lo que pediste.</p>
+        <p class="suave">El error quedó registrado. Probá de nuevo en unos minutos; si se repite, avisale al personal de la biblioteca qué estabas haciendo.</p>
+        <a class="boton" href="/">Volver al inicio</a>
+    </main>
+</body>
+</html>

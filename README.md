@@ -145,7 +145,7 @@ El superusuario crea las cuentas del personal desde **Cuentas** (ver el manual d
 python manage.py test
 ```
 
-Resultado esperado: **888 pruebas, OK** (tarda unos minutos). El detalle está en
+Resultado esperado: **895 pruebas, OK** (tarda unos minutos). El detalle está en
 [Evidencias de pruebas](docs/evidencias-de-pruebas.md).
 
 ## 4. Roles
